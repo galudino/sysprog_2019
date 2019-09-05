@@ -51,8 +51,7 @@
 int main(int argc, const char *argv[]) {
     printf("Hey\n");
     
-
-    // NULL is (void *)(0);
+    /**< NULL is (void *)(0); */
     return EXIT_SUCCESS;
 }
 
