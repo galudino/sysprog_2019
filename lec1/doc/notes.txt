@@ -1,0 +1,28 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       05 Sep 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+Don't use C99!
+ANSI-C only.
+You will have to fork gcslib for ANSI-C.
+
+Don't use -fsanitize.
+
+iLabs run on CentOS Linux. (Red Hat)
+
+Asking questions:
+    What do you think the problem is?
+    (where in the code is it?)
+
+    What have you done so far?
+    (input/output, tests, Google?)
+
+
+
+
+
