@@ -28,17 +28,24 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
-#include <unistd.h>
-#include <string.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <assert.h>
 
 #include "header.h"
+
+#define ARR_SZ 256
+
+void arrtest(void);
+void structtest(void);
 
 /**
  *  @brief  Program execution begins here
@@ -49,9 +56,52 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    printf("Hey\n");
-    
-    /**< NULL is (void *)(0); */
+    arrtest();
+    structtest();
     return EXIT_SUCCESS;
 }
 
+void arrtest() {
+    char str[128] = "hey";
+    
+    /* append characters to "hey" */
+    str[3] = 'y';
+    str[4] = 'y';
+    str[5] = '\0';
+    
+    /* use the rest of str to create another string */
+    str[6] = 't';
+    str[7] = 'e';
+    str[8] = 's';
+    str[9] = 't';
+    str[10] = '\0';
+    
+    /* print both strings from the same str array */
+    printf("%s %s\n", str, (str + 6));
+
+    printf("size of str    :\t%d\n", sizeof(str));
+    printf("strlen(str + 6):\t%d\n", strlen(str + 6));
+    printf("strlen(str)    :\t%d\n", strlen(str));
+
+    printf("\n");
+}
+
+void structtest() {
+    point loc = { 23, 45 };
+    int a = 0;
+    int *b = NULL;
+
+    printf("location: (%d, %d)\n", loc.x, loc.y);
+    
+    a = 2;
+    b = &a;
+    printf("%p\n%p\n", &a, b);
+    printf("value a: %d\n", a);
+    printf("deref b: %d\n", (*b));
+
+    a = 22;
+    b = &a;
+    printf("%p\n%p\n", &a, b);
+    printf("value a: %d\n", a);
+    printf("deref b: %d\n", (*b));
+}

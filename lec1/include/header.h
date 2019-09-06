@@ -41,6 +41,11 @@
 #include <string.h>
 #include <unistd.h>
 
+struct point {
+    int x;
+    int y;
+};
 
+typedef struct point point;
 
 #endif /* HEADER_H */

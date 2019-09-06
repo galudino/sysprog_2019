@@ -37,8 +37,8 @@ MATH 				= -lm
 PEDANTIC 			= -pedantic-errors
 
 SANTIIZED 			= #-fsanitize=address
-W_ALL 				= -Wall
-W_ERR 				= -Werror
+W_ALL 				= #-Wall
+W_ERR 				= #-Werror
 
 ## Add new flag categories here ##############################################
 CFLAGS 				= $(DEBUG) $(CSTD) $(PEDANTIC) $(W_ALL) $(W_ERR) $(SANITIZED)
