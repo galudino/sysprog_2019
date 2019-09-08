@@ -21,8 +21,3 @@ Asking questions:
 
     What have you done so far?
     (input/output, tests, Google?)
-
-
-
-
-

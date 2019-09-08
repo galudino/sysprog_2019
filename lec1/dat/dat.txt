@@ -1,1 +1,2 @@
-Input files can go here.
+/* Input files go here */
+

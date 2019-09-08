@@ -1,1 +1,2 @@
-Executables can go here.
+/* Binaries (executables) go here */
+

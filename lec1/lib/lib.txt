@@ -1,1 +1,2 @@
-Libraries can go here.
+/* Libraries go here. */
+

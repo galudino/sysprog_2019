@@ -1,1 +1,2 @@
-Object files can go here.
+/* Build files (.o) go here. */
+

@@ -31,15 +31,30 @@
 #ifndef HEADER_H
 #define HEADER_H
 
-#include <dirent.h>
-#include <fcntl.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdarg.h>
+
+#if __STD_VERSION__ >= 19990L
+#include <stdbool.h>
+#include <stdint.h>
+#else
+# define false '\0'
+# define true '0'
+typedef unsigned char bool;
+#endif
+
+#if WIN32 || _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
+
+#include <assert.h>
+#include <string.h>
+#include <strings.h>
+#include <dirent.h>
+#include <fcntl.h>
 
 
 

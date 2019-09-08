@@ -30,16 +30,6 @@
 
 #include "header.h"
 
-#include <dirent.h>
-#include <fcntl.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
 /**
  *  @brief  Program execution begins here
  *
@@ -49,7 +39,8 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    // Enter source code here...
+    /* Enter source code here... */
+
     
     return EXIT_SUCCESS;
 }

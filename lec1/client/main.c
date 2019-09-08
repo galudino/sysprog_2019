@@ -3,7 +3,7 @@
  *  @brief      Client source file
  *
  *  @author     Gemuele Aludino
- *  @date       03 Sep 2019
+ *  @date       05 Sep 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -27,18 +27,6 @@
  *  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdarg.h>
-#include <dirent.h>
-#include <fcntl.h>
-#include <assert.h>
 
 #include "header.h"
 
@@ -79,9 +67,9 @@ void arrtest() {
     /* print both strings from the same str array */
     printf("%s %s\n", str, (str + 6));
 
-    printf("size of str    :\t%d\n", sizeof(str));
-    printf("strlen(str + 6):\t%d\n", strlen(str + 6));
-    printf("strlen(str)    :\t%d\n", strlen(str));
+    printf("size of str    :\t%lu\n", sizeof(str));
+    printf("strlen(str + 6):\t%lu\n", strlen(str + 6));
+    printf("strlen(str)    :\t%lu\n", strlen(str));
 
     printf("\n");
 }
@@ -95,13 +83,13 @@ void structtest() {
     
     a = 2;
     b = &a;
-    printf("%p\n%p\n", &a, b);
+    printf("%p\n%p\n", (void *)(&a), (void *)(b));
     printf("value a: %d\n", a);
     printf("deref b: %d\n", (*b));
 
     a = 22;
     b = &a;
-    printf("%p\n%p\n", &a, b);
+    printf("%p\n%p\n", (void *)(&a), (void *)(b));
     printf("value a: %d\n", a);
     printf("deref b: %d\n", (*b));
 }

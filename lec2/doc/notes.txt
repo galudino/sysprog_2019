@@ -1,0 +1,42 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       10 Sep 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+
+/* LAST CLASS --------------------------- */
+
+C is 'memory oriented'
+arrays
+
+a type is...
+    a length    sizeof
+    a format    (type ?)
+
+different types have different sizes...
+
+char, or int8_t     8 bit integer
+short, or int16_t   16 bit integer  (iLab)
+int, or int32_t     32 bit integer  (iLab)
+
+short <= int <= long
+
+C89/ANSI C does not support variable length
+arrays. That is a C99 feature and newer
+
+sizeof returns byte size.
+sizeof(ARR) / sizeof(TYPE) yields length
+
+'strings' are null-terminated char arrays
+
+structs
+
+struct [ID] {
+    /* TYPES */
+};
+
+/* -------------------------------------- */
