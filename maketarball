@@ -1,5 +1,7 @@
 #!/bin/bash
 
+## Creates a tar file of directory contents, sans files in exclude.txt
+
 ## default filename if $1 is an empty string
 filename_default="sysprog_2019_$(date +%Y-%m-%d_%H%M%S).tar.gz"
 
