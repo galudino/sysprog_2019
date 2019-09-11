@@ -40,3 +40,56 @@ struct [ID] {
 };
 
 /* -------------------------------------- */
+
+Pointers
+---------
+variable that does not hold data,
+        but a memory location
+        (where there might be data)
+
+&A == get the address of var A
+*A == "go to the memory and address A holds"
+
+pass by value is okay for small stuff
+pass by reference/pointer better for bigger stuff
+
+2^(n)
+
+all pointers are the same size.
+
+structs
+-------
+have memory for all fields
+
+unions
+------
+have memory for largest field
+
+/* dot op or arrow op? */
+ptr_struct->field; or (*ptr_struct).field;
+
+the addr of an array
+is the same address as that of
+that array's first element.
+
+elements of arrays are on the stack.
+pointers can point to something on the stack or heap.
+
+See ch 2 or 3 for C programming man pages
+
+using less
+----------
+same interface/controls as man
+quit with q.
+
+using more
+----------
+can only scroll down
+ENTER one line
+space one page
+once end is reached, exit
+search functionality still possible
+
+using cat
+---------
+concatenates multiple files together.
