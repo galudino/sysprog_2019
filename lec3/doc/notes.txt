@@ -1,0 +1,93 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       10 Sep 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+
+/* LAST CLASS --------------------------- */
+
+Pointers
+---------
+variable that does not hold data,
+        but a memory location
+        (where there might be data)
+
+&A == get the address of var A
+*A == "go to the memory and address A holds"
+
+pass by value is okay for small stuff
+pass by reference/pointer better for bigger stuff
+
+2^(n)
+
+all pointers are the same size.
+
+structs
+-------
+have memory for all fields
+
+unions
+------
+have memory for largest field
+
+/* dot op or arrow op? */
+ptr_struct->field; or (*ptr_struct).field;
+
+the addr of an array
+is the same address as that of
+that array's first element.
+
+elements of arrays are on the stack.
+pointers can point to something on the stack or heap.
+
+See ch 2 or 3 for C programming man pages
+
+using less
+----------
+same interface/controls as man
+quit with q.
+
+using more
+----------
+can only scroll down
+ENTER one line
+space one page
+once end is reached, exit
+search functionality still possible
+
+using cat
+---------
+concatenates multiple files together.
+
+/* -------------------------------------- */
+& address-of operator only works with r-values
+
+struct thing {
+    int a;
+};
+
+struct thing stuff = { 123 };
+struct thing *ptr = &stuff;
+ptr->a = 456;   /* (*ptr).a = 456 */
+
+*(ptr + i) == ptr[i]
+
+((char *)(ptr) + (i * sizeof(TYPE))) == (ptr + i)
+
+typedef
+    alias a type with the id of your choice
+
+argc - argument count
+argv - const char *argv[]
+    array of pointers to const char
+        const char **argv
+    pointer to pointer to const char
+
+\
+    escape character
+
+pointer dereference always has precedence
