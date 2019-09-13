@@ -39,8 +39,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #else
-# define false '\0'
-# define true '0'
+# define false  0
+# define true   1
 typedef unsigned char bool;
 #endif
 
