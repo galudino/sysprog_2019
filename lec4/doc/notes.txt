@@ -1,0 +1,73 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       17 Sep 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+/* LAST CLASS --------------------------- */
+& address-of operator only works with r-values
+
+struct thing {
+    int a;
+};
+
+struct thing stuff = { 123 };
+struct thing *ptr = &stuff;
+ptr->a = 456;   /* (*ptr).a = 456 */
+
+*(ptr + i) == ptr[i]
+
+((char *)(ptr) + (i * sizeof(TYPE))) == (ptr + i)
+
+typedef
+    alias a type with the id of your choice
+
+argc - argument count
+argv - const char *argv[]
+    array of pointers to const char
+        const char **argv
+    pointer to pointer to const char
+
+\
+    escape character
+
+pointer dereference always has precedence
+
+malloc
+    dynamically allocates memory on th heap and returns the base address of said memory
+    (it can fail)
+
+
+/* ------------------------------------- */
+
+semicolon must be followed by a space
+before next expression begins.
+
+no trailing whitespace allowed
+
+one operator per expression
+
+keep reading the string
+even though somewhere along the way,
+you came across the error.
+you want to report all errors.
+
+"1 NOT 2"
+bad operands
+logical expression attempted, malformed
+--OR---
+malformed logical, expected 1 argument (received 2)
+wrong operand type (2)
+
+$ gcc -o check.c check
+$ ./check
+$ > ./check
+
+instead of assert...
+if (!ptr) {
+    fprintf(stderr, "reason\n");
+    exit(EXIT_FAILURE);
+}
