@@ -1,9 +1,9 @@
 /**
- *  @file       header.h
- *  @brief      Header file
+ *  @file       check.c
+ *  @brief      Client source file for Asst0
  *
  *  @author     Gemuele Aludino
- *  @date       17 Sep 2019
+ *  @date       19 Sep 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -27,9 +27,6 @@
  *  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-#ifndef HEADER_H
-#define HEADER_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,6 +53,21 @@ typedef unsigned char bool;
 #include <dirent.h>
 #include <fcntl.h>
 
+/**
+ *  @brief  Program execution begins here
+ *
+ *  @param[in]  argc    argument count
+ *  @param[in]  argv    command line arguments
+ *
+ *  @return     exit status
+ */
+int main(int argc, const char *argv[]) {
+    int i = 0;
+    for (i = 0; i < argc; i++) {
+        printf("argv[i]: %s\n", argv[i]);
+    }
 
-
-#endif /* HEADER_H */
+    printf("\n");
+    
+    return EXIT_SUCCESS;
+}

@@ -1,9 +1,9 @@
 /**
- *  @file       header.h
- *  @brief      Header file
+ *  @file       main.c
+ *  @brief      Client source file
  *
  *  @author     Gemuele Aludino
- *  @date       17 Sep 2019
+ *  @date       19 Sep 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -28,34 +28,51 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HEADER_H
-#define HEADER_H
+#include "header.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
+void malloctest() {
+    int *ptr = malloc(256 * sizeof *ptr);
+    if (!ptr) {
+        char str[64];
+        int i = 0;
+        i += sprintf(str, "malloc failure\n");
+        i += sprintf(str, "exiting now...\n");
+        fprintf(stderr, str);
 
-#if __STD_VERSION__ >= 19990L
-#include <stdbool.h>
-#include <stdint.h>
-#else
-# define false  0
-# define true   1
-typedef unsigned char bool;
-#endif
+        exit(EXIT_FAILURE);
+    }
+    
+    /* use ptr */
 
-#if WIN32 || _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
+    free(ptr);
+    ptr = NULL;
+}
 
-#include <assert.h>
-#include <string.h>
-#include <strings.h>
-#include <dirent.h>
-#include <fcntl.h>
+/**
+ *  @brief  Program execution begins here
+ *
+ *  @param[in]  argc    argument count
+ *  @param[in]  argv    command line arguments
+ *
+ *  @return     exit status
+ */
+int main(int argc, const char *argv[]) {
+    node *head = malloc(sizeof *head);
+    if (!head) {
+        fprintf(stderr, "malloc failed - (struct node *)");
+        exit(EXIT_FAILURE);
+    }
 
+    head->data = 28;
+    head->next = malloc(sizeof *head);
+    if (!head->next) {
+        fprintf(stderr, "malloc failed - (struct node *)");
+        exit(EXIT_FAILURE);
+    }
 
+    head->next->data = 24;
+    head->next->next = NULL;
 
-#endif /* HEADER_H */
+    return EXIT_SUCCESS;
+}
+

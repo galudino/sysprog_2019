@@ -1,0 +1,42 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       19 Sep 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+/* LAST CLASS --------------------------- */
+
+semicolon must be followed by a space
+before next expression begins.
+
+no trailing whitespace allowed
+
+one operator per expression
+
+keep reading the string
+even though somewhere along the way,
+you came across the error.
+you want to report all errors.
+
+"1 NOT 2"
+bad operands
+logical expression attempted, malformed
+--OR---
+malformed logical, expected 1 argument (received 2)
+wrong operand type (2)
+
+$ gcc -o check.c check
+$ ./check
+$ > ./check
+
+instead of assert...
+if (!ptr) {
+    fprintf(stderr, "reason\n");
+    exit(EXIT_FAILURE);
+}
+
+/* ------------------------------------- */
+

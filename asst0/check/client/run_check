@@ -1,0 +1,11 @@
+#!/bin/bash
+
+## Script to compile and run check.c
+
+if [ -z $1 ]
+then
+    gcc check.c -o check; ./check < check_input.txt;
+else
+    gcc check.c -std=c89 -pedantic-errors -o check; ./check < check_input.txt;
+fi
+
