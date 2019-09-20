@@ -1,2 +1,19 @@
 // Notes go here.
 
+quote - only allowed at start or end of expr
+operand:
+    permitted:
+        first char after quote
+        after whitespace
+
+operator:
+    permitted:
+        after
+
+0. Tokenize argv[1] and store each string in a vector.
+    define delimiter. default is ';'
+    character by character, 
+
+
+
+

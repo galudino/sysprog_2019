@@ -1,11 +1,34 @@
 #!/bin/bash
 
-## Script to compile and run check.c
+## Script to build and run check.c with input file check_input.txt
+
+CLIENT="check.c"
+EXECUTABLE="check"
+INPUT_FILE=check_input.txt
+
+CC="gcc"
+
+## I want to ensure that I write C89-compiliant code (C89/C90 == ANSI-C),
+## and I want all compiler warnings to come up as errors.
+## The default mode for this script, 'run_check', is debugging mode;
+## the $RELEASE_FLAG will remove $CFLAGS from the compilation command,
+## so what would remain is:     
+##      gcc check.c -o check; ./check; ./check < check_input.txt
+CSTD="-std=c89"
+PEDANTIC="-pedantic"
+ERRORS="-errors"
+
+CFLAGS="$CSTD $PEDANTIC$ERRORS"
+
+RELEASE_FLAG="release"
 
 if [ -z $1 ]
 then
-    gcc check.c -o check; ./check < check_input.txt;
+    $CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "$(< $INPUT_FILE)"
 else
-    gcc check.c -std=c89 -pedantic-errors -o check; ./check < check_input.txt;
+    if [ $1 == $RELEASE_FLAG ]
+    then
+        CFLAGS=""
+    fi
+    $CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "$(< $INPUT_FILE)"
 fi
-
