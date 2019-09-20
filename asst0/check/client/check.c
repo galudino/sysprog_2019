@@ -324,6 +324,7 @@ int main(int argc, char *argv[]) {
     int i = 0;
     char *pos = argv[1];
     uint32_t length = strlen(pos);
+    bool first_char = true;
 
     svec = calloc(svec_cap, sizeof *svec);
     massert_calloc(svec);
@@ -339,21 +340,21 @@ int main(int argc, char *argv[]) {
             svec = svec_new;
         }
 
-        if (pos[i] == '"' && i == 0 || pos[i] == '"' && i == (length - 1)) {
-            ++pos;
-        }
-
-        if (pos[i] == ';' || pos[i] == '"' && pos[i + 1] == '\0') {
-            char *result = malloc(strlen(pos) + 1);
-            massert_malloc(result);
+        if (pos[i] == ';' || pos[i] == '"') {
+            char *result = NULL;
             
+            result = malloc(strlen(pos) + 1);
+            massert_malloc(result);
             strcpy(result, pos);
 
             result[i] = '\0';
+            svec[svec_len++] = result;
 
-            svec[svec_len++] = str_trim_left(result, NULL);
             pos += (i + 1);
+            i = 0;
         }
+
+        first_char == false;
     }
 
     for (i = 0; i < svec_len; i++) {
@@ -367,8 +368,6 @@ int main(int argc, char *argv[]) {
 
     free(svec);
     svec = NULL;
-
-    puts("");
     return EXIT_SUCCESS;
 }
 
