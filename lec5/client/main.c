@@ -30,23 +30,8 @@
 
 #include "header.h"
 
-void malloctest() {
-    int *ptr = malloc(256 * sizeof *ptr);
-    if (!ptr) {
-        char str[64];
-        int i = 0;
-        i += sprintf(str, "malloc failure\n");
-        i += sprintf(str, "exiting now...\n");
-        fprintf(stderr, str);
-
-        exit(EXIT_FAILURE);
-    }
-    
-    /* use ptr */
-
-    free(ptr);
-    ptr = NULL;
-}
+int int_compare(const void *c1, const void *c2);
+int str_compare(const void *c1, const void *c2);
 
 /**
  *  @brief  Program execution begins here
@@ -57,22 +42,73 @@ void malloctest() {
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    node *head = malloc(sizeof *head);
-    if (!head) {
-        fprintf(stderr, "malloc failed - (struct node *)");
-        exit(EXIT_FAILURE);
+    int *intarr = NULL;
+    char **strarr = NULL;
+    int i = 0;
+
+    int (*comparator)(const void *, const void *) = NULL;
+
+    intarr = calloc(16, sizeof *intarr);
+    assert(intarr);
+    
+    for (i = 0; i < 16; i++) {
+        intarr[i] = rand() % 50;
     }
 
-    head->data = 28;
-    head->next = malloc(sizeof *head);
-    if (!head->next) {
-        fprintf(stderr, "malloc failed - (struct node *)");
-        exit(EXIT_FAILURE);
+    comparator = int_compare;
+    qsort(intarr, 16, sizeof *intarr, comparator);
+
+    for (i = 0; i < 16; i++) {
+        printf("intarr[%d]: %d\n", i, intarr[i]);
     }
 
-    head->next->data = 24;
-    head->next->next = NULL;
+    free(intarr);
+    intarr = NULL;
+    
+    puts("");
 
+    strarr = calloc(8, sizeof *strarr);
+    assert(strarr);
+
+    strarr[0] = strcpy(malloc(strlen("delta") + 1), "delta");
+    strarr[1] = strcpy(malloc(strlen("beta") + 1), "beta");
+    strarr[2] = strcpy(malloc(strlen("alpha") + 1), "alpha");
+    strarr[3] = strcpy(malloc(strlen("foxtrot") + 1), "foxtrot");
+    strarr[4] = strcpy(malloc(strlen("charlie") + 1), "charlie");
+    strarr[5] = strcpy(malloc(strlen("echo") + 1), "echo");
+    strarr[6] = strcpy(malloc(strlen("icecream") + 1), "icecream");
+    strarr[7] = strcpy(malloc(strlen("kilo") + 1), "kilo");
+    strarr[8] = strcpy(malloc(strlen("gilgamesh") + 1), "gilgamesh");
+    
+    comparator = str_compare;
+    qsort(strarr, 9, sizeof *strarr, comparator);
+
+    for (i = 0; i < 9; i++) {
+        printf("strarr[%d]: %s\n", i, strarr[i]);
+    }
+
+    for (i = 0; i < 9; i++) {
+        free(strarr[i]);
+        strarr[i] = NULL;
+    }
+
+    free(strarr);
+    strarr = NULL;
+        
     return EXIT_SUCCESS;
+}
+
+int int_compare(const void *c1, const void *c2) {
+    int *first = (int *)(c1);
+    int *second = (int *)(c2);
+
+    return (*first) - (*second);
+}
+
+int str_compare(const void *c1, const void *c2) {
+    char **first = (char **)(c1);
+    char **second = (char **)(c2);
+
+    return strcmp((*first), (*second));
 }
 

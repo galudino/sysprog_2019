@@ -40,3 +40,5 @@ if (!ptr) {
 
 /* ------------------------------------- */
 
+if you want memory to persist beyond the scope that it was declared,
+   allocate dynamically on the heap.
