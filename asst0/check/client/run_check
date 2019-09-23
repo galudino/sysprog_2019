@@ -17,7 +17,6 @@ CC="gcc"
 CSTD="-std=c89"
 PEDANTIC="-pedantic"
 ERRORS="-errors"
-
 CFLAGS="$CSTD $PEDANTIC$ERRORS"
 
 RELEASE_FLAG="release"
