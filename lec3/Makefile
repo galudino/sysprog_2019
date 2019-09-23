@@ -98,7 +98,7 @@ $(DIR_OBJ)/%$(EXT_OBJ): $(DIR_SRC)/%$(EXT_SRC)
 	$(CC) -c $< -o $@ $(CFLAGS) $(INC)
 
 ## Links .o object files - binary executable produced
-$(EXE_CLI): $(OBJECTS)
+$(EXE_CLI): $(OBJECTS) $(DIR_CLI)/$(SRC_CLI)
 	@echo;
 	@echo "Linking $(EXE_CLI)..."
 	@echo;
@@ -110,7 +110,7 @@ $(EXE_CLI): $(OBJECTS)
 	@echo;
 
 ## Links .o object files - binary executable produced
-$(EXE_TST): $(OBJECTS)
+$(EXE_TST): $(OBJECTS) $(DIR_TST)/$(SRC_TST)
 	@echo;
 	@echo "Linking $(EXE_TST)..."
 	@echo;
