@@ -61,6 +61,7 @@ typedef long int ptrdiff_t;
 #define KRED_b "\x1B[1;31m" /**< red bold */
 #define KGRN_b "\x1B[1;32m" /**< green bold */
 #define KYEL_b "\x1B[1;33m" /**< yellow bold */
+#define KMAG_b "\x1B[1;35m" /**< magenta bold */
 #define KCYN_b "\x1B[1;36m" /**< cyan bold */
 #define KWHT_b "\x1B[1;37m" /**< white bold */
 
@@ -70,8 +71,8 @@ int ulog(FILE *dest,
          const char *file,  /**< meant for use with the __FILE__ macro */
          const char *func,  /**< meant for use with the __func__ macro */
          long double line,  /**< meant for use with the __LINE__ macro */
-         const char *fmt,
-         ...); /**< user's custom message */
+         const char *fmt,   /**< user's custom message */
+         ...);
 
 bool ulog_attrs_disable[] = { false, false, false, false, false, false, false };
 
@@ -193,7 +194,8 @@ enum ULOG_ATTRS {
     FUNCTION,
     MESSAGE
 };
-extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
+
+bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
 
 #define ULOG_TOGGLE_ATTR(ULOG_ATTR)                                            \
     ulog_attrs_disable[ULOG_ATTR] = (ulog_attrs_disable[ULOG_ATTR]) ? (false) : (true)
@@ -292,8 +294,13 @@ void *gcs__memset(void *dst, int ch, size_t n);
 int gcs__memcmp(const void *s1, const void *s2, size_t n);
 #endif /* !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_) */
 
+#if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
+#define streql(s1, s2) gcs__strcmp(s1, s2) == 0
+#define strneql(s1, s2, n) gcs__strncmp(s1, s2, n) == 0
+#else
 #define streql(s1, s2) strcmp(s1, s2) == 0
 #define strneql(s1, s2, n) strncmp(s1, s2, n) == 0
+#endif
 
 #if __linux__ && !__POSIX__
 #define strdup(str) strcpy(malloc(strlen(str) + 1), src)
@@ -337,8 +344,7 @@ void vresize_str(vector_str *v, size_t n);
 size_t vcapacity_str(vector_str *v);
 bool vempty_str(vector_str *v);
 
-/**< vector_str: reserve/shrinking functions */
-void vreserve_str(vector_str *v, size_t n);
+/**< vector_str: shrinking functions */
 void vshrinktofit_str(vector_str *v);
 
 /**< vector_str: element access functions */
@@ -386,7 +392,7 @@ int check__fexpr_err(FILE *dest,
 char *check__expr_tok(char *src, const char *delim);
 bool check__expr_assess(const char *expr,
                         const char *operands[],
-                        const char *operators,
+                        const char *operators[],
                         const char *delim);
 
 #define CHECK__OPERANDS                                                        \
@@ -398,13 +404,70 @@ int main(int argc, char *argv[]) {
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
 
+    char *pos = NULL;
+    size_t len = 0;
+    size_t i = 0;
+    char ch = ' ';
+    bool first_char = true;
 
+    vector_str *v = NULL;
+    size_t vsize = 0;
+    char *expr = NULL;
+
+    pos = *(argv + 1);
+    len = gcs__strlen(pos);
+
+    while ((*pos) == ' ') {
+        ++pos;
+    }
+
+    *(pos + (len - 1)) = *(pos + (len - 1)) == '\"' ? '\0' : *(pos + (len - 1));
+
+    v = vnew_str();
+    i = 0;
+
+    for (i = 0; i < len; i++) {
+        if (*(pos + i) == '"' && first_char) {
+            pos += (i + 1);
+        }
+
+        if (*(pos + i) == ';') {
+            *(pos + i) = '\0';
+            expr = pos;
+            vpushb_str(v, expr);
+            pos += (i + 1);
+            i = 0;
+        }
+
+        first_char = first_char ? false : first_char;
+    }
+
+    vpushb_str(v, pos);
+
+    vsize = vsize_str(v);
+    for (i = 0; i < vsize; i++) {
+        expr = (*(vat_str(v, i)));
+        check__expr_assess(expr, operands, operators, " ");
+    }
+
+    /**< for debugging only, remove later. */
+    vputs_str(v);
+    vdelete_str(&v);
 
     return EXIT_SUCCESS;
 }
 
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
-    return 0;
+    char buffer[BUFFER_SIZE];
+    int j = 0;
+
+    j = sprintf(buffer + j,
+                "Found %s%d%s expressions: %s%d%s logical and %s%d%s arithmetic.", 
+                KWHT_b, ct_expr, KNRM, 
+                KWHT_b, ct_logical, KNRM, 
+                KWHT_b, ct_arithmetic, KNRM);
+
+    return fprintf(dest, "%s\n", buffer);
 }
 
 int check__fexpr_err(FILE *dest,
@@ -413,16 +476,43 @@ int check__fexpr_err(FILE *dest,
                      const char *expr_fragmt,
                      uint32_t ct_expr,
                      int index) {
-    return 0;
+    char buffer[BUFFER_SIZE];
+    char spaces[BUFFER_SIZE];
+    int i = 0;
+    int j = 0;
+
+    gcs__strcpy(spaces, "\t");
+
+    if (index > -1) {
+        for (i = 1; i <= index + 1; i++) {
+            *(spaces + i) = ' ';
+        }
+    }
+
+    j += sprintf(buffer + j, 
+                 "%s: "KWHT_b"%s"KNRM" in "KMAG_b"expression %d"KNRM": %s in\n\t\"%s\"\n", KRED_b"Error"KNRM, 
+                 err_type, ct_expr, desc, expr_fragmt);
+    
+    if (index > -1) {
+        j += sprintf(buffer + j, "%s%s", spaces, KYEL_b"^"KNRM);
+    }
+
+    return fprintf(dest, "%s\n", buffer);
 }
 
-char *check__expr_tok(char *src, const char *delim) { return NULL; }
+char *check__expr_tok(char *src, const char *delim) {
+
+
+    return src;
+}
 
 bool check__expr_assess(const char *expr,
                         const char *operands[],
-                        const char *operators,
+                        const char *operators[],
                         const char *delim) {
-
+    char str[256];
+    sprintf(str, "expr: %s", expr);
+    LOG(__FILE__, str);
     return false;
 }
 
@@ -447,7 +537,10 @@ void *str_copy(void *arg, const void *other) {
     char **target = (char **)(arg);
     char **source = (char **)(other);
 
-    (*target) = gcs__strdup((*source));
+    (*target) = malloc(gcs__strlen(*source) + 1);
+    massert_malloc((*target));
+    gcs__strcpy((*target), (*source));
+
     return (*target) ? (*target) : NULL;
 }
 
@@ -964,7 +1057,7 @@ void vclear_str(vector_str *v) {
         }
 
         v->ttbl->dtor(v->impl.finish);
-        bzero(v->impl.start, vsize_str(v));
+        gcs__memset(v->impl.start, 0, vsize_str(v));
         /* v->impl.finish is already at v->impl.start. */
     } else {
         /**
@@ -972,7 +1065,7 @@ void vclear_str(vector_str *v) {
          *  (no dtor function specified in ttbl) --
          *  we just memset and reset the finish pointer.
          */
-        bzero(v->impl.start, vsize_str(v));
+        gcs__memset(v->impl.start, 0, vsize_str(v));
         v->impl.finish = v->impl.start;
     }
 }
@@ -1154,19 +1247,21 @@ static void vdeinit_str(vector_str *v) {
 char *gcs__strcpy(char *dst, const char *src) {
     char ch = ' ';
     int i = 0;
+
     while ((ch = (*src++)) != '\0') {
         (*dst++) = ch;
         ++i;
     }
-    dst[i] = '\0';
 
-    
+    *(dst + i) = '\0';
+
     return dst;
 }
 
 char *gcs__strncpy(char *dst, const char *src, size_t n) {
     char ch = ' ';
     int i = 0;
+
     while ((ch = (*src++)) != '\0' && (i++) < n) {
         (*dst++) = ch;
     }
@@ -1236,7 +1331,7 @@ void *gcs__memcpy(void *dst, const void *src, size_t width) {
     int i = 0;
 
     for (i = 0; i < width; i++) {
-        dest[i] = source[i];
+        *(dest + i) = *(source + i);
     }
 
     return dst;
@@ -1251,11 +1346,11 @@ void *gcs__memmove(void *dst, const void *src, size_t width) {
     massert_malloc(temp);
 
     for (i = 0; i < width; i++) {
-        temp[i] = source[i];
+        *(temp + i) = *(source + i);
     }
 
     for (i = 0; i < width; i++) {
-        dest[i] = temp[i];
+        *(dest + i) + *(temp + i);
     }
 
     free(temp);
