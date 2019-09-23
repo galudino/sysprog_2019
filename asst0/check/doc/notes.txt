@@ -17,3 +17,57 @@ operator:
 
 
 
+Found 4 expressions: 2 arithmetic and 2 logical.
+OK.
+
+expr(0): error: expected '"' after expression end
+    "true and false
+                   ^
+expr(1):
+
+note
+error
+warning
+
+expression(0): error: expression was not ended
+    "1 + 2 1"
+          ^
+expression(0): error: unexpected operand
+    "1 + 2 1"
+           ^
+
+
+Found 3 expressions: 2 logical and 1 arithmetic.
+Error: Operand type mismatch in expression 2
+    "true & 5"
+            ^
+
+You will have the input string,
+a "cursor" variable that will keep the address of the current character position within the input string,
+and an integer to keep track of the numerical index of the current expression.
+Once you've separated an expression from the bulk input string,
+copy it and store it with the rest of the expressions that you will be tokenizing.
+
+Let's say we've reached our delimiter (defined to be ';')
+
+input_string                  "3 + 2; true AND false"
+cursor_variable                     ^
+index                               6
+
+copy_string                   3 + 2; true AND false
+
+copy_string, null terminated at copy_string[6]
+                              3 + 2
+
+stash copy_string for later use with the rest of the exprs
+
+move cursor_variable          "3 + 2; true AND false"
+                                     ^
+
+input_string (unprocessed input) is now:
+                               true AND false"
+                              ^ one char of whitespace before 't'
+
+reset index to 0.
+repeat until input_string depleted of chars.
+

@@ -194,7 +194,7 @@ enum ULOG_ATTRS {
     FUNCTION,
     MESSAGE
 };
-
+  
 bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
 
 #define ULOG_TOGGLE_ATTR(ULOG_ATTR)                                            \
