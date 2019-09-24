@@ -400,6 +400,8 @@ bool check__expr_assess(const char *expr,
 
 #define CHECK__OPERATORS "+", "-", "*", "/", "AND", "OR", "NOT"
 
+#define CHECK__USAGE "USAGE: ./check [input string]"
+
 int main(int argc, char *argv[]) {
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
@@ -413,6 +415,64 @@ int main(int argc, char *argv[]) {
     vector_str *v = NULL;
     size_t vsize = 0;
     char *expr = NULL;
+
+    {
+        uint32_t i = 0;
+        char msg[4096];
+        i += sprintf(msg + i, KNRM"\n\n%s\n", "USAGE:\n./check"KWHT_b" [input string]"KNRM);
+        i += sprintf(msg + i, "%s\n\n", "Argument count (argc) must be 2; argument values are \"./check\" and [input string].");
+        i += sprintf(msg + i, "%s\n\n", "The "KWHT_b"[input string]"KNRM" consists of one or more "KWHT_b"expressions."KNRM);
+
+        i += sprintf(msg + i, "%s\n", "An "KWHT_b"expression"KNRM" is comprised of multiple "KWHT_b"tokens"KNRM" --");
+        i += sprintf(msg + i, "%s\n\n", "which will denote an "KWHT_b"operand"KNRM","KWHT_b" operator"KNRM", or "KWHT_b"delimiter."KNRM);
+
+        i += sprintf(msg + i, "%s\n", "Possible operands: { \"false\", \"true\", \"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\" }");
+        i += sprintf(msg + i, "%s\n", "Possible operators: { \"AND\", \"OR\", \"NOT\", \"+\", \"-\", \"*\", \"/\" }"KNRM);
+        i += sprintf(msg + i, "%s\n\n", "Possible delimiters: { \" \", \";\" }");
+
+        i += sprintf(msg + i, "%s\n", "The delimiter \" \" (one character of whitespace) must appear:");
+        i += sprintf(msg + i, "\t%s\n", "after every operand and operator,");
+        i += sprintf(msg + i, "\t\t%s\n", "except for the last operand that ends the input string.");
+        i += sprintf(msg + i, "%s\n", "The delimiter \";\" must appear after each expression,");
+        i += sprintf(msg + i, "\t%s\n", "except for the last expression of an input string --");
+        i += sprintf(msg + i, "\t\t%s\n\n", "if and only if the input string has at least 2 expressions.");
+
+        i += sprintf(msg + i, "%s\n", "Both \"false\" and \"true\"");
+        i += sprintf(msg + i, "\t%s\n\n", "are "KWHT_b"logical"KNRM" operands.");
+        i += sprintf(msg + i, "%s\n", "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", and \"9\"");
+        i += sprintf(msg + i, "\t%s\n\n", "are "KWHT_b"arithmetic"KNRM" operands.");
+
+        i += sprintf(msg + i, "%s\n", "NOT is a "KWHT_b"unary logical"KNRM" operator.");
+        i += sprintf(msg + i, "%s\n", "An legal expression consisting of a unary logical operator");
+        i += sprintf(msg + i, "%s\n", "has one logical operand, which appears to the right of the operator, like this:");
+        i += sprintf(msg + i, "\t%s\n\n", "\"NOT true\"");
+
+        i += sprintf(msg + i, "%s\n", "AND and OR are "KWHT_b"binary logical"KNRM" operators.");
+        i += sprintf(msg + i, "%s\n", "Legal expressions consisting of a binary logical operator");
+        i += sprintf(msg + i, "%s\n", "have two logical operands, which appear on each side of the operator; they can look like this:");
+        i += sprintf(msg + i, "\t%s\n", "\"true OR false\"");
+        i += sprintf(msg + i, "\t%s\n", "\"false AND true\"");
+        i += sprintf(msg + i, "\t%s\n\n", "\"true OR false; false AND true\"");
+
+        i += sprintf(msg + i, "%s\n", "+, -, *, and / are "KWHT_b"binary arithmetic"KNRM" operators.");
+        i += sprintf(msg + i, "%s\n", "Legal expressions consisting of a binary arithmetic operator");
+        i += sprintf(msg + i, "%s\n", "have two arithmetic operands, which appear on each side of the operator; they can look like this:");
+        i += sprintf(msg + i, "\t%s\n", "\"2 + 2\"");
+        i += sprintf(msg + i, "\t%s\n", "\"9 - 5\"");
+        i += sprintf(msg + i, "\t%s\n\n", "\"2 * 2; 9 / 5\"");
+
+        i += sprintf(msg + i, "%s\n", "There is no limit as to how many expressions can go in an input string,");
+        i += sprintf(msg + i, "%s\n", "and logical/arithmetic expressions may coexist within the same input string.");
+        i += sprintf(msg + i, "\t%s\n", "However, mixing logical operands with arithmetic operators,");
+        i += sprintf(msg + i, "\t%s\n\n", "or arithmetic operands with logical operators is illegal.");
+
+        i += sprintf(msg + i, "%s\n", "Sample usage cases (program invocation and input string):");
+        i += sprintf(msg + i, "\t%s\n", "./check \"2 + 2\"");
+        i += sprintf(msg + i, "\t%s\n", "./check \"2 + 2; true OR false\"");
+        i += sprintf(msg + i, "\t%s\n", "./check \"false AND false; NOT true; 9 / 5\"");
+
+        massert(argc == 2, msg);
+    }
 
     pos = *(argv + 1);
     len = gcs__strlen(pos);
