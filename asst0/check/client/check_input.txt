@@ -1,1 +1,1 @@
-"3 + 2; false OR true"
+"3 + 2; NOT true"

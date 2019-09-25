@@ -290,10 +290,21 @@ size_t gcs__strlen(const char *src);
 int gcs__strcmp(const char *c1, const char *c2);
 int gcs__strncmp(const char *c1, const char *c2, size_t n);
 
+char *gcs__strtok(char *src, const char *delim);
+char *gcs__strtok_r(char *src, const char *delim, char **save_ptr);
+
 void *gcs__memcpy(void *dst, const void *src, size_t width);
 void *gcs__memmove(void *dst, const void *src, size_t width);
 void *gcs__memset(void *dst, int ch, size_t n);
 int gcs__memcmp(const void *s1, const void *s2, size_t n);
+#else
+#define gcs__strcpy strcpy
+#define gcs__strdup strdup
+#define gcs__strlen strlen
+#define gcs__strcmp strcmp
+#define gcs__strtok strtok
+#define gcs__memcpy memcpy
+#define gcs__memset memset
 #endif /* !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_) */
 
 #if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
@@ -305,9 +316,8 @@ int gcs__memcmp(const void *s1, const void *s2, size_t n);
 #endif
 
 #if __linux__ && !__POSIX__
-#define strdup(str) strcpy(malloc(strlen(str) + 1), src)
-#define strndup(str, n) strcpy(malloc(n + 1), (str + n))
-#endif /* __linux__ && !__POSIX__ */
+#define strdup(src) strcpy(malloc(strlen(src) + 1), src)
+#endif
 
 /**< (char *) will be address as str by vector_str. */
 typedef char *str;
@@ -381,6 +391,7 @@ void vfputsf_str(vector_str *v,
                  size_t breaklim);
 
 /**< check: client functions - logging/errors */
+void check__arg_check(int argc, const char *argv[]);
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic);
 int check__fexpr_err(FILE *dest,
                      const char *err_type,
@@ -399,11 +410,11 @@ int check__fexpr_err(FILE *dest,
     fexpr_err(stderr, err_type, desc, expr_fragmt, ct_expr, index)
 
 /**< check: client functions - tokenize */
-char *check__expr_tok(char *src, const char *delim);
+void check__expr_populate(vector_str *v, const char *input_string, const char *delimiter);
 bool check__expr_assess(const char *expr,
                         const char *operands[],
                         const char *operators[],
-                        const char *delim);
+                        const char *delimiter);
 
 #define CHECK__OPERANDS                                                        \
     "false", "true", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
@@ -411,8 +422,6 @@ bool check__expr_assess(const char *expr,
 #define CHECK__OPERATORS "+", "-", "*", "/", "AND", "OR", "NOT"
 
 #define CHECK__USAGE "USAGE: ./check [input string]"
-
-void check__argc_check(int argc);
 
 /**
  *  @brief  Program execution begins here
@@ -422,103 +431,40 @@ void check__argc_check(int argc);
  *
  *  @return     0 on success, else failure
  */
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
     /**
      *  Define the legal operands and operators
      */
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
+    const char *delimiter = NULL;
+    char *expr = NULL;
+    size_t i = 0; /**< loop control variable */
 
-    char *pos = NULL;           /**< address of current char in input string */
-    size_t len = 0;             /**< length of input string */
-    size_t i = 0;               /**< index of current char in pos */
-
-    vector_str *v = NULL;       /**< pointer to vector of char * */
-    size_t vsize = 0;           /**< logical length of vector_str */
-    char *expr = NULL;          /**< tokenized expression from pos */
+    vector_str *v = NULL; /**< pointer to vector of char * */
+    size_t vsize = 0;     /**< logical length of vector_str */
 
     /**
-     *  Check argument count (argc).
+     *  Check argument count (argc)
+     *  and argument value (argv).
+     *
      *  If argc != 2, abort.
+     *  If gcs__strlen(argv[1]) == 0, abort.
      */
-    check__argc_check(argc);
-
-    /**
-     *  argv[1], (or *(argv + 1)), is the input string.
-     *  pos is the address of the current position within argv[1]
-     *  for tokenization.
-     *
-     *  len is the character length of pos, which is also
-     *  the character length of the entire input string, argv[1].
-     */
-    pos = *(argv + 1);
-    len = gcs__strlen(pos);
-
-    /**
-     *  While left side of input string is a whitespace,
-     *  advance pos (we are left-side trimming the whitespaces)
-     *  
-     *  (A failsafe against input strings coming from a file.)
-     */
-    while ((*pos) == ' ') {
-        ++pos;
-    }
-
-    /**
-     *  If first non-whitespace char is a '"',
-     *  advance pos one character.
-     *
-     *  (We do not want the introductory '"' from the input string
-     *   to be included in the first tokenized expression)
-     */
-    pos += (*pos) == '\"' ? 1 : 0;
-
-    /**
-     *  If the last char in pos is a '"', null terminate pos.
-     *  Otherwise, leave it alone (it will be assigned whatever it is now)
-     *
-     *  (We do not want the '"' char prior to the null terminator
-     *   to be included in the last tokenized expression)
-     */
-    *(pos + (len - 1)) = *(pos + (len - 1)) == '\"' ? '\0' : *(pos + (len - 1));
+    check__arg_check(argc, argv);
 
     /**
      *  Create and construct an instance of vector_str.
-     *  Set i = 0; i is the numerical index of pos --
-     *  this is reset each time pos is null terminated,
-     *  denoting the end of token.
+     *  Expression strings are stored here.
+     *
+     *  vector_str v will be sent to
+     *  check__expr_populate, along with argv[1],
+     *  the input string, and
      */
     v = vnew_str();
-    i = 0;
 
-    for (i = 0; i < len; i++) {
-        /**
-         *  If pos[i] (or *(pos + i)) == ';',
-         *  null terminate at pos[i] (set pos[i] == '\0').
-         *
-         *  Set expr equal to pos -- this is the expression
-         *  that will be pushed to vector_str v.
-         *  Push expr to v. (expr is deep copied into v's buffer.)
-         *  
-         *  Advance pos (i + 1) characters forward --
-         *  this is one character beyond the null-terminator placed
-         *  at pos[i].
-         *
-         *  Reset i to 0. (i is reset after a new expr is pushed to v.)
-         */
-        if (*(pos + i) == ';') {
-            *(pos + i) = '\0';
-            expr = pos;
-            vpushb_str(v, expr);
-            pos += (i + 1);
-            i = 0;
-        }
-    }
-
-    /**
-     *  Push the last token to vector_str v.
-     */
-    vpushb_str(v, pos);
+    delimiter = ";";
+    check__expr_populate(v, argv[1], delimiter);
 
     /**
      *  Retrieve the size of vector_str v,
@@ -526,26 +472,36 @@ int main(int argc, char *argv[]) {
      */
     vsize = vsize_str(v);
     for (i = 0; i < vsize; i++) {
-        expr = (*(vat_str(v, i)));
-        check__expr_assess(expr, operands, operators, " ");
+        size_t len = 0;
+        size_t j = 0;
+        char *expr = (*(vat_str(v, i)));
+
+        LOG(__FILE__, expr);
+        /*check__expr_assess(expr, operands, operators, " ");*/
     }
 
-    /**< for debugging only, remove later. */
-    vputs_str(v);
+    vputs_str(v); /**< for debugging only, remove later. */
     vdelete_str(&v);
 
     return EXIT_SUCCESS;
 }
 
-void check__argc_check(int argc) {
+void check__arg_check(int argc, const char *argv[]) {
     uint32_t i = 0;
     char msg[4096];
+    size_t input_len = 0;
+
     i += sprintf(msg + i,
                  KNRM "\n\n%s\n",
                  "USAGE:\n./check" KWHT_b " [input string]" KNRM);
-    i += sprintf(msg + i, "%s\n\n", "Argument count (argc) must be 2; argument "
-                                    "values are \"./check\" and [input "
-                                    "string].");
+
+    i += sprintf(msg + i,
+                 "\n%s\n%s\n\n",
+                 "Argument count (argc) must be 2; argument "
+                 "values are \"./check\" and [input "
+                 "string].",
+                 "[input_string] must have a length greater than 0.");
+
     i += sprintf(msg + i,
                  "%s\n\n",
                  "The " KWHT_b "[input string]" KNRM
@@ -560,15 +516,21 @@ void check__argc_check(int argc) {
                  "which will denote an " KWHT_b "operand" KNRM "," KWHT_b
                  " operator" KNRM ", or " KWHT_b "delimiter." KNRM);
 
-    i += sprintf(msg + i, "%s\n", "Possible operands: { \"false\", \"true\", "
-                                  "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", "
-                                  "\"6\", \"7\", \"8\", \"9\" }");
-    i += sprintf(msg + i, "%s\n", "Possible operators: { \"AND\", \"OR\", "
-                                  "\"NOT\", \"+\", \"-\", \"*\", \"/\" }" KNRM);
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "Possible operands: { \"false\", \"true\", "
+                 "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", "
+                 "\"6\", \"7\", \"8\", \"9\" }");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "Possible operators: { \"AND\", \"OR\", "
+                 "\"NOT\", \"+\", \"-\", \"*\", \"/\" }" KNRM);
     i += sprintf(msg + i, "%s\n\n", "Possible delimiters: { \" \", \";\" }");
 
-    i += sprintf(msg + i, "%s\n", "The delimiter \" \" (one character of "
-                                  "whitespace) must appear:");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "The delimiter \" \" (one character of "
+                 "whitespace) must appear:");
     i += sprintf(msg + i, "\t%s\n", "after every operand and operator,");
     i += sprintf(msg + i,
                  "\t\t%s\n",
@@ -586,8 +548,10 @@ void check__argc_check(int argc) {
     i += sprintf(msg + i, "%s\n", "Both \"false\" and \"true\"");
     i +=
         sprintf(msg + i, "\t%s\n\n", "are " KWHT_b "logical" KNRM " operands.");
-    i += sprintf(msg + i, "%s\n", "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", "
-                                  "\"6\", \"7\", \"8\", and \"9\"");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", "
+                 "\"6\", \"7\", \"8\", and \"9\"");
     i += sprintf(msg + i,
                  "\t%s\n\n",
                  "are " KWHT_b "arithmetic" KNRM " operands.");
@@ -598,17 +562,21 @@ void check__argc_check(int argc) {
     i += sprintf(msg + i,
                  "%s\n",
                  "An legal expression consisting of a unary logical operator");
-    i += sprintf(msg + i, "%s\n", "has one logical operand, which appears to "
-                                  "the right of the operator, like this:");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "has one logical operand, which appears to "
+                 "the right of the operator, like this:");
     i += sprintf(msg + i, "\t%s\n\n", "\"NOT true\"");
 
     i += sprintf(msg + i, "%s\n", "AND and OR are " KWHT_b "binary logical" KNRM " operators.");
     i += sprintf(msg + i,
                  "%s\n",
                  "Legal expressions consisting of a binary logical operator");
-    i += sprintf(msg + i, "%s\n", "have two logical operands, which appear on "
-                                  "each side of the operator; they can look "
-                                  "like this:");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "have two logical operands, which appear on "
+                 "each side of the operator; they can look "
+                 "like this:");
     i += sprintf(msg + i, "\t%s\n", "\"true OR false\"");
     i += sprintf(msg + i, "\t%s\n", "\"false AND true\"");
     i += sprintf(msg + i, "\t%s\n\n", "\"true OR false; false AND true\"");
@@ -621,17 +589,23 @@ void check__argc_check(int argc) {
         sprintf(msg + i,
                 "%s\n",
                 "Legal expressions consisting of a binary arithmetic operator");
-    i += sprintf(msg + i, "%s\n", "have two arithmetic operands, which appear "
-                                  "on each side of the operator; they can look "
-                                  "like this:");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "have two arithmetic operands, which appear "
+                 "on each side of the operator; they can look "
+                 "like this:");
     i += sprintf(msg + i, "\t%s\n", "\"2 + 2\"");
     i += sprintf(msg + i, "\t%s\n", "\"9 - 5\"");
     i += sprintf(msg + i, "\t%s\n\n", "\"2 * 2; 9 / 5\"");
 
-    i += sprintf(msg + i, "%s\n", "There is no limit as to how many "
-                                  "expressions can go in an input string,");
-    i += sprintf(msg + i, "%s\n", "and logical/arithmetic expressions may "
-                                  "coexist within the same input string.");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "There is no limit as to how many "
+                 "expressions can go in an input string,");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "and logical/arithmetic expressions may "
+                 "coexist within the same input string.");
     i += sprintf(msg + i,
                  "\t%s\n",
                  "However, mixing logical operands with arithmetic operators,");
@@ -648,7 +622,8 @@ void check__argc_check(int argc) {
                  "\t%s\n",
                  "./check \"false AND false; NOT true; 9 / 5\"");
 
-    massert(argc == 2, msg);
+    input_len = argc >= 2 ? gcs__strlen(argv[1]) : input_len;
+    massert((argc == 2) && (input_len > 0), msg);
 }
 
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
@@ -706,7 +681,63 @@ int check__fexpr_err(FILE *dest,
     return fprintf(dest, "%s\n", buffer);
 }
 
-char *check__expr_tok(char *src, const char *delim) { return src; }
+void check__expr_populate(vector_str *v, const char *input_string, const char *delimiter) {
+    char *pos = gcs__strdup(input_string);
+    size_t len = gcs__strlen(pos);
+
+    /**
+        *  Failsafe,
+        *  in case the graders end up having
+        *  argv[1] come from a text file.
+        *
+        *  If first non-whitespace char is a '"',
+        *  advance pos one character.
+        *
+        *  (We do not want the introductory '"' from the input string
+        *   to be included in the first tokenized expression)
+        */
+    pos += (*pos) == '"' ? 1 : 0;
+
+    /**
+     *  Failsafe,
+     *  in case the graders end up having
+     *  argv[1] come from a text file.
+     *
+     *  If the last char in pos is a '"', null terminate pos.
+     *  Otherwise, leave it alone (it will be assigned whatever it is now)
+     *
+     *  (We do not want the '"' char prior to the null terminator
+     *   to be included in the last tokenized expression)
+     */
+    *(pos + (len - 2)) = *(pos + (len - 2)) == '\"' ? '\0' : *(pos + (len - 2));
+
+    /**
+     *  Initialize the tokenizer by invoking gcs__strtok
+     *  with the position string, pos, that points to the
+     *  current character within input_string.
+     *
+     *  Capture the token in expr and append it
+     *  to the vector_str instance.
+     *
+     *  (Since gcs__strtok mutates pos each time
+     *   it is invoked, we must deep copy expr into
+     *   the vector.)
+     */
+    pos = gcs__strtok(pos, delimiter);
+    vpushb_str(v, pos);
+
+    /**
+     *  While valid non-null tokens can be parsed,
+     *  assign them to expr and push expr
+     *  to the vector.
+     */
+    while ((pos = gcs__strtok(NULL, delimiter)) != NULL) {
+        vpushb_str(v, pos);
+    }
+
+    free(pos);
+    pos = NULL;
+}
 
 bool check__expr_assess(const char *expr,
                         const char *operands[],
@@ -1439,8 +1470,9 @@ static void vinit_str(vector_str *v, size_t capacity) {
     v->ttbl = _str_;
 
     if (capacity <= 0) {
-        WARNING(__FILE__, "Provided input capacity was less than or equal to "
-                          "0. Will default to capacity of 1.");
+        WARNING(__FILE__,
+                "Provided input capacity was less than or equal to "
+                "0. Will default to capacity of 1.");
         capacity = 1;
     }
 
@@ -1541,6 +1573,59 @@ int gcs__strcmp(const char *c1, const char *c2) {
     return diff;
 }
 
+char *gcs__strtok(char *src, const char *delim) {
+    static char *old_str = NULL;
+    return gcs__strtok_r(src, delim, &old_str);
+}
+
+char *gcs__strtok_r(char *src, const char *delim, char **save_ptr) {
+    char *end = NULL;
+    size_t len = 0;
+    size_t i = 0;
+
+    src = src ? src : (*save_ptr);
+
+    /**
+     *  Nothing to tokenize.
+     */
+    if ((*src) == '\0') {
+        (*save_ptr) = src;
+        return NULL;
+    }
+
+    /**
+     *  Advance to delimiter delim.
+     */
+    len = gcs__strlen(src);
+    for (i = 0; i < len; i++) {
+        if (src[i] == (*delim)) {
+            break;
+        }
+    }
+
+    if ((*src) == '\0') {
+        /**
+         *  End of string reached.
+         *  Delimiter never found.
+         */
+        (*save_ptr) = src;
+        return NULL;
+    } else {
+        src[i] = '\0';
+    }
+
+    end = src + (i + 1);
+
+    if ((*end) == '\0') {
+        (*save_ptr) = end;
+        return src;
+    }
+
+    (*save_ptr) = end;
+
+    return src;
+}
+
 int gcs__strncmp(const char *c1, const char *c2, size_t n) {
     int diff = 0;
     int i = 0;
@@ -1591,6 +1676,7 @@ void *gcs__memmove(void *dst, const void *src, size_t width) {
 void *gcs__memset(void *dst, int ch, size_t n) {}
 
 int gcs__memcmp(const void *s1, const void *s2, size_t n) {}
+#else
 
 #endif /* !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_) */
 
