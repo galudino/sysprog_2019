@@ -402,6 +402,8 @@ bool check__expr_assess(const char *expr,
 
 #define CHECK__USAGE "USAGE: ./check [input string]"
 
+void check__argc_check(int argc);
+
 int main(int argc, char *argv[]) {
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
@@ -416,7 +418,60 @@ int main(int argc, char *argv[]) {
     size_t vsize = 0;
     char *expr = NULL;
 
-    {
+    check__argc_check();
+
+    pos = *(argv + 1);
+    len = gcs__strlen(pos);
+
+    /**
+     *  While left side of input string is a whitespace,
+     *  advance pos (we are left-side trimming the whitespaces)
+     */
+    while ((*pos) == ' ') {
+        ++pos;
+    }
+
+    /**
+     *  If the last char in pos is a '"', null terminate pos.
+     *  Otherwise, leave it alone (it will be assigned whatever it is now)
+     */ 
+    *(pos + (len - 1)) = *(pos + (len - 1)) == '\"' ? '\0' : *(pos + (len - 1));
+
+    v = vnew_str();
+    i = 0;
+
+    for (i = 0; i < len; i++) {
+        if (*(pos + i) == '"' && first_char) {
+            pos += (i + 1);
+        }
+
+        if (*(pos + i) == ';') {
+            *(pos + i) = '\0';
+            expr = pos;
+            vpushb_str(v, expr);
+            pos += (i + 1);
+            i = 0;
+        }
+
+        first_char = first_char ? false : first_char;
+    }
+
+    vpushb_str(v, pos);
+
+    vsize = vsize_str(v);
+    for (i = 0; i < vsize; i++) {
+        expr = (*(vat_str(v, i)));
+        check__expr_assess(expr, operands, operators, " ");
+    }
+
+    /**< for debugging only, remove later. */
+    vputs_str(v);
+    vdelete_str(&v);
+
+    return EXIT_SUCCESS;
+}
+
+void check__argc_check(int argc) {
         uint32_t i = 0;
         char msg[4096];
         i += sprintf(msg + i, KNRM"\n\n%s\n", "USAGE:\n./check"KWHT_b" [input string]"KNRM);
@@ -472,49 +527,6 @@ int main(int argc, char *argv[]) {
         i += sprintf(msg + i, "\t%s\n", "./check \"false AND false; NOT true; 9 / 5\"");
 
         massert(argc == 2, msg);
-    }
-
-    pos = *(argv + 1);
-    len = gcs__strlen(pos);
-
-    while ((*pos) == ' ') {
-        ++pos;
-    }
-
-    *(pos + (len - 1)) = *(pos + (len - 1)) == '\"' ? '\0' : *(pos + (len - 1));
-
-    v = vnew_str();
-    i = 0;
-
-    for (i = 0; i < len; i++) {
-        if (*(pos + i) == '"' && first_char) {
-            pos += (i + 1);
-        }
-
-        if (*(pos + i) == ';') {
-            *(pos + i) = '\0';
-            expr = pos;
-            vpushb_str(v, expr);
-            pos += (i + 1);
-            i = 0;
-        }
-
-        first_char = first_char ? false : first_char;
-    }
-
-    vpushb_str(v, pos);
-
-    vsize = vsize_str(v);
-    for (i = 0; i < vsize; i++) {
-        expr = (*(vat_str(v, i)));
-        check__expr_assess(expr, operands, operators, " ");
-    }
-
-    /**< for debugging only, remove later. */
-    vputs_str(v);
-    vdelete_str(&v);
-
-    return EXIT_SUCCESS;
 }
 
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
