@@ -143,19 +143,17 @@ bool ulog_attrs_disable[] = { false, false, false, false, false, false, false };
  *  @brief      Shorthand macro for ulog to display warning for a program
  */
 #if __STDC_VERSION__ >= 199901L
-# ifndef ULOG_DISABLE_WARNING
-#  define WARNING(FILEMACRO, ...)                                                \
-          ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__,                \
-          (long int)__LINE__, __VA_ARGS__)
-# endif /* ULOG_DISABLE_WARNING */
+#ifndef ULOG_DISABLE_WARNING
+#define WARNING(FILEMACRO, ...)                                                \
+    ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__, (long int)__LINE__, __VA_ARGS__)
+#endif /* ULOG_DISABLE_WARNING */
 #else
-# ifndef ULOG_DISABLE_WARNING
-#  define WARNING(FILEMACRO, MSG)                                                \
-          ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__,                \
-          (long int)__LINE__, MSG)
-# else
-#  define WARNING(FILEMACRO, MSG)
-# endif /* ULOG_DISABLE_WARNING */
+#ifndef ULOG_DISABLE_WARNING
+#define WARNING(FILEMACRO, MSG)                                                \
+    ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+#else
+#define WARNING(FILEMACRO, MSG)
+#endif /* ULOG_DISABLE_WARNING */
 #endif /* __STDC_VERSION__ >= 199901L */
 
 /**
@@ -194,7 +192,7 @@ enum ULOG_ATTRS {
     FUNCTION,
     MESSAGE
 };
-  
+
 bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
 
 #define ULOG_TOGGLE_ATTR(ULOG_ATTR)                                            \
@@ -266,8 +264,12 @@ ULOG_TOGGLE_ATTR(MESSAGE);
             "[Request for heap storage reallocation failed (realloc returned " \
             "NULL and was assigned to '" #PTR "')]");
 
-#define massert_container(PTR);\
-massert(PTR, "['"#PTR"' was found to be NULL - '"#PTR"' must be assigned to the return value of a container initializer function prior to use.]");
+#define massert_container(PTR)                                                 \
+    ;                                                                          \
+    massert(PTR,                                                               \
+            "['" #PTR "' was found to be NULL - '" #PTR                        \
+            "' must be assigned to the return value of a container "           \
+            "initializer function prior to use.]");
 
 #define massert_pfunc(PFUNC)                                                   \
     ;                                                                          \
@@ -363,12 +365,20 @@ void vclear_str(vector_str *v);
 
 /**< vector_str: custom print functions - output to FILE stream */
 void vputs_str(vector_str *v);
-void vputsf_str(vector_str *v, const char *before, const char *after,
-               const char *postelem, const char *empty, size_t breaklim);
-void vfputs_str(vector_str *v, FILE *dest);
-void vfputsf_str(vector_str *v, FILE *dest, const char *before,
-                const char *after, const char *postelem, const char *empty,
+void vputsf_str(vector_str *v,
+                const char *before,
+                const char *after,
+                const char *postelem,
+                const char *empty,
                 size_t breaklim);
+void vfputs_str(vector_str *v, FILE *dest);
+void vfputsf_str(vector_str *v,
+                 FILE *dest,
+                 const char *before,
+                 const char *after,
+                 const char *postelem,
+                 const char *empty,
+                 size_t breaklim);
 
 /**< check: client functions - logging/errors */
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic);
@@ -404,22 +414,44 @@ bool check__expr_assess(const char *expr,
 
 void check__argc_check(int argc);
 
+/**
+ *  @brief  Program execution begins here
+ *
+ *  @param[in]  argc    Argument count (sizeof(argv))
+ *  @param[in]  argv    Command line arguments
+ *
+ *  @return     0 on success, else failure
+ */
 int main(int argc, char *argv[]) {
+    /**
+     *  Define the legal operands and operators
+     */
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
 
-    char *pos = NULL;
-    size_t len = 0;
-    size_t i = 0;
-    char ch = ' ';
-    bool first_char = true;
+    char *pos = NULL;           /**< address of current char in input string */
+    size_t len = 0;             /**< length of input string */
+    size_t i = 0;               /**< index of current char in pos */
+    bool first_char = true;     /**< flag to determine if first char reading */
 
-    vector_str *v = NULL;
-    size_t vsize = 0;
-    char *expr = NULL;
+    vector_str *v = NULL;       /**< pointer to vector of char * */
+    size_t vsize = 0;           /**< logical length of vector_str */
+    char *expr = NULL;          /**< tokenized expression from pos */
 
-    check__argc_check();
+    /**
+     *  Check argument count (argc).
+     *  If argc != 2, abort.
+     */
+    check__argc_check(argc);
 
+    /**
+     *  argv[1], (or *(argv + 1)), is the input string.
+     *  pos is the address of the current position within argv[1]
+     *  for tokenization.
+     *
+     *  len is the character length of pos, which is also
+     *  the character length of the entire input string, argv[1].
+     */
     pos = *(argv + 1);
     len = gcs__strlen(pos);
 
@@ -434,17 +466,43 @@ int main(int argc, char *argv[]) {
     /**
      *  If the last char in pos is a '"', null terminate pos.
      *  Otherwise, leave it alone (it will be assigned whatever it is now)
-     */ 
+     */
     *(pos + (len - 1)) = *(pos + (len - 1)) == '\"' ? '\0' : *(pos + (len - 1));
 
+    /**
+     *  Create and construct an instance of vector_str.
+     *  Set i = 0; i is the numerical index of pos --
+     *  this is reset each time pos is null terminated,
+     *  denoting the end of token.
+     */
     v = vnew_str();
     i = 0;
 
     for (i = 0; i < len; i++) {
+        /**
+         *  If pos[i] (or *(pos + i)) == '"', 
+         *  and it is the first character of input_string,
+         *  advance pos one address forward.
+         *  (we don't want '"' as part of the first token.)
+         */
         if (*(pos + i) == '"' && first_char) {
             pos += (i + 1);
         }
 
+        /**
+         *  If pos[i] (or *(pos + i)) == ';',
+         *  null terminate at pos[i] (set pos[i] == '\0').
+         *
+         *  Set expr equal to pos -- this is the expression
+         *  that will be pushed to vector_str v.
+         *  Push expr to v. (expr is deep copied into v's buffer.)
+         *  
+         *  Advance pos (i + 1) characters forward --
+         *  this is one character beyond the null-terminator placed
+         *  at pos[i].
+         *
+         *  Reset i to 0. (i is reset after a new expr is pushed to v.)
+         */
         if (*(pos + i) == ';') {
             *(pos + i) = '\0';
             expr = pos;
@@ -453,11 +511,21 @@ int main(int argc, char *argv[]) {
             i = 0;
         }
 
+        /**
+         *  first_char becomes false after the first iteration.
+         */
         first_char = first_char ? false : first_char;
     }
 
+    /**
+     *  Push the last token to vector_str v.
+     */
     vpushb_str(v, pos);
 
+    /**
+     *  Retrieve the size of vector_str v,
+     *  this denotes the amount of tokens found.
+     */
     vsize = vsize_str(v);
     for (i = 0; i < vsize; i++) {
         expr = (*(vat_str(v, i)));
@@ -472,61 +540,117 @@ int main(int argc, char *argv[]) {
 }
 
 void check__argc_check(int argc) {
-        uint32_t i = 0;
-        char msg[4096];
-        i += sprintf(msg + i, KNRM"\n\n%s\n", "USAGE:\n./check"KWHT_b" [input string]"KNRM);
-        i += sprintf(msg + i, "%s\n\n", "Argument count (argc) must be 2; argument values are \"./check\" and [input string].");
-        i += sprintf(msg + i, "%s\n\n", "The "KWHT_b"[input string]"KNRM" consists of one or more "KWHT_b"expressions."KNRM);
+    uint32_t i = 0;
+    char msg[4096];
+    i += sprintf(msg + i,
+                 KNRM "\n\n%s\n",
+                 "USAGE:\n./check" KWHT_b " [input string]" KNRM);
+    i += sprintf(msg + i, "%s\n\n", "Argument count (argc) must be 2; argument "
+                                    "values are \"./check\" and [input "
+                                    "string].");
+    i += sprintf(msg + i,
+                 "%s\n\n",
+                 "The " KWHT_b "[input string]" KNRM
+                 " consists of one or more " KWHT_b "expressions." KNRM);
 
-        i += sprintf(msg + i, "%s\n", "An "KWHT_b"expression"KNRM" is comprised of multiple "KWHT_b"tokens"KNRM" --");
-        i += sprintf(msg + i, "%s\n\n", "which will denote an "KWHT_b"operand"KNRM","KWHT_b" operator"KNRM", or "KWHT_b"delimiter."KNRM);
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "An " KWHT_b "expression" KNRM
+                 " is comprised of multiple " KWHT_b "tokens" KNRM " --");
+    i += sprintf(msg + i,
+                 "%s\n\n",
+                 "which will denote an " KWHT_b "operand" KNRM "," KWHT_b
+                 " operator" KNRM ", or " KWHT_b "delimiter." KNRM);
 
-        i += sprintf(msg + i, "%s\n", "Possible operands: { \"false\", \"true\", \"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\" }");
-        i += sprintf(msg + i, "%s\n", "Possible operators: { \"AND\", \"OR\", \"NOT\", \"+\", \"-\", \"*\", \"/\" }"KNRM);
-        i += sprintf(msg + i, "%s\n\n", "Possible delimiters: { \" \", \";\" }");
+    i += sprintf(msg + i, "%s\n", "Possible operands: { \"false\", \"true\", "
+                                  "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", "
+                                  "\"6\", \"7\", \"8\", \"9\" }");
+    i += sprintf(msg + i, "%s\n", "Possible operators: { \"AND\", \"OR\", "
+                                  "\"NOT\", \"+\", \"-\", \"*\", \"/\" }" KNRM);
+    i += sprintf(msg + i, "%s\n\n", "Possible delimiters: { \" \", \";\" }");
 
-        i += sprintf(msg + i, "%s\n", "The delimiter \" \" (one character of whitespace) must appear:");
-        i += sprintf(msg + i, "\t%s\n", "after every operand and operator,");
-        i += sprintf(msg + i, "\t\t%s\n", "except for the last operand that ends the input string.");
-        i += sprintf(msg + i, "%s\n", "The delimiter \";\" must appear after each expression,");
-        i += sprintf(msg + i, "\t%s\n", "except for the last expression of an input string --");
-        i += sprintf(msg + i, "\t\t%s\n\n", "if and only if the input string has at least 2 expressions.");
+    i += sprintf(msg + i, "%s\n", "The delimiter \" \" (one character of "
+                                  "whitespace) must appear:");
+    i += sprintf(msg + i, "\t%s\n", "after every operand and operator,");
+    i += sprintf(msg + i,
+                 "\t\t%s\n",
+                 "except for the last operand that ends the input string.");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "The delimiter \";\" must appear after each expression,");
+    i += sprintf(msg + i,
+                 "\t%s\n",
+                 "except for the last expression of an input string --");
+    i += sprintf(msg + i,
+                 "\t\t%s\n\n",
+                 "if and only if the input string has at least 2 expressions.");
 
-        i += sprintf(msg + i, "%s\n", "Both \"false\" and \"true\"");
-        i += sprintf(msg + i, "\t%s\n\n", "are "KWHT_b"logical"KNRM" operands.");
-        i += sprintf(msg + i, "%s\n", "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", and \"9\"");
-        i += sprintf(msg + i, "\t%s\n\n", "are "KWHT_b"arithmetic"KNRM" operands.");
+    i += sprintf(msg + i, "%s\n", "Both \"false\" and \"true\"");
+    i +=
+        sprintf(msg + i, "\t%s\n\n", "are " KWHT_b "logical" KNRM " operands.");
+    i += sprintf(msg + i, "%s\n", "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", "
+                                  "\"6\", \"7\", \"8\", and \"9\"");
+    i += sprintf(msg + i,
+                 "\t%s\n\n",
+                 "are " KWHT_b "arithmetic" KNRM " operands.");
 
-        i += sprintf(msg + i, "%s\n", "NOT is a "KWHT_b"unary logical"KNRM" operator.");
-        i += sprintf(msg + i, "%s\n", "An legal expression consisting of a unary logical operator");
-        i += sprintf(msg + i, "%s\n", "has one logical operand, which appears to the right of the operator, like this:");
-        i += sprintf(msg + i, "\t%s\n\n", "\"NOT true\"");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "NOT is a " KWHT_b "unary logical" KNRM " operator.");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "An legal expression consisting of a unary logical operator");
+    i += sprintf(msg + i, "%s\n", "has one logical operand, which appears to "
+                                  "the right of the operator, like this:");
+    i += sprintf(msg + i, "\t%s\n\n", "\"NOT true\"");
 
-        i += sprintf(msg + i, "%s\n", "AND and OR are "KWHT_b"binary logical"KNRM" operators.");
-        i += sprintf(msg + i, "%s\n", "Legal expressions consisting of a binary logical operator");
-        i += sprintf(msg + i, "%s\n", "have two logical operands, which appear on each side of the operator; they can look like this:");
-        i += sprintf(msg + i, "\t%s\n", "\"true OR false\"");
-        i += sprintf(msg + i, "\t%s\n", "\"false AND true\"");
-        i += sprintf(msg + i, "\t%s\n\n", "\"true OR false; false AND true\"");
+    i += sprintf(msg + i, "%s\n", "AND and OR are " KWHT_b "binary logical" KNRM " operators.");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "Legal expressions consisting of a binary logical operator");
+    i += sprintf(msg + i, "%s\n", "have two logical operands, which appear on "
+                                  "each side of the operator; they can look "
+                                  "like this:");
+    i += sprintf(msg + i, "\t%s\n", "\"true OR false\"");
+    i += sprintf(msg + i, "\t%s\n", "\"false AND true\"");
+    i += sprintf(msg + i, "\t%s\n\n", "\"true OR false; false AND true\"");
 
-        i += sprintf(msg + i, "%s\n", "+, -, *, and / are "KWHT_b"binary arithmetic"KNRM" operators.");
-        i += sprintf(msg + i, "%s\n", "Legal expressions consisting of a binary arithmetic operator");
-        i += sprintf(msg + i, "%s\n", "have two arithmetic operands, which appear on each side of the operator; they can look like this:");
-        i += sprintf(msg + i, "\t%s\n", "\"2 + 2\"");
-        i += sprintf(msg + i, "\t%s\n", "\"9 - 5\"");
-        i += sprintf(msg + i, "\t%s\n\n", "\"2 * 2; 9 / 5\"");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "+, -, *, and / are " KWHT_b "binary arithmetic" KNRM
+                 " operators.");
+    i +=
+        sprintf(msg + i,
+                "%s\n",
+                "Legal expressions consisting of a binary arithmetic operator");
+    i += sprintf(msg + i, "%s\n", "have two arithmetic operands, which appear "
+                                  "on each side of the operator; they can look "
+                                  "like this:");
+    i += sprintf(msg + i, "\t%s\n", "\"2 + 2\"");
+    i += sprintf(msg + i, "\t%s\n", "\"9 - 5\"");
+    i += sprintf(msg + i, "\t%s\n\n", "\"2 * 2; 9 / 5\"");
 
-        i += sprintf(msg + i, "%s\n", "There is no limit as to how many expressions can go in an input string,");
-        i += sprintf(msg + i, "%s\n", "and logical/arithmetic expressions may coexist within the same input string.");
-        i += sprintf(msg + i, "\t%s\n", "However, mixing logical operands with arithmetic operators,");
-        i += sprintf(msg + i, "\t%s\n\n", "or arithmetic operands with logical operators is illegal.");
+    i += sprintf(msg + i, "%s\n", "There is no limit as to how many "
+                                  "expressions can go in an input string,");
+    i += sprintf(msg + i, "%s\n", "and logical/arithmetic expressions may "
+                                  "coexist within the same input string.");
+    i += sprintf(msg + i,
+                 "\t%s\n",
+                 "However, mixing logical operands with arithmetic operators,");
+    i += sprintf(msg + i,
+                 "\t%s\n\n",
+                 "or arithmetic operands with logical operators is illegal.");
 
-        i += sprintf(msg + i, "%s\n", "Sample usage cases (program invocation and input string):");
-        i += sprintf(msg + i, "\t%s\n", "./check \"2 + 2\"");
-        i += sprintf(msg + i, "\t%s\n", "./check \"2 + 2; true OR false\"");
-        i += sprintf(msg + i, "\t%s\n", "./check \"false AND false; NOT true; 9 / 5\"");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "Sample usage cases (program invocation and input string):");
+    i += sprintf(msg + i, "\t%s\n", "./check \"2 + 2\"");
+    i += sprintf(msg + i, "\t%s\n", "./check \"2 + 2; true OR false\"");
+    i += sprintf(msg + i,
+                 "\t%s\n",
+                 "./check \"false AND false; NOT true; 9 / 5\"");
 
-        massert(argc == 2, msg);
+    massert(argc == 2, msg);
 }
 
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
@@ -534,10 +658,17 @@ int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t
     int j = 0;
 
     j = sprintf(buffer + j,
-                "Found %s%d%s expressions: %s%d%s logical and %s%d%s arithmetic.", 
-                KWHT_b, ct_expr, KNRM, 
-                KWHT_b, ct_logical, KNRM, 
-                KWHT_b, ct_arithmetic, KNRM);
+                "Found %s%d%s expressions: %s%d%s logical and %s%d%s "
+                "arithmetic.",
+                KWHT_b,
+                ct_expr,
+                KNRM,
+                KWHT_b,
+                ct_logical,
+                KNRM,
+                KWHT_b,
+                ct_arithmetic,
+                KNRM);
 
     return fprintf(dest, "%s\n", buffer);
 }
@@ -561,22 +692,23 @@ int check__fexpr_err(FILE *dest,
         }
     }
 
-    j += sprintf(buffer + j, 
-                 "%s: "KWHT_b"%s"KNRM" in "KMAG_b"expression %d"KNRM": %s in\n\t\"%s\"\n", KRED_b"Error"KNRM, 
-                 err_type, ct_expr, desc, expr_fragmt);
-    
+    j += sprintf(buffer + j,
+                 "%s: " KWHT_b "%s" KNRM " in " KMAG_b "expression %d" KNRM
+                 ": %s in\n\t\"%s\"\n",
+                 KRED_b "Error" KNRM,
+                 err_type,
+                 ct_expr,
+                 desc,
+                 expr_fragmt);
+
     if (index > -1) {
-        j += sprintf(buffer + j, "%s%s", spaces, KYEL_b"^"KNRM);
+        j += sprintf(buffer + j, "%s%s", spaces, KYEL_b "^" KNRM);
     }
 
     return fprintf(dest, "%s\n", buffer);
 }
 
-char *check__expr_tok(char *src, const char *delim) {
-
-
-    return src;
-}
+char *check__expr_tok(char *src, const char *delim) { return src; }
 
 bool check__expr_assess(const char *expr,
                         const char *operands[],
@@ -651,15 +783,15 @@ int str_compare(const void *c1, const void *c2) {
     char *first = *((char **)(c1));
     char *second = *((char **)(c2));
 
-    #if __STD_VERSION__ >= 199901L
+#if __STD_VERSION__ >= 199901L
     char cfirst[gcs__strlen(first) + 1];
     char csecond[gcs__strlen(second) + 1];
-    #else
+#else
     char *cfirst = malloc(gcs__strlen(first) + 1);
     char *csecond = malloc(gcs__strlen(second) + 1);
     massert_malloc(cfirst);
     massert_malloc(second);
-    #endif /* __STDC_VERSION__ >= 199901L */
+#endif /* __STDC_VERSION__ >= 199901L */
 
     gcs__strcpy(cfirst, first);
     gcs__strcpy(csecond, second);
@@ -671,13 +803,13 @@ int str_compare(const void *c1, const void *c2) {
 
     result = strcmp(cfirst, csecond);
 
-    #if __STD_VERSION__ >= 199901L
+#if __STD_VERSION__ >= 199901L
     free(cfirst);
     cfirst = NULL;
 
     free(csecond);
     csecond = NULL;
-    #endif /* __STDC_VERSION__ >= 199901L */
+#endif /* __STDC_VERSION__ >= 199901L */
 
     return result;
 }
@@ -686,14 +818,8 @@ void str_print(const void *arg, FILE *dest) {
     fprintf(dest, "%s", *(char **)arg);
 }
 
-struct typetable ttbl_str = {
-    sizeof(str),
-    str_copy,
-    str_dtor,
-    str_swap,
-    str_compare,
-    str_print
-};
+struct typetable ttbl_str = { sizeof(str), str_copy,    str_dtor,
+                              str_swap,    str_compare, str_print };
 
 struct typetable *_str_ = &ttbl_str;
 
@@ -705,10 +831,10 @@ struct typetable *_str_ = &ttbl_str;
 #define VECTOR_DEFAULT_CAPACITY 16
 
 /* optional macros for accessing the innards of vector_base */
-#define AT(VEC, INDEX)  ((VEC->impl.start) + (INDEX))
-#define FRONT(VEC)      ((VEC->impl.start))
-#define BACK(VEC)       ((VEC->impl.finish) - 1)
-#define END(VEC)        (VEC->impl.end_of_storage)
+#define AT(VEC, INDEX) ((VEC->impl.start) + (INDEX))
+#define FRONT(VEC) ((VEC->impl.start))
+#define BACK(VEC) ((VEC->impl.finish) - 1)
+#define END(VEC) (VEC->impl.end_of_storage)
 
 /**
  *  @struct     vector_str
@@ -721,9 +847,9 @@ struct typetable *_str_ = &ttbl_str;
  */
 struct vector_str {
     struct vector_base_str {
-        str *start;           /**< address of array base (first element) */
-        str *finish;          /**< address reserved for next rear element */
-        str *end_of_storage;  /**< addresses last allocated block of storage */
+        str *start;          /**< address of array base (first element) */
+        str *finish;         /**< address reserved for next rear element */
+        str *end_of_storage; /**< addresses last allocated block of storage */
     } impl;
 
     struct typetable *ttbl; /*<< data width, cpy, dtor, swap, compare, print */
@@ -740,9 +866,9 @@ static void vdeinit_str(vector_str *v);
  *  @return     pointer to vector_str
  */
 vector_str *vnew_str(void) {
-    vector_str *v = vallocate_str();  /* allocate */
+    vector_str *v = vallocate_str();       /* allocate */
     vinit_str(v, VECTOR_DEFAULT_CAPACITY); /* construct */
-    return v;                                   /* return */
+    return v;                              /* return */
 }
 
 /**
@@ -752,13 +878,14 @@ vector_str *vnew_str(void) {
  *  @return     pointer to vector_str
  */
 vector_str *vnewr_str(size_t n) {
-    vector_str *v = vallocate_str();/* allocate */
-    vinit_str(v, n);                     /* construct */
-    return v;                                 /* return */
+    vector_str *v = vallocate_str(); /* allocate */
+    vinit_str(v, n);                 /* construct */
+    return v;                        /* return */
 }
 
 /**
- *  @brief  Calls vdeinit_str (vector_str's destructor) and deallocates the pointer v.
+ *  @brief  Calls vdeinit_str (vector_str's destructor) and deallocates the
+ *pointer v.
  *
  *  @param[out] v   Address of a pointer to vector_str
  *
@@ -766,7 +893,8 @@ vector_str *vnewr_str(size_t n) {
  *  by a call to vdelete_str when a pointer to vector_str is no longer needed.
  *
  *  If the vector_str has a ttbl with a dtor function defined,
- *  the elements within the vector_str will be destroyed using the dtor function.
+ *  the elements within the vector_str will be destroyed using the dtor
+ *function.
  *
  *  Note that if the elements from within v are dynamically allocated,
  *  and/or the elements have dynamically allocated fields --
@@ -781,7 +909,8 @@ void vdelete_str(vector_str **v) {
      *  memory at each field (if dtor function is defined in ttbl,
      *  and is written to release such memory) --
      *  after that step (or if there is no memory to free within the elements),
-     *  (*v)->impl.start has its memory freed, and the remainder of (*v)'s fields
+     *  (*v)->impl.start has its memory freed, and the remainder of (*v)'s
+     * fields
      *  are set NULL.
      */
     vdeinit_str((*v));
@@ -825,7 +954,7 @@ void vresize_str(vector_str *v, size_t n) {
 
     size_t fin = 0;
     size_t end = 0;
-    
+
     massert_container(v);
 
     old_size = vsize_str(v);
@@ -885,7 +1014,8 @@ size_t vcapacity_str(vector_str *v) {
 bool vempty_str(vector_str *v) {
     massert_container(v);
     /**
-     *  Since v->impl.finish is always one address ahead of vector's back element,
+     *  Since v->impl.finish is always one address ahead of vector's back
+     * element,
      *  if v->impl.start == v->impl.finish, the vector is empty.
      */
     return v->impl.start == v->impl.finish;
@@ -930,17 +1060,23 @@ str *vat_str(vector_str *v, size_t n) {
 
     if (n >= size) {
         char str[256];
-        sprintf(str, "Input %lu is greater than vector's logical length, %lu -- index out of bounds.", n, size);
+        sprintf(str,
+                "Input %lu is greater than vector's logical length, %lu -- "
+                "index out of bounds.",
+                n,
+                size);
         ERROR(__FILE__, str);
         return NULL;
     } else if (n == 0) {
         /* if n is 0, it's the front of the vector */
         target = v->impl.start;
     } else if (n == (size - 1)) {
-        /* if n is (size - 1), the back index, effectively (v->impl.finish - 1) */
+        /* if n is (size - 1), the back index, effectively (v->impl.finish - 1)
+         */
         target = v->impl.finish - 1;
     } else {
-        /* if n is anywhere within (0, size - 1), effectively (v->impl.start + n) */
+        /* if n is anywhere within (0, size - 1), effectively (v->impl.start +
+         * n) */
         target = v->impl.start + n;
     }
 
@@ -995,7 +1131,7 @@ str **vdata_str(vector_str *v) {
  *  using memcpy.
  */
 void vpushb_str(vector_str *v, str val) {
-   massert_container(v);
+    massert_container(v);
 
     /**
      *  A doubling strategy is employed when the finish pointer
@@ -1004,7 +1140,7 @@ void vpushb_str(vector_str *v, str val) {
     if (v->impl.finish == v->impl.end_of_storage) {
         vresize_str(v, vcapacity_str(v) * 2);
     }
-    
+
     if (v->ttbl->copy) {
         /* deep copy */
         v->ttbl->copy(v->impl.finish++, &val);
@@ -1012,7 +1148,7 @@ void vpushb_str(vector_str *v, str val) {
         /* shallow copy */
         gcs__memcpy(v->impl.finish++, &val, v->ttbl->width);
     }
-    
+
     /* finish pointer advanced to the next empty block */
 }
 
@@ -1028,8 +1164,8 @@ void vpushb_str(vector_str *v, str val) {
  *  using memcpy.
  */
 void vpushbptr_str(vector_str *v, str *valaddr) {
-   massert_container(v);
-   massert_ptr(valaddr);
+    massert_container(v);
+    massert_ptr(valaddr);
 
     /**
      *  A doubling strategy is employed when the finish pointer
@@ -1046,7 +1182,6 @@ void vpushbptr_str(vector_str *v, str *valaddr) {
         /* shallow copy */
         gcs__memcpy(v->impl.finish++, valaddr, v->ttbl->width);
     }
-
 
     /* finish pointer advanced to the next empty block */
 }
@@ -1115,7 +1250,8 @@ void vclear_str(vector_str *v) {
     }
 
     if (v->ttbl->dtor) {
-        /* decrementing finish pointer to match the address of the last element */
+        /* decrementing finish pointer to match the address of the last element
+         */
 
         /**
          *  If elements were deep-copied,
@@ -1157,13 +1293,20 @@ void vputs_str(vector_str *v) {
  *
  *  @param[in]  v           pointer to vector_str
  *  @param[in]  before      string that appears before any elements appear
- *  @param[in]  after       string that appears after all the elements have appeared
- *  @param[in]  postelem    string that appears after each element, except the last one
- *  @param[in]  breaklim    amount of elements that print before a line break occurs.
+ *  @param[in]  after       string that appears after all the elements have
+ *appeared
+ *  @param[in]  postelem    string that appears after each element, except the
+ *last one
+ *  @param[in]  breaklim    amount of elements that print before a line break
+ *occurs.
  *                          0 means no line breaks
  */
-void vputsf_str(vector_str *v, const char *before, const char *after,
-               const char *postelem, const char *empty, size_t breaklim) {
+void vputsf_str(vector_str *v,
+                const char *before,
+                const char *after,
+                const char *postelem,
+                const char *empty,
+                size_t breaklim) {
     /* redirect to vfputsf with stream stdout */
     vfputsf_str(v, stdout, before, after, postelem, empty, breaklim);
 }
@@ -1192,9 +1335,17 @@ void vfputs_str(vector_str *v, FILE *dest) {
 
     bytes_label = v->ttbl->width == 1 ? "byte" : "bytes";
 
-    sprintf(buffer2, "%s\n%s\t\t%lu\n%s\t%lu\n%s\t%lu %s\n%s\n", link, "Size",
-            vsize_str(v), "Capacity", vcapacity_str(v), "Element size", v->ttbl->width,
-            bytes_label, link);
+    sprintf(buffer2,
+            "%s\n%s\t\t%lu\n%s\t%lu\n%s\t%lu %s\n%s\n",
+            link,
+            "Size",
+            vsize_str(v),
+            "Capacity",
+            vcapacity_str(v),
+            "Element size",
+            v->ttbl->width,
+            bytes_label,
+            link);
 
     vfputsf_str(v, dest, buffer1, buffer2, postelem, empty, breaklim);
 }
@@ -1206,14 +1357,21 @@ void vfputs_str(vector_str *v, FILE *dest) {
  *  @param[in]  v           pointer to vector_str
  *  @param[in]  dest        file stream (e.g. stdout, stderr, a file)
  *  @param[in]  before      string that appears before any elements appear
- *  @param[in]  after       string that appears after all the elements have appeared
- *  @param[in]  postelem    string that appears after each element, except the last one
- *  @param[in]  breaklim    amount of elements that print before a line break occurs.
+ *  @param[in]  after       string that appears after all the elements have
+ *appeared
+ *  @param[in]  postelem    string that appears after each element, except the
+ *last one
+ *  @param[in]  breaklim    amount of elements that print before a line break
+ *occurs.
  *                          0 means no line breaks
  */
-void vfputsf_str(vector_str *v, FILE *dest, const char *before,
-                const char *after, const char *postelem, const char *empty,
-                size_t breaklim) {
+void vfputsf_str(vector_str *v,
+                 FILE *dest,
+                 const char *before,
+                 const char *after,
+                 const char *postelem,
+                 const char *empty,
+                 size_t breaklim) {
     void (*print)(const void *, FILE *dest) = NULL;
 
     size_t size = 0;
@@ -1283,9 +1441,10 @@ static void vinit_str(vector_str *v, size_t capacity) {
     v->ttbl = _str_;
 
     if (capacity <= 0) {
-        WARNING(__FILE__, "Provided input capacity was less than or equal to 0. Will default to capacity of 1.");
+        WARNING(__FILE__, "Provided input capacity was less than or equal to "
+                          "0. Will default to capacity of 1.");
         capacity = 1;
-    } 
+    }
 
     start = calloc(capacity, v->ttbl->width);
     massert_calloc(start);
@@ -1431,13 +1590,9 @@ void *gcs__memmove(void *dst, const void *src, size_t width) {
     return dst;
 }
 
-void *gcs__memset(void *dst, int ch, size_t n) {
+void *gcs__memset(void *dst, int ch, size_t n) {}
 
-}
-
-int gcs__memcmp(const void *s1, const void *s2, size_t n) {
-
-}
+int gcs__memcmp(const void *s1, const void *s2, size_t n) {}
 
 #endif /* !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_) */
 
