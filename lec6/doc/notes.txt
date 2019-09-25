@@ -3,7 +3,7 @@
  *  @brief      Class notes
  *
  *  @author     Gemuele Aludino
- *  @date       19 Sep 2019
+ *  @date       24 Sep 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 
@@ -19,4 +19,8 @@ result: unknown identifier
 Midterm
 10/16/2019 Wed
 
-end expr end tok end ln
+[end expr][end tok][end line]
+
+void (*func)(void *);
+
+preprocessor directive

@@ -3,7 +3,7 @@
  *  @brief      Client source file
  *
  *  @author     Gemuele Aludino
- *  @date       19 Sep 2019
+ *  @date       24 Sep 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -30,6 +30,8 @@
 
 #include "header.h"
 
+int int_cmp(const void *c1, const void *c2);
+
 /**
  *  @brief  Program execution begins here
  *
@@ -39,8 +41,17 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
+    const int *const immutable = &argc;
 
-        
+    printf("%d\n", (*immutable));
+
     return EXIT_SUCCESS;
+}
+
+int int_cmp(const void *c1, const void *c2) {
+    int *first = (int *)(c1);
+    int *second = (int *)(c2);
+
+    return (*first) - (*second);
 }
 
