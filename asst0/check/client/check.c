@@ -432,7 +432,6 @@ int main(int argc, char *argv[]) {
     char *pos = NULL;           /**< address of current char in input string */
     size_t len = 0;             /**< length of input string */
     size_t i = 0;               /**< index of current char in pos */
-    bool first_char = true;     /**< flag to determine if first char reading */
 
     vector_str *v = NULL;       /**< pointer to vector of char * */
     size_t vsize = 0;           /**< logical length of vector_str */
@@ -458,14 +457,28 @@ int main(int argc, char *argv[]) {
     /**
      *  While left side of input string is a whitespace,
      *  advance pos (we are left-side trimming the whitespaces)
+     *  
+     *  (A failsafe against input strings coming from a file.)
      */
     while ((*pos) == ' ') {
         ++pos;
     }
 
     /**
+     *  If first non-whitespace char is a '"',
+     *  advance pos one character.
+     *
+     *  (We do not want the introductory '"' from the input string
+     *   to be included in the first tokenized expression)
+     */
+    pos += (*pos) == '\"' ? 1 : 0;
+
+    /**
      *  If the last char in pos is a '"', null terminate pos.
      *  Otherwise, leave it alone (it will be assigned whatever it is now)
+     *
+     *  (We do not want the '"' char prior to the null terminator
+     *   to be included in the last tokenized expression)
      */
     *(pos + (len - 1)) = *(pos + (len - 1)) == '\"' ? '\0' : *(pos + (len - 1));
 
@@ -479,16 +492,6 @@ int main(int argc, char *argv[]) {
     i = 0;
 
     for (i = 0; i < len; i++) {
-        /**
-         *  If pos[i] (or *(pos + i)) == '"', 
-         *  and it is the first character of input_string,
-         *  advance pos one address forward.
-         *  (we don't want '"' as part of the first token.)
-         */
-        if (*(pos + i) == '"' && first_char) {
-            pos += (i + 1);
-        }
-
         /**
          *  If pos[i] (or *(pos + i)) == ';',
          *  null terminate at pos[i] (set pos[i] == '\0').
@@ -510,11 +513,6 @@ int main(int argc, char *argv[]) {
             pos += (i + 1);
             i = 0;
         }
-
-        /**
-         *  first_char becomes false after the first iteration.
-         */
-        first_char = first_char ? false : first_char;
     }
 
     /**
