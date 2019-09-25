@@ -299,12 +299,18 @@ void *gcs__memset(void *dst, int ch, size_t n);
 int gcs__memcmp(const void *s1, const void *s2, size_t n);
 #else
 #define gcs__strcpy strcpy
+#define gcs__memmove strncpy
 #define gcs__strdup strdup
+#define gcs__strndup strndup
 #define gcs__strlen strlen
 #define gcs__strcmp strcmp
+#define gcs__strncmp strncmp
 #define gcs__strtok strtok
+#define gcs__strtok_r strtok_r
 #define gcs__memcpy memcpy
+#define gcs__memmove memmove
 #define gcs__memset memset
+#define gcs__memcmp memcmp
 #endif /* !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_) */
 
 #if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
@@ -686,16 +692,16 @@ void check__expr_populate(vector_str *v, const char *input_string, const char *d
     size_t len = gcs__strlen(pos);
 
     /**
-        *  Failsafe,
-        *  in case the graders end up having
-        *  argv[1] come from a text file.
-        *
-        *  If first non-whitespace char is a '"',
-        *  advance pos one character.
-        *
-        *  (We do not want the introductory '"' from the input string
-        *   to be included in the first tokenized expression)
-        */
+     *  Failsafe,
+     *  in case the graders end up having
+     *  argv[1] come from a text file.
+     *
+     *  If first non-whitespace char is a '"',
+     *  advance pos one character.
+     *
+     *  (We do not want the introductory '"' from the input string
+     *   to be included in the first tokenized expression)
+     */
     pos += (*pos) == '"' ? 1 : 0;
 
     /**
@@ -735,6 +741,10 @@ void check__expr_populate(vector_str *v, const char *input_string, const char *d
         vpushb_str(v, pos);
     }
 
+    /**
+     *  Now that pos is broken up and copied to vector_str v,
+     *  we no longer need pos, so its memory will be released.
+     */
     free(pos);
     pos = NULL;
 }
