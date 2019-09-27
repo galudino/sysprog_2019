@@ -563,20 +563,20 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
 
     int j = 0;
 
-    if (streql(level, "[BUG]")) {
+    if (gcs__streql(level, "[BUG]")) {
         color = KYEL_b;
         found = true;
     }
 
     if (found == false) {
-        if (streql(level, "[LOG]")) {
+        if (gcs__streql(level, "[LOG]")) {
             color = KCYN_b;
             found = true;
         }
     }
 
     if (found == false) {
-        if (streql(level, "[ERROR]")) {
+        if (gcs__streql(level, "[ERROR]")) {
             color = KRED_b;
             blink = KBNK;
             found = true;
@@ -584,7 +584,7 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
     }
 
     if (found == false) {
-        if (streql(level, "[WARNING]")) {
+        if (gcs__streql(level, "[WARNING]")) {
             color = KMAG_b;
             blink = KBNK;
         }

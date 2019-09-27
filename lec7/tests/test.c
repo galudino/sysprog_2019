@@ -1,13 +1,13 @@
 /**
  *  @file       test.c
- *  @brief      Test source file for Asst0
+ *  @brief      Test source file
  *
  *  @author     Gemuele Aludino
  *  @date       19 Sep 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
- *  Copyright © 20xx Gemuele Aludino
+ *  Copyright © 2019 Gemuele Aludino
  *
  *  Permission is hereby granted, free of charge, to any person obtaining
  *  a copy of this software and associated documentation files (the "Software"),
@@ -67,6 +67,7 @@ typedef unsigned char bool;
  */
 int main(int argc, const char *argv[]) {
     /* Enter source code here... */
+
     
     return EXIT_SUCCESS;
 }

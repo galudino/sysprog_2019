@@ -1,13 +1,13 @@
 /**
- *  @file       test.c
- *  @brief      Test source file for Asst0
+ *  @file       header.h
+ *  @brief      Header file
  *
  *  @author     Gemuele Aludino
- *  @date       19 Sep 2019
+ *  @date       26 Sep 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
- *  Copyright © 20xx Gemuele Aludino
+ *  Copyright © 2019 Gemuele Aludino
  *
  *  Permission is hereby granted, free of charge, to any person obtaining
  *  a copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,9 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
+#ifndef HEADER_H
+#define HEADER_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -37,8 +39,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #else
-# define false '\0'
-# define true '0'
+# define false  0
+# define true   1
 typedef unsigned char bool;
 #endif
 
@@ -53,20 +55,7 @@ typedef unsigned char bool;
 #include <strings.h>
 #include <dirent.h>
 #include <fcntl.h>
-*/
 
-#include "header.h"
 
-/**
- *  @brief  Program execution begins here
- *
- *  @param[in]  argc    argument count
- *  @param[in]  argv    command line arguments
- *
- *  @return     exit status
- */
-int main(int argc, const char *argv[]) {
-    /* Enter source code here... */
-    
-    return EXIT_SUCCESS;
-}
+
+#endif /* HEADER_H */

@@ -1,0 +1,9 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       26 Sep 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+

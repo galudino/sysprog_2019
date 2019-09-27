@@ -328,8 +328,22 @@ int gcs__memcmp(const void *s1, const void *s2, size_t n);
 /**< (char *) will be address as str by vector_str. */
 typedef char *str;
 
-/**< struct typetable: type information for a container */
-struct typetable;
+/**
+ *  @struct     typetable
+ *  @brief      a virtual function table that determines the behavior of
+ *              a container ADT when acting with or upon its elements
+ */
+struct typetable {
+    size_t width; /**< sizeof(T) */
+
+    void *(*copy)(void *, const void *); /**< intended for deep copies */
+    void (*dtor)(void *); /**< for release of dynamically allocated memory */
+    void (*swap)(void *,
+                 void *); /**< for moving dynamically allocated memory */
+
+    int (*compare)(const void *, const void *); /**< sorting/searching */
+    void (*print)(const void *, FILE *dest);    /**< output to stream */
+};
 
 /**< str typetable functions */
 void *str_copy(void *dst, const void *src);
@@ -341,6 +355,95 @@ void str_print(const void *arg, FILE *dst);
 /**< forward-declared typetable instances */
 struct typetable ttbl_str;
 struct typetable *_str_;
+
+/**
+ *  @struct     vector
+ *  @brief      Represents a dynamic array ADT
+ *
+ *  Note that struct vector and struct vector_base are
+ *  opaque -- their fields cannot be accessed directly,
+ *  nor can instances of struct vector/struct vector_base
+ *  be created on the stack. This is done to enforce encapsulation.
+ */
+struct vector {
+    /**
+     *  @struct     vector_base
+     *  @brief      Decouples vector-related fields from typetable
+     */
+    struct vector_base {
+        void *start;          /**< address of array base (first element) */
+        void *finish;         /**< address reserved for next rear element */
+        void *end_of_storage; /**< addresses last allocated block of storage */
+    } impl;
+
+    struct typetable *ttbl; /**< data width, cpy, dtor, swap, compare, print */
+};
+
+typedef struct vector vector;
+
+/**< vector: allocate and construct */
+vector *v_new(struct typetable *ttbl);
+vector *v_newr(struct typetable *ttbl, size_t n);
+
+/**< vector: destruct and deallocate */
+void v_delete(vector **v);
+
+/**< vector: length functions */
+size_t v_size(vector *v);
+
+/**< vector: resize functions */
+void v_resize(vector *v, size_t n);
+
+/**< vector: capacity based functions */
+size_t v_capacity(vector *v);
+bool v_empty(vector *v);
+
+/**< vector: reserve/shrinking functions */
+void v_reserve(vector *v, size_t n);
+void v_shrink_to_fit(vector *v);
+
+/**< vector: element access functions */
+void *v_at(vector *v, size_t n);
+void *v_front(vector *v);
+void *v_back(vector *v);
+void *v_data(vector *v);
+
+/**< vector: modifiers - push/pop */
+void v_pushb(vector *v, const void *valaddr);
+void v_popb(vector *v);
+
+/**< vector: modifiers - clear container */
+void v_clear(vector *v);
+
+/**< vector: custom print functions - output to FILE stream */
+void v_puts(vector *v);
+
+void v_putsf(vector *v, const char *before, const char *after,
+             const char *postelem, const char *empty, size_t breaklim);
+
+void v_fputs(vector *v, FILE *dest);
+
+void v_fputsf(vector *v, FILE *dest, const char *before, const char *after,
+              const char *postelem, const char *empty, size_t breaklim);
+
+/**
+ *  @struct     vector_str
+ *  @brief      Represents a type-safe dynamic array ADT
+ *
+ *  Note that struct vector_str and struct vector_base_str are
+ *  opaque -- their fields cannot be accessed directly,
+ *  nor can instances of struct vector_str/struct vector_base_str
+ *  be created on the stack. This is done to enforce encapsulation.
+ */
+struct vector_str {
+    struct vector_base_str {
+        str *start;          /**< address of array base (first element) */
+        str *finish;         /**< address reserved for next rear element */
+        str *end_of_storage; /**< addresses last allocated block of storage */
+    } impl;
+
+    struct typetable *ttbl; /*<< data width, cpy, dtor, swap, compare, print */
+};
 
 /**< struct vector_str: dynamic array ADT typed for (char *) */
 typedef struct vector_str vector_str;
@@ -416,7 +519,8 @@ int check__fexpr_err(FILE *dest,
     fexpr_err(stderr, err_type, desc, expr_fragmt, ct_expr, index)
 
 /**< check: client functions - tokenize */
-void check__expr_populate(vector_str *v, const char *input_string, const char *delimiter);
+void check__expr_populate(vector_str *v, char *input_string, const char *delimiter);
+void check__expr_populate_v(vector *v, char *input_string, const char *delimiter);
 bool check__expr_assess(const char *expr,
                         const char *operands[],
                         const char *operators[],
@@ -438,17 +542,24 @@ bool check__expr_assess(const char *expr,
  *  @return     0 on success, else failure
  */
 int main(int argc, const char *argv[]) {
+    #define TEMPORARY
+    #ifndef TEMPORARY
+    #define TEMPORARY
     /**
      *  Define the legal operands and operators
      */
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
     const char *delimiter = NULL;
+
     char *expr = NULL;
+    char *input_string = NULL;
+
     size_t i = 0; /**< loop control variable */
 
-    vector_str *v = NULL; /**< pointer to vector of char * */
-    size_t vsize = 0;     /**< logical length of vector_str */
+    vector_str *v = NULL;
+    /*vector *v = NULL;*/
+    size_t vsize = 0; 
 
     /**
      *  Check argument count (argc)
@@ -468,26 +579,84 @@ int main(int argc, const char *argv[]) {
      *  the input string, and
      */
     v = vnew_str();
+    /*v = v_new(_str_);*/
+
 
     delimiter = ";";
-    check__expr_populate(v, argv[1], delimiter);
+    input_string = gcs__strdup(argv[1]);
+    check__expr_populate(v, input_string, delimiter);
+    /*check__expr_populate_v(v, input_string, delimiter);*/
+
+    free(input_string);
+    input_string = NULL;
 
     /**
      *  Retrieve the size of vector_str v,
      *  this denotes the amount of tokens found.
      */
     vsize = vsize_str(v);
+    /*vsize = v_size(v);*/
+
     for (i = 0; i < vsize; i++) {
         size_t len = 0;
         size_t j = 0;
         char *expr = (*(vat_str(v, i)));
+        /*char *expr = *(char **)v_at(v, i);*/
 
         LOG(__FILE__, expr);
         /*check__expr_assess(expr, operands, operators, " ");*/
     }
 
-    vputs_str(v); /**< for debugging only, remove later. */
+    
+    vputs_str(v);
     vdelete_str(&v);
+    
+    /*v_delete(&v);*/
+    #endif
+
+
+    /*
+    vector *v = v_new(_str_);
+    char *str = NULL;
+
+    _str_->copy = NULL;
+
+    str = strdup("string1");
+    v_pushb(v, &str);
+
+    str = strdup("string2");
+    v_pushb(v, &str);
+
+    v_puts(v);
+
+    v_delete(&v);
+    */
+
+    /*
+    vector_str *v = vnew_str();
+    char *str = NULL;
+
+    _str_->copy = NULL;
+
+    str = strdup("string1");
+    vpushbptr_str(v, &str);
+
+    str = strdup("string2");
+    vpushbptr_str(v, &str);
+    
+    vputs_str(v);
+    vdelete_str(&v);
+    */
+
+    
+    vector_str *v = vnew_str();
+
+    vpushb_str(v, "string1");
+    vpushb_str(v, "string2");
+
+    vputs_str(v);
+    vdelete_str(&v);
+
 
     return EXIT_SUCCESS;
 }
@@ -687,8 +856,8 @@ int check__fexpr_err(FILE *dest,
     return fprintf(dest, "%s\n", buffer);
 }
 
-void check__expr_populate(vector_str *v, const char *input_string, const char *delimiter) {
-    char *pos = gcs__strdup(input_string);
+void check__expr_populate(vector_str *v, char *input_string, const char *delimiter) {
+    char *pos = input_string;
     size_t len = gcs__strlen(pos);
 
     /**
@@ -730,7 +899,7 @@ void check__expr_populate(vector_str *v, const char *input_string, const char *d
      *   the vector.)
      */
     pos = gcs__strtok(pos, delimiter);
-    vpushb_str(v, pos);
+    vpushbptr_str(v, &pos);
 
     /**
      *  While valid non-null tokens can be parsed,
@@ -738,15 +907,67 @@ void check__expr_populate(vector_str *v, const char *input_string, const char *d
      *  to the vector.
      */
     while ((pos = gcs__strtok(NULL, delimiter)) != NULL) {
-        vpushb_str(v, pos);
+        vpushbptr_str(v, &pos);
     }
+}
+
+void check__expr_populate_v(vector *v, char *input_string, const char *delimiter) {
+    char *expr = NULL;
+    char *pos = input_string;
+    size_t len = gcs__strlen(pos);
 
     /**
-     *  Now that pos is broken up and copied to vector_str v,
-     *  we no longer need pos, so its memory will be released.
+     *  Failsafe,
+     *  in case the graders end up having
+     *  argv[1] come from a text file.
+     *
+     *  If first non-whitespace char is a '"',
+     *  advance pos one character.
+     *
+     *  (We do not want the introductory '"' from the input string
+     *   to be included in the first tokenized expression)
      */
-    free(pos);
-    pos = NULL;
+    pos += (*pos) == '"' ? 1 : 0;
+
+    /**
+     *  Failsafe,
+     *  in case the graders end up having
+     *  argv[1] come from a text file.
+     *
+     *  If the last char in pos is a '"', null terminate pos.
+     *  Otherwise, leave it alone (it will be assigned whatever it is now)
+     *
+     *  (We do not want the '"' char prior to the null terminator
+     *   to be included in the last tokenized expression)
+     */
+    *(pos + (len - 2)) = *(pos + (len - 2)) == '\"' ? '\0' : *(pos + (len - 2));
+
+    /**
+     *  Initialize the tokenizer by invoking gcs__strtok
+     *  with the position string, pos, that points to the
+     *  current character within input_string.
+     *
+     *  Capture the token in expr and append it
+     *  to the vector_str instance.
+     *
+     *  (Since gcs__strtok mutates pos each time
+     *   it is invoked, we must deep copy expr into
+     *   the vector.)
+     */
+    pos = gcs__strtok(pos, delimiter);
+    expr = gcs__strdup(pos);
+    v_pushb(v, &expr);
+
+    /**
+     *  While valid non-null tokens can be parsed,
+     *  assign them to expr and push expr
+     *  to the vector.
+     */
+    while ((pos = gcs__strtok(NULL, delimiter)) != NULL) {
+        expr = gcs__strdup(pos);
+        v_pushb(v, &expr);
+    }
+
 }
 
 bool check__expr_assess(const char *expr,
@@ -759,32 +980,15 @@ bool check__expr_assess(const char *expr,
     return false;
 }
 
-/**
- *  @struct     typetable
- *  @brief      a virtual function table that determines the behavior of
- *              a container ADT when acting with or upon its elements
- */
-struct typetable {
-    size_t width; /**< sizeof(T) */
-
-    void *(*copy)(void *, const void *); /**< intended for deep copies */
-    void (*dtor)(void *); /**< for release of dynamically allocated memory */
-    void (*swap)(void *,
-                 void *); /**< for moving dynamically allocated memory */
-
-    int (*compare)(const void *, const void *); /**< sorting/searching */
-    void (*print)(const void *, FILE *dest);    /**< output to stream */
-};
-
 void *str_copy(void *arg, const void *other) {
     char **target = (char **)(arg);
     char **source = (char **)(other);
 
-    (*target) = malloc(gcs__strlen(*source) + 1);
+    (*target) = malloc(gcs__strlen((*source) + 1));
     massert_malloc((*target));
     gcs__strcpy((*target), (*source));
 
-    return (*target) ? (*target) : NULL;
+    return (*target);
 }
 
 void str_dtor(void *arg) {
@@ -840,7 +1044,7 @@ int str_compare(const void *c1, const void *c2) {
     str_trim(csecond, NULL);
     */
 
-    result = strcmp(cfirst, csecond);
+    result = gcs__strcmp(cfirst, csecond);
 
 #if __STD_VERSION__ >= 199901L
     free(cfirst);
@@ -862,6 +1066,702 @@ struct typetable ttbl_str = { sizeof(str), str_copy,    str_dtor,
 
 struct typetable *_str_ = &ttbl_str;
 
+static vector *v_allocate(void);
+static void v_init(vector *v, struct typetable *ttbl, size_t capacity);
+static void v_deinit(vector *v);
+static void v_swap_addr(vector *v, void *first, void *second);
+
+/**
+ *  @brief  Allocates, constructs, and returns a pointer to vector,
+ *          size VECTOR_DEFAULT_CAPACITY (16)
+ *
+ *  @param[in]  ttbl    pointer to struct typetable for
+ *                      width/copy/dtor/swap/compare/print
+ *
+ *  @return     pointer to vector
+ */
+vector *v_new(struct typetable *ttbl) {
+    vector *v = v_allocate();                   /* allocate */
+    v_init(v, ttbl, 16);   /* construct */
+    return v;                                   /* return */
+}
+
+/**
+ *  @brief  Allocates, constructs, and returns a pointer to vector,
+ *          size n
+ *
+ *  @param[in]  ttbl   pointer to struct typetable for
+ *                     width/copy/dtor/swap/compare/print
+ *
+ *  @return     pointer to vector
+ */
+vector *v_newr(struct typetable *ttbl, size_t n) {
+    vector *v = v_allocate();                   /* allocate */
+    v_init(v, ttbl, n);                         /* construct */
+    return v;                                   /* return */
+}
+
+/**
+ *  @brief  Calls v_deinit (vector's destructor) and deallocates the pointer v.
+ *
+ *  @param[out] v   Address of a pointer to vector
+ *
+ *  Every call to any of vector's "new" functions should be accompanied
+ *  by a call to v_delete when a pointer to vector is no longer needed.
+ *
+ *  If the vector has a ttbl with a dtor function defined,
+ *  the elements within the vector will be destroyed using the dtor function.
+ *
+ *  Note that if the elements from within v are dynamically allocated,
+ *  and/or the elements have dynamically allocated fields --
+ *  and there is no dtor function defined, memory management
+ *  will become the client's responsibility.
+ */
+void v_delete(vector **v) {
+    massert_container((*v));
+
+    /**
+     *  Deinitialization involves releasing all dynamically allocated
+     *  memory at each field (if dtor function is defined in ttbl,
+     *  and is written to release such memory) --
+     *  after that step (or if there is no memory to free within the elements),
+     *  (*v)->impl.start has its memory freed, and the remainder of (*v)'s fields
+     *  are set NULL.
+     */
+    v_deinit((*v));
+
+    /* finally, the memory (*v) points to will be freed. */
+    free((*v));
+    (*v) = NULL;
+}
+
+/**
+ *  @brief  Returns the logical length of v
+ *
+ *  @param[in]  v   pointer to vector
+ *
+ *  @return     logical length of v
+ */
+size_t v_size(vector *v) {
+    massert_container(v);
+    /* effectively v->impl.finish - v->impl.start */
+    return ptr_distance(v->impl.start, v->impl.finish, v->ttbl->width);
+}
+
+/**
+ *  @brief  Resizes the vector to size n
+ *
+ *  @param[in]  v   pointer to vector
+ *  @param[in]  n   desired size for v
+ *
+ *  If n is less than the current logical length (v_size(v)),
+ *  v will be truncated (excess elements are destroyed),
+ *  otherwise, v's capacity will be extended.
+ */
+void v_resize(vector *v, size_t n) {
+    size_t old_size = 0;
+    size_t old_capacity = 0;
+
+    void *target = NULL;
+    void *newstart = NULL;
+
+    int back_index = 0;
+    int i = 0;
+
+    size_t fin = 0;
+    size_t end = 0;
+    
+    massert_container(v);
+
+    old_size = v_size(v);
+    old_capacity = v_capacity(v);
+
+    if (old_capacity == n) {
+        return;
+    } else if (n == 0) {
+        WARNING(__FILE__, "v_resize must receive a nonzero value for n.");
+    }
+
+    /**
+     *  If n is less than the old size, and items were deep copied --
+     *  dynamically allocated memory will be released as per the dtor function
+     *  prior to truncation
+     *  (if dtor is defined in ttbl, copy should be defined as well)
+     */
+    if (n < old_size && v->ttbl->dtor) {
+        target = (char *)(v->impl.start) + (n * v->ttbl->width);
+
+        back_index = n - 1;
+        for (i = 0; i < back_index; i++) {
+            v->ttbl->dtor(target);
+            target = (char *)(target) - (v->ttbl->width);
+        }
+    }
+
+    newstart = realloc(v->impl.start, n * v->ttbl->width);
+    massert_realloc(newstart);
+
+    fin = n > old_size ? old_size : n;
+    end = n > old_size ? n : fin;
+
+    v->impl.start = newstart;
+    v->impl.finish = (char *)(v->impl.start) + (fin * v->ttbl->width);
+    v->impl.end_of_storage = (char *)(v->impl.start) + (end * v->ttbl->width);
+}
+
+/**
+ *  @brief  Returns the capacity of v
+ *
+ *  @param[in]  v   pointer to vector
+ *
+ *  @return         capacity of v
+ */
+size_t v_capacity(vector *v) {
+    massert_container(v);
+    /* effectively v->impl.end_of_storage - v->impl.start */
+    return ptr_distance(v->impl.start, v->impl.end_of_storage, v->ttbl->width);
+}
+
+/**
+ *  @brief  Determines if v is an empty vector, or not
+ *
+ *  @param[in]  v   pointer to vector
+ *
+ *  @return     true if v->impl.start == v->impl.finish, false otherwise
+ */
+bool v_empty(vector *v) {
+    massert_container(v);
+    /**
+     *  Since v->impl.finish is always one address ahead of vector's back element,
+     *  if v->impl.start == v->impl.finish, the vector is empty.
+     */
+    return v->impl.start == v->impl.finish;
+}
+
+/**
+ *  @brief  Reserves n blocks of elements for v
+ *
+ *  @param[out] v   pointer to vector
+ *  @param[in]  n   desired amount of blocks to reserve
+ *
+ *  This function is effectively a conditional resize --
+ *  n must exceed that of v's current capacity.
+ */
+void v_reserve(vector *v, size_t n) {
+    massert_container(v);
+
+    /**
+     *  Reserve is effectively a resize,
+     *  but verifies that the value of n meets the requirements for a reservation.
+     */
+    if (n > v_capacity(v)) {
+        v_resize(v, n);
+    } else {
+        /* no-op */
+        ERROR(__FILE__, "n must be greater than vector's buffer capacity.");
+        return;
+    }
+}
+
+/**
+ *  @brief  Shrinks vector's buffer to that of its logical length
+ *
+ *  @param[in] v    pointer to vector
+ *
+ *  This function is effectively a conditional resize --
+ *  but verifies that:
+ *      - vector is not empty
+ *      - vector's finish pointer is not equal to end_of_storage pointer
+ */
+void v_shrink_to_fit(vector *v) {
+    massert_container(v);
+
+    if ((v->impl.start != v->impl.finish) && (v->impl.finish != v->impl.end_of_storage)) {
+        v_resize(v, v_size(v));
+    }
+}
+
+/**
+ *  @brief  Retrieves the address of an element from vector at index n
+ *
+ *  @param[in]  v   pointer to vector
+ *  @param[in]  n   index of desired element
+ *
+ *  @return     address of element at n
+ *
+ *  A bounds check is performed to ensure that n is a valid index.
+ *
+ *  Note that the address (pointer) of the element type is returned,
+ *  be sure to cast the return of v_at to the pointer type of
+ *  the element, then dereference the casted v_at to yield
+ *  the element itself.
+ */
+void *v_at(vector *v, size_t n) {
+    size_t size = 0;
+    void *target = NULL;
+
+    massert_container(v);
+
+    size = v_size(v);
+    target = NULL;
+
+    if (n >= size) {
+        char str[256];
+        sprintf(str, "Input %lu is greater than vector's logical length, %lu -- index out of bounds.", n, size);
+        ERROR(__FILE__, str);
+        return NULL;
+    } else if (n == 0) {
+        /* if n is 0, it's the front of the vector */
+        target = v->impl.start;
+    } else if (n == (size - 1)) {
+        /* if n is (size - 1), the back index, effectively (v->impl.finish - 1) */
+        target = (char *)(v->impl.finish) - (v->ttbl->width);
+    } else {
+        /* if n is anywhere within (0, size - 1), effectively (v->impl.start + n) */
+        target = (char *)(v->impl.start) + (n * v->ttbl->width);
+    }
+
+    return target ? target : NULL;
+}
+
+/**
+ *  @brief  Retrieves the address of the front element from vector
+ *
+ *  @param[in]  v   pointer to vector
+ *
+ *  @return     address of front element
+ *
+ *  Note that the address (pointer) of the element type is returned,
+ *  be sure to cast the return of v_front to the pointer type of
+ *  the element, then dereference the casted v_front to yield
+ *  the element itself.
+ */
+void *v_front(vector *v) {
+    massert_container(v);
+    /**
+     *  v_front() returns v->impl.start,
+     *  so if
+     *      TYPE is your intended data type,
+     *  and
+     *      *(TYPE *)(v->impl.start)
+     *  refers to a (TYPE),
+     *  and
+     *      (TYPE *)(v->impl.start)
+     *  refers to a (TYPE *)(,
+     *  then v_front(v) can be casted as such:
+     *      (TYPE *)(v_front(v))
+     *  and dereferenced --
+     *     *(TYPE *)(v_front(v))
+     *  to yield:
+     *      TYPE front = *(TYPE *)(v_front(v));
+     */
+    return v->impl.start;
+}
+
+/**
+ *  @brief  Retrieves the address of the rear element from vector
+ *
+ *  @param[in]  v   pointer to vector
+ *
+ *  @return     address of rear element
+ *
+ *  Note that the address (pointer) of the element type is returned,
+ *  be sure to cast the return of v_back to the pointer type of
+ *  the element, then dereference the casted v_back to yield
+ *  the element itself.
+ */
+void *v_back(vector *v) {
+    massert_container(v);
+    /**
+     *  v_back() returns (char *)(v->impl.finish) - (v->ttbl->width),
+     *  which is effectively (v->impl.finish - 1).
+     *  so if
+     *      TYPE is your intended data type,
+     *  and
+     *      *((TYPE *)(v->impl.finish) - (v->ttbl->width));
+     *  refers to a (TYPE),
+     *  and
+     *      (TYPE *)(v->impl.finish) - (v->ttbl->width);
+     *  refers to a (TYPE *),
+     *  then v_back(v) can be casted as such:
+     *      (TYPE *)(v_back(v))
+     *  and dereferenced --
+     *     *(TYPE *)(v_back(v))
+     *  to yield:
+     *      TYPE back = *(TYPE *)(v_back(v));
+     */
+    return (char *)(v->impl.finish) - (v->ttbl->width);
+}
+
+/**
+ *  @brief  Retrieves the address of vector's buffer
+ *
+ *  @param[in]  v   pointer to vector
+ *
+ *  @return     address of v->impl.start
+ */
+void *v_data(vector *v) {
+    massert_container(v);
+    /**
+     *  v_data() returns the address of v->impl.start,
+     *  so if
+     *      TYPE is your intended data type,
+     *  and
+     *      *(TYPE *)(v->impl.start)
+     *  refers to a (TYPE),
+     *  and
+     *       (TYPE *)(v->impl.start)
+     *  refers to a (TYPE *),
+     *  and
+     *      v_data(v)
+     *  returns &(v->impl.start),
+     *  then v_data(v) can be casted as such:
+     *      (TYPE **)(v_data(v))
+     *  and dereferenced --
+     *     *(TYPE **)(v_data(v));
+     *  to yield:
+     *      TYPE *array = *(TYPE **)(v_data(v));
+     *  and array[i] will yield a TYPE at index i.
+     */
+    return &(v->impl.start);
+}
+
+/**
+ *  @brief  Appends an element to the rear of the vector
+ *
+ *  @param[in]  v       pointer to vector
+ *  @param[in]  valaddr address of element to be copied
+ *
+ *  If a copy function is defined in v's ttbl,
+ *  valaddr will be deep-copied into v.
+ *  Otherwise, valaddr will be shallow-copied into v
+ *  using memcpy.
+ */
+void v_pushb(vector *v, const void *valaddr) {
+    massert_container(v);
+    massert_ptr(valaddr);
+
+    /**
+     *  A doubling strategy is employed when the finish pointer
+     *  meets the end_of_storage pointer.
+     */
+    if (v->impl.finish == v->impl.end_of_storage) {
+        v_resize(v, v_capacity(v) * 2);
+    }
+
+    if (v->ttbl->copy) {
+        /* if copy fn defined in ttbl, deep copy */
+        v->ttbl->copy(v->impl.finish, valaddr);
+    } else {
+        /* if no copy defined in ttbl, shallow copy */
+        gcs__memcpy(v->impl.finish, valaddr, v->ttbl->width);
+    }
+
+    /* advance finish pointer to the next empty block */
+    v->impl.finish = (char *)(v->impl.finish) + (v->ttbl->width);
+}
+
+/**
+ *  @brief  Removes element at the rear of the vector
+ *
+ *  @param[in]  v   pointer to vector
+ *
+ *  If a dtor function is defined in v's ttbl,
+ *  the rear element will be destroyed using the dtor function
+ *  from within ttbl.
+ *
+ *  Otherwise, the popped element will be overwritten by the next
+ *  element that is added at the finish pointer.
+ *
+ *  Memory management of dynamically allocated elements/elements with
+ *  dynamically allocated fields become the client's responsibility
+ *  if a dtor function is NOT defined within v's ttbl.
+ */
+void v_popb(vector *v) {
+    massert_container(v);
+
+    if (v->impl.finish == v->impl.start) {
+        /* v_popb is a no-op if vector is empty */
+        return;
+    }
+
+    /* decrement the finish pointer to the address of the "victim" block */
+    v->impl.finish = (char *)(v->impl.finish) - (v->ttbl->width);
+
+    if (v->ttbl->dtor) {
+        /**
+         *  If dtor defined in ttbl,
+         *  release memory at finish pointer as defined by dtor.
+         */
+        v->ttbl->dtor(v->impl.finish);
+    }
+
+    /**
+     *  If no dtor defined, the next element appendage
+     *  will simply be overwritten
+     */
+}
+
+/**
+ *  @brief  Destroys elements from within v
+ *
+ *  @param[in]  v   pointer to vector
+ *
+ *  Memory management of dynamically allocated elements
+ *  and/or elements with dynamically allocated fields
+ *  become the client's responsibility if a dtor function
+ *  is NOT defined within v's ttbl.
+ */
+void v_clear(vector *v) {
+    massert_container(v);
+
+    if (v->impl.finish == v->impl.start) {
+        /**
+         *  if vector is empty
+         *  (start and finish pointers share same address),
+         *  it's a no-op.
+         */
+        return;
+    }
+
+    if (v->ttbl->dtor) {
+        /* decrementing finish pointer to match the address of the last element */
+
+        /**
+         *  If elements were deep-copied,
+         *  their memory must be released as per the
+         *  client-supplied dtor function in ttbl.
+         */
+        v->impl.finish = (char *)(v->impl.finish) - (v->ttbl->width);
+
+        while (v->impl.finish != v->impl.start) {
+            v->ttbl->dtor(v->impl.finish);
+            v->impl.finish = (char *)(v->impl.finish) - (v->ttbl->width);
+        }
+
+        v->ttbl->dtor(v->impl.finish);
+        gcs__memset(v->impl.start, 0, v_size(v) * v->ttbl->width);
+        /* v->impl.finish is already at v->impl.start. */
+    } else {
+        /**
+         *  If elements were shallow copied,
+         *  (no dtor function specified in ttbl) --
+         *  we just memset and reset the finish pointer.
+         */
+        gcs__memset(v->impl.start, 0, v_size(v) * v->ttbl->width);
+        v->impl.finish = v->impl.start;
+    }
+}
+
+/**
+ *  @brief  Prints a diagnostic of vector to stdout
+ *
+ *  @param[in]  v   pointer to vector
+ */
+void v_puts(vector *v) {
+    /* redirect to v_fputs with stream stdout */
+    v_fputs(v, stdout);
+}
+
+/**
+ *  @brief  Prints the contents of vector with user-defined formatting
+ *
+ *  @param[in]  v           pointer to vector
+ *  @param[in]  before      string that appears before any elements appear
+ *  @param[in]  after       string that appears after all the elements have appeared
+ *  @param[in]  postelem    string that appears after each element, except the last one
+ *  @param[in]  breaklim    amount of elements that print before a line break occurs.
+ *                          0 means no line breaks
+ */
+void v_putsf(vector *v,
+             const char *before,
+             const char *after,
+             const char *postelem,
+             const char *empty,
+             size_t breaklim) {
+    /* redirect to v_fputsf with stream stdout */
+    v_fputsf(v, stdout, before, after, postelem, empty, breaklim);
+}
+
+/**
+ *  @brief  Prints a diagnostic of vector to file stream dest
+ *
+ *  @param[in]  v       pointer to vector
+ *  @param[in]  dest    file stream (e.g stdout, stderr, a file)
+ */
+void v_fputs(vector *v, FILE *dest) {
+    char buffer1[MAXIMUM_STACK_BUFFER_SIZE];
+    char buffer2[MAXIMUM_STACK_BUFFER_SIZE];
+
+    const char *link = "------------------------------";
+    const char *bytes_label = NULL;
+    const char *postelem = "";
+    const char *empty = "--- Container is empty ---";
+
+    const size_t breaklim = 1;
+
+    massert_container(v);
+    massert_ptr(dest);
+
+    sprintf(buffer1, "\n%s\n%s\n%s\n", link, "Elements", link);
+
+    bytes_label = v->ttbl->width == 1 ? "byte" : "bytes";
+
+    sprintf(buffer2, "%s\n%s\t\t%lu\n%s\t%lu\n%s\t%lu %s\n%s\n", link, "Size",
+            v_size(v), "Capacity", v_capacity(v), "Element size", v->ttbl->width,
+            bytes_label, link);
+
+    v_fputsf(v, dest, buffer1, buffer2, postelem, empty, breaklim);
+}
+
+/**
+ *  @brief  Prints the contents of vector with user-defined formatting,
+ *          to file stream dest
+ *
+ *  @param[in]  v           pointer to vector
+ *  @param[in]  dest        file stream (e.g. stdout, stderr, a file)
+ *  @param[in]  before      string that appears before any elements appear
+ *  @param[in]  after       string that appears after all the elements have appeared
+ *  @param[in]  postelem    string that appears after each element, except the last one
+ *  @param[in]  breaklim    amount of elements that print before a line break occurs.
+ *                          0 means no line breaks
+ */
+void v_fputsf(vector *v, FILE *dest,
+              const char *before,
+              const char *after,
+              const char *postelem,
+              const char *empty,
+              size_t breaklim) {
+    void (*print)(const void *, FILE *dest) = NULL;
+
+    size_t size = 0;
+    size_t i = 0;
+    size_t curr = 0;
+
+    void *target = NULL;
+
+    massert_container(v);
+    massert_ptr(dest);
+
+    fprintf(dest, "%s", before ? before : "");
+
+    print = v->ttbl->print;
+
+    size = v_size(v);
+
+    if (size == 0) {
+        fprintf(dest, "%s\n", empty ? empty : "");
+    } else {
+        target = v->impl.start;
+
+        for (i = 0, curr = 1; i < size; i++, curr++) {
+            print(target, dest);
+
+            /* address - disable for release */
+            fprintf(dest, "\t\t(%s%p%s)", KCYN, target, KNRM);
+
+            if (i < size - 1) {
+                fprintf(dest, "%s", postelem ? postelem : "");
+            }
+
+            if (curr == breaklim) {
+                curr = 0;
+                fprintf(dest, "\n");
+            }
+
+            target = (char *)(target) + (v->ttbl->width);
+        }
+    }
+
+    fprintf(dest, "%s", after ? after : "");
+}
+
+/**
+ *  @brief  Calls malloc to allocate memory for a pointer to vector
+ *
+ *  @return     pointer to vector
+ */
+static vector *v_allocate(void) {
+    vector *v = NULL;
+    v = malloc(sizeof *v);
+    return v;
+}
+
+/**
+ *  @brief  "Constructor" function, initializes vector
+ *
+ *  @param[in]  v       pointer to vector
+ *  @param[in]  ttbl    pointer to typetable; width/copy/dtor/swap/compare/dtor
+ *  @param[in]  capacity    capacity desired for vector
+ */
+static void v_init(vector *v, struct typetable *ttbl, size_t capacity) {
+    void *start = NULL;
+
+    massert_container(v);
+
+    massert_ptr(ttbl);
+    v->ttbl = ttbl;
+
+    if (capacity <= 0) {
+        WARNING(__FILE__, "Provided input capacity was less than or equal to 0. Will default to capacity of 1.");
+        capacity = 1;
+    } 
+
+    start = calloc(capacity, v->ttbl->width);
+    massert_calloc(start);
+
+    v->impl.start = start;
+    v->impl.finish = v->impl.start;
+
+    v->impl.end_of_storage
+    = (char *)(v->impl.start) + (capacity * v->ttbl->width);
+}
+
+/**
+ *  @brief "Destructor" function, deinitializes vector
+ *
+ *  @param[in]  v   pointer to vector
+ */
+static void v_deinit(vector *v) {
+    if (v == NULL) {
+        return;
+    }
+
+    v_clear(v);
+
+    free(v->impl.start);
+    v->impl.start = NULL;
+    v->impl.finish = NULL;
+    v->impl.end_of_storage = NULL;
+
+    v->ttbl = NULL;
+}
+
+/**
+ *  @brief  Swaps the content at first and second, address from within v
+ *
+ *  @param[in]  v       pointer to vector
+ *  @param[out] first   first address to swap content
+ *  @param[out] second  second address to swap content
+ */
+static void v_swap_addr(vector *v, void *first, void *second) {
+    void *temp = NULL;
+
+    massert_container(v);
+    massert_ptr(first);
+    massert_ptr(second);
+
+    temp = malloc(v->ttbl->width);
+    massert_malloc(temp);
+    gcs__memcpy(temp, first, v->ttbl->width);
+
+    gcs__memcpy(first, second, v->ttbl->width);
+    gcs__memcpy(second, temp, v->ttbl->width);
+
+    free(temp);
+    temp = NULL;
+}
+
 /**
  *  @def        VECTOR_TMPL_MAXIMUM_STACK_BUFFER_SIZE
  *  @brief      Arbitrary maximum size for a statically allocated (char) buffer
@@ -874,25 +1774,6 @@ struct typetable *_str_ = &ttbl_str;
 #define FRONT(VEC) ((VEC->impl.start))
 #define BACK(VEC) ((VEC->impl.finish) - 1)
 #define END(VEC) (VEC->impl.end_of_storage)
-
-/**
- *  @struct     vector_str
- *  @brief      Represents a type-safe dynamic array ADT
- *
- *  Note that struct vector_str and struct vector_base_str are
- *  opaque -- their fields cannot be accessed directly,
- *  nor can instances of struct vector_str/struct vector_base_str
- *  be created on the stack. This is done to enforce encapsulation.
- */
-struct vector_str {
-    struct vector_base_str {
-        str *start;          /**< address of array base (first element) */
-        str *finish;         /**< address reserved for next rear element */
-        str *end_of_storage; /**< addresses last allocated block of storage */
-    } impl;
-
-    struct typetable *ttbl; /*<< data width, cpy, dtor, swap, compare, print */
-};
 
 static vector_str *vallocate_str(void);
 static void vinit_str(vector_str *v, size_t capacity);
@@ -1185,7 +2066,7 @@ void vpushb_str(vector_str *v, str val) {
         v->ttbl->copy(v->impl.finish++, &val);
     } else {
         /* shallow copy */
-        gcs__memcpy(v->impl.finish++, &val, v->ttbl->width);
+        gcs__memcpy(v->impl.finish++, val, v->ttbl->width);
     }
 
     /* finish pointer advanced to the next empty block */
@@ -1516,6 +2397,7 @@ static void vdeinit_str(vector_str *v) {
 
 #if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
 char *gcs__strcpy(char *dst, const char *src) {
+    /*
     char ch = ' ';
     int i = 0;
 
@@ -1527,17 +2409,49 @@ char *gcs__strcpy(char *dst, const char *src) {
     *(dst + i) = '\0';
 
     return dst;
+    */
+
+    char *pos = dst;
+    while ((*(pos++) = *(src++)) != '\0') { }
+    return dst;
+
+    /*
+    int i = 0;
+    while ((dst[i] = src[i]) != '\0') {
+        i++;
+    }
+    return dst;
+    */
 }
 
 char *gcs__strncpy(char *dst, const char *src, size_t n) {
+    /*
     char ch = ' ';
     int i = 0;
 
     while ((ch = (*src++)) != '\0' && (i++) < n) {
         (*dst++) = ch;
     }
+    */
 
-    return dst;
+    /*
+    char *pos = dst;
+    size_t i = 0;
+    bool found = false;
+    while ((*(pos++) = *(src++)) != '\0') { 
+        if ((++i) == n) {
+            found = true;
+            break;
+        }
+    }
+
+    pos[i] = found ? '\0' : pos[i];
+    */
+    char *pos = dst;
+    size_t i = 0;
+    while (i++ != n && (*pos++ = *src++));
+
+    return dst;    
 }
 
 char *gcs__strdup(const char *src) {
@@ -1554,8 +2468,11 @@ char *gcs__strndup(const char *src, size_t n) {
     size_t len = gcs__strlen(src);
     int delta = len - n;
 
+    size_t i = 0;
+    bool found = false;
+
     if (delta > 0) {
-        str = malloc(n + 1);
+        str = malloc(n);
         massert_malloc(str);
         gcs__strncpy(str, src, n);
     }
@@ -1573,14 +2490,33 @@ size_t gcs__strlen(const char *src) {
 }
 
 int gcs__strcmp(const char *c1, const char *c2) {
-    int diff = 0;
-    while ((*c1) != '\0') {
-        if ((*c1++) != (*c2++)) {
-            diff += (c1 - c2);
-        }
-    }
+    const uint8_t *pos1 = (const uint8_t *)(c1);
+    const uint8_t *pos2 = (const uint8_t *)(c2);
 
-    return diff;
+    uint8_t ch1 = 0;
+    uint8_t ch2 = 0;
+
+    /**
+     *  We iterate from left to right until the first
+     *  pair of unlike characters between c1 and c2 are found.
+     *  (of matching indices, of course.)
+     *
+     *  if c1[0] == c2[0], we continue until c1[n] != c2[n].
+     */
+    do {
+        ch1 = *(pos1++);
+        ch2 = *(pos2++);
+
+        if (ch1 == '\0') {
+            break;
+        }
+    } while (ch1 == ch2);
+
+    /**
+     *  Delta is taken between the first pair
+     *  of unlike characters between c1 and c2.
+     */
+    return ch1 - ch2;
 }
 
 char *gcs__strtok(char *src, const char *delim) {
