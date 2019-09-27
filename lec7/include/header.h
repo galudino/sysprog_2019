@@ -56,6 +56,8 @@ typedef unsigned char bool;
 #include <dirent.h>
 #include <fcntl.h>
 
+int addone(int n);
 
+int globalvar = 234;
 
 #endif /* HEADER_H */

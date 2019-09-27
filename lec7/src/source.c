@@ -30,4 +30,6 @@
 
 #include "header.h"
 
-
+int addone(int n) {
+    return (n + 1);
+}

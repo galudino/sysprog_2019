@@ -7,3 +7,65 @@
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 
+definitions (preprocessor directives)
+
+macro 
+    definition with parameters
+    #define SQUARE(x) x * x         /* BAD */
+    #define SQUARE(x) ((x) * (x))   /* GOOD */
+
+header file
+    struct/union declarations
+    function declarations
+    variable declarations
+    preprocessor directives
+    (don't put definitions)
+
+NULL    (void *)(0)
+
+errno
+
+printf("Error at line %d in file: %s\n", __LINE__, __FILE__);
+
+char *ptr = malloc...
+....
+char *newptr = realloc(ptr, 80);
+ptr = newptr ? newptr : ptr;
+
+/* your own impl of string.h */
+strlen
+strcpy
+strcmp
+strtok
+strtok_r
+strdup
+memcpy
+memset
+
+/* vector_str simplified (vstr) */
+vstr_init
+vstr_deinit
+vstr_new
+vstr_delete
+
+vstr_size
+vstr_capacity
+vstr_empty
+
+vstr_resize
+vstr_shrinktofit
+
+vstr_at
+vstr_front
+vstr_back
+vstr_data
+
+vstr_pushb
+vstr_popb
+
+vstr_clear
+
+vstr_puts
+vstr_fputs
+vstr_putsf
+vstr_fputsf

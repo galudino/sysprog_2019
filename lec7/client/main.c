@@ -41,7 +41,7 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-
-
+    printf("addone: %d\n", addone(1));
+    printf("%d\n", globalvar);
     return EXIT_SUCCESS;
 }
