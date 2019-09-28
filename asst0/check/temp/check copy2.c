@@ -1,4 +1,334 @@
-/* Temporary files go here */
+/**
+ *  @file       check.c
+ *  @brief      Client source file for Asst0
+ *
+ *  @author     Gemuele Aludino
+ *  @date       19 Sep 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+/**
+ *  Copyright © 2019 Gemuele Aludino
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining
+ *  a copy of this software and associated documentation files (the "Software"),
+ *  to deal in the Software without restriction, including without limitation
+ *  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *  and/or sell copies of the Software, and to permit persons to whom the
+ *  Software is furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included
+ *  in all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ *  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ *  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+ *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <string.h>
+
+#if __STD_VERSION__ >= 19990L
+#include <stdbool.h>
+#include <stdint.h>
+#else
+#define false 0
+#define true 1
+typedef unsigned char bool;
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+typedef long int ptrdiff_t;
+#endif /* __STD_VERSION__ >= 19990L */
+
+#define BUFFER_SIZE 256
+#define MAXIMUM_STACK_BUFFER_SIZE 16384
+
+#define KNRM "\x1B[0;0m"   /**< reset to standard color/weight */
+#define KNRM_b "\x1B[0;1m" /**< standard color bold */
+
+#define KGRY "\x1B[0;2m" /**< dark grey */
+
+#define KBNK "\x1B[0;5m" /**< blink every second */
+
+#define KCYN "\x1B[0;36m" /**< cyan */
+#define KWHT "\x1B[0;37m" /**< white */
+
+#define KRED_b "\x1B[1;31m" /**< red bold */
+#define KGRN_b "\x1B[1;32m" /**< green bold */
+#define KYEL_b "\x1B[1;33m" /**< yellow bold */
+#define KMAG_b "\x1B[1;35m" /**< magenta bold */
+#define KCYN_b "\x1B[1;36m" /**< cyan bold */
+#define KWHT_b "\x1B[1;37m" /**< white bold */
+
+/**< utils: debugging */
+int ulog(FILE *dest,
+         const char *level, /**< meant for "LOG" or "ERROR" */
+         const char *file,  /**< meant for use with the __FILE__ macro */
+         const char *func,  /**< meant for use with the __func__ macro */
+         long double line,  /**< meant for use with the __LINE__ macro */
+         const char *fmt,   /**< user's custom message */
+         ...);
+
+bool ulog_attrs_disable[] = { false, false, false, false, false, false, false };
+
+/**
+ *  Unless you would like to create a customized
+ *  debugging message, please use the following preprocessor directives.
+ *
+ *  LOG is a general-purpose messaging tool.
+ *  ERROR is used for displaying error messages (i.e. something failed, etc)
+ *
+ *  The first argument in LOG and ERROR is FILEMACRO,
+ *  which refers to the following macro:
+ *          __FILE__
+ *  This is just a string, so if you are building a custom ulog message,
+ *  with ERROR or WARNING, and would like to put a different
+ *  string in place of __FILE__, you may do so.
+ */
+/**
+ *  @def        LOG
+ *  @brief      Shorthand macro for ulog to create messages for a program
+ *
+ *  Use the preprocessor directive
+ *      #define ULOG_DISABLE_BUG
+ *  before the inclusion of utils.h (or before these directives)
+ *  to disable the LOG macro.
+ */
+#if __STDC_VERSION__ >= 199901L
+#ifndef ULOG_DISABLE_LOG
+#define LOG(FILEMACRO, ...)                                                    \
+    ulog(ULOG_STREAM_LOG, "[LOG]", FILEMACRO, __func__, (long int)__LINE__, __VA_ARGS__)
+#else
+#define LOG(FILEMACRO, ...)
+#endif /* ULOG_DISABLE_LOG */
+#else
+#ifndef ULOG_DISABLE_LOG
+#define LOG(FILEMACRO, MSG)                                                    \
+    ulog(ULOG_STREAM_LOG, "[LOG]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+#else
+#define LOG(FILEMACRO, MSG)
+#endif /* ULOG_DISABLE_LOG */
+#endif /* __STDC_VERSION__ >= 199901L */
+
+/**
+ *  @def        ERROR
+ *  @brief      Shorthand macro for ulog to display errors for a program
+ *
+ *  Use the preprocessor directive
+ *      #define ULOG_DISABLE_ERROR
+ *  before the inclusion of utils.h (or before these directives)
+ *  to disable the ERROR macro.
+ */
+#if __STDC_VERSION__ >= 199901L
+#ifndef ULOG_DISABLE_ERROR
+#define ERROR(FILEMACRO, ...)                                                  \
+    ulog(ULOG_STREAM_ERROR, "[ERROR]", FILEMACRO, __func__, (long int)__LINE__, __VA_ARGS__)
+#endif /* ULOG_DISABLE_ERROR */
+#else
+#ifndef ULOG_DISABLE_ERROR
+#define ERROR(FILEMACRO, MSG)                                                  \
+    ulog(ULOG_STREAM_ERROR, "[ERROR]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+#else
+#define ERROR(FILEMACRO, MSG)
+#endif /* ULOG_DISABLE_ERROR */
+#endif /* __STDC_VERSION__ >= 199901L */
+
+/**
+ *  @def        WARNING
+ *  @brief      Shorthand macro for ulog to display warning for a program
+ */
+#if __STDC_VERSION__ >= 199901L
+#ifndef ULOG_DISABLE_WARNING
+#define WARNING(FILEMACRO, ...)                                                \
+    ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__, (long int)__LINE__, __VA_ARGS__)
+#endif /* ULOG_DISABLE_WARNING */
+#else
+#ifndef ULOG_DISABLE_WARNING
+#define WARNING(FILEMACRO, MSG)                                                \
+    ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+#else
+#define WARNING(FILEMACRO, MSG)
+#endif /* ULOG_DISABLE_WARNING */
+#endif /* __STDC_VERSION__ >= 199901L */
+
+/**
+ *  @def        ULOG_DISABLE_ALL
+ *  @brief      Shorthand macro to disable the following preprocessor macros:
+ *              LOG, ERROR
+ *
+ *  Use the preprocessor directive
+ *      #define ULOG_DISABLE_ALL
+ *  before the inclusion of utils.h (or before any of the directives below)
+ *  to disable the macros ERROR and WARNING all at once.
+ *
+ *  You may also use any combination of these macros to keep some
+ *  of the ulog macro types active.
+ *
+ *  ulog has the following format:
+ *  (level is what appears in LEVEL, usually [ERROR] or [WARNING]
+ *  if using the ulog macros. Using the ulog function allows you to customize
+ *  your own error message)
+ *  MMM dd yyyy HH:mm:ss LEVEL [filepath/filename:linenumber] function_name
+ *message
+ */
+#ifdef ULOG_DISABLE_ALL
+#define ULOG_DISABLE_LOG
+#define ULOG_DISABLE_ERROR
+#define ULOG_DISABLE_WARNING
+#endif
+
+#define UTILS_LOG_ATTRS_COUNT 7
+enum ULOG_ATTRS {
+    DATE,
+    TIME,
+    LEVEL,
+    FILENAME,
+    LINE,
+    FUNCTION,
+    MESSAGE
+};
+
+bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
+
+#define ULOG_TOGGLE_ATTR(ULOG_ATTR)                                            \
+    ulog_attrs_disable[ULOG_ATTR] = (ulog_attrs_disable[ULOG_ATTR]) ? (false) : (true)
+
+/** Turn off ulog attributes by invoking one or more of these in a function.
+ULOG_TOGGLE_ATTR(DATE);
+ULOG_TOGGLE_ATTR(TIME);
+ULOG_TOGGLE_ATTR(LEVEL);
+ULOG_TOGGLE_ATTR(FILENAME);
+ULOG_TOGGLE_ATTR(LINE);
+ULOG_TOGGLE_ATTR(FUNCTION);
+ULOG_TOGGLE_ATTR(MESSAGE);
+*/
+
+/**< Designated default streams for LOG, and ERROR  */
+#define ULOG_STREAM_LOG stdout
+#define ULOG_STREAM_ERROR stderr
+#define ULOG_STREAM_WARNING stderr
+
+/**
+ *  Custom assert function with message string -
+ *  message prints to stderr, just like the assert macro in assert.h,
+ *  and the message string is printed using the ulog function --
+ *  wrapped with the ERROR macro defined in this header file.
+ *  Then, just like the assert macro, abort() is invoked
+ *  and the program ends.
+ *
+ *  Unlike the original assert macro,
+ *  NDEBUG will not disable massert - massert
+ *  will persist whether you are in debug mode, or release mode.
+ *
+ *  massert is most useful when a program is no longer fit
+ *  to continue, given a particular condition --
+ *  a description message of your choice can be provided.
+ *
+ *  If no message is preferred, you may provide an empty string.
+ */
+#define massert(CONDITION, MESSAGE)                                                              \
+    do {                                                                                         \
+        if (((CONDITION) == (false))) {                                                          \
+            fprintf(stderr, "Assertion failed: (%s)\n", #CONDITION);                             \
+            ulog(ULOG_STREAM_ERROR, "[ERROR]", __FILE__, __func__, (long int)__LINE__, MESSAGE); \
+            abort();                                                                             \
+        }                                                                                        \
+    } while (0)
+
+#define massert_ptr(PTR)                                                       \
+    ;                                                                          \
+    massert(PTR,                                                               \
+            "['" #PTR "' was found to be NULL - '" #PTR                        \
+            "' must be nonnull to continue.]");
+
+#define massert_malloc(PTR)                                                    \
+    ;                                                                          \
+    massert(PTR,                                                               \
+            "[Request for heap storage allocation failed (malloc returned "    \
+            "NULL and was assigned to '" #PTR "')]");
+
+#define massert_calloc(PTR)                                                    \
+    ;                                                                          \
+    massert(PTR,                                                               \
+            "[Request for heap storage allocation failed (calloc returned "    \
+            "NULL and was assigned to '" #PTR "')]");
+
+#define massert_realloc(PTR)                                                   \
+    ;                                                                          \
+    massert(PTR,                                                               \
+            "[Request for heap storage reallocation failed (realloc returned " \
+            "NULL and was assigned to '" #PTR "')]");
+
+#define massert_container(PTR)                                                 \
+    ;                                                                          \
+    massert(PTR,                                                               \
+            "['" #PTR "' was found to be NULL - '" #PTR                        \
+            "' must be assigned to the return value of a container "           \
+            "initializer function prior to use.]");
+
+#define massert_pfunc(PFUNC)                                                   \
+    ;                                                                          \
+    massert(PFUNC,                                                             \
+            "['" #PFUNC "' was found to be NULL - '" #PFUNC                    \
+            "' must be assigned to a function with a matching prototype.]");
+
+/**< pointer utility */
+ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
+
+#if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
+/**< gcs: string utilities */
+char *gcs__strcpy(char *dst, const char *src);
+char *gcs__strncpy(char *dst, const char *src, size_t n);
+char *gcs__strdup(const char *src);
+char *gcs__strndup(const char *src, size_t n);
+size_t gcs__strlen(const char *src);
+int gcs__strcmp(const char *c1, const char *c2);
+int gcs__strncmp(const char *c1, const char *c2, size_t n);
+
+char *gcs__strtok(char *src, const char *delim);
+char *gcs__strtok_r(char *src, const char *delim, char **save_ptr);
+
+void *gcs__memcpy(void *dst, const void *src, size_t width);
+void *gcs__memmove(void *dst, const void *src, size_t width);
+void *gcs__memset(void *dst, int ch, size_t n);
+int gcs__memcmp(const void *s1, const void *s2, size_t n);
+#else
+#define gcs__strcpy strcpy
+#define gcs__memmove strncpy
+#define gcs__strdup strdup
+#define gcs__strndup strndup
+#define gcs__strlen strlen
+#define gcs__strcmp strcmp
+#define gcs__strncmp strncmp
+#define gcs__strtok strtok
+#define gcs__strtok_r strtok_r
+#define gcs__memcpy memcpy
+#define gcs__memmove memmove
+#define gcs__memset memset
+#define gcs__memcmp memcmp
+#endif /* !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_) */
+
+#if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
+#define streql(s1, s2) gcs__strcmp(s1, s2) == 0
+#define strneql(s1, s2, n) gcs__strncmp(s1, s2, n) == 0
+#else
+#define streql(s1, s2) strcmp(s1, s2) == 0
+#define strneql(s1, s2, n) strncmp(s1, s2, n) == 0
+#endif
+
+#if __linux__ && !__POSIX__
+# if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
+#  define strdup(src) gcs__strcpy(malloc(gcs__strlen(src) + 1), src)
+# else
+#  define strdup(src) strcpy(malloc(strlen(src) + 1), src)
+# endif
+#endif
 
 /**< (char *) will be address as str by vector_str. */
 typedef char *str;
@@ -174,7 +504,484 @@ void vfputsf_str(vector_str *v,
                  const char *empty,
                  size_t breaklim);
 
-//
+/**< check: client functions - logging/errors */
+void check__arg_check(int argc, const char *argv[]);
+int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic);
+int check__fexpr_err(FILE *dest,
+                     const char *err_type,
+                     const char *desc,
+                     const char *expr_fragmt,
+                     uint32_t ct_expr,
+                     int index);
+
+#define check__fexpr_ok(dest) fprintf(dest, "%s%s%s", KGRN_b, "OK.", KNRM)
+#define check__expr_ok() fexpr_ok(stdout)
+
+#define check__expr_log(ct_expr, ct_logical, ct_arithmetic)                    \
+    fexpr_log(stdout, ct_expr, ct_logical, ct_arithmetic)
+
+#define check__expr_err(err_type, desc, expr_fragmt, ct_expr, index)           \
+    fexpr_err(stderr, err_type, desc, expr_fragmt, ct_expr, index)
+
+/**< check: client functions - tokenize */
+void check__expr_populate(vector_str *v, char *input_string, const char *delimiter);
+void check__expr_populate_v(vector *v, char *input_string, const char *delimiter);
+bool check__expr_assess(const char *expr,
+                        const char *operands[],
+                        const char *operators[],
+                        const char *delimiter);
+
+#define CHECK__OPERANDS                                                        \
+    "false", "true", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+
+#define CHECK__OPERATORS "+", "-", "*", "/", "AND", "OR", "NOT"
+
+#define CHECK__USAGE "USAGE: ./check [input string]"
+
+/**
+ *  @brief  Program execution begins here
+ *
+ *  @param[in]  argc    Argument count (sizeof(argv))
+ *  @param[in]  argv    Command line arguments
+ *
+ *  @return     0 on success, else failure
+ */
+int main(int argc, const char *argv[]) {
+
+    /**
+     *  Define the legal operands and operators
+     */
+    const char *operands[] = { CHECK__OPERANDS };
+    const char *operators[] = { CHECK__OPERATORS };
+    const char *delimiter = NULL;
+
+    char *expr = NULL;
+    char *input_string = NULL;
+
+    size_t i = 0; /**< loop control variable */
+
+    vector_str *v = NULL;
+    /*vector *v = NULL;*/
+    size_t vsize = 0; 
+
+    /**
+     *  Check argument count (argc)
+     *  and argument value (argv).
+     *
+     *  If argc != 2, abort.
+     *  If gcs__strlen(argv[1]) == 0, abort.
+     */
+    check__arg_check(argc, argv);
+
+    /**
+     *  Create and construct an instance of vector_str.
+     *  Expression strings are stored here.
+     *
+     *  vector_str v will be sent to
+     *  check__expr_populate, along with argv[1],
+     *  the input string, and
+     */
+    v = vnew_str();
+    /*v = v_new(_str_);*/
+
+
+    delimiter = ";";
+    input_string = gcs__strdup(argv[1]);
+    check__expr_populate(v, input_string, delimiter);
+    /*check__expr_populate_v(v, input_string, delimiter);*/
+
+    free(input_string);
+    input_string = NULL;
+
+    /**
+     *  Retrieve the size of vector_str v,
+     *  this denotes the amount of tokens found.
+     */
+    vsize = vsize_str(v);
+    /*vsize = v_size(v);*/
+
+    for (i = 0; i < vsize; i++) {
+        size_t len = 0;
+        size_t j = 0;
+        char *expr = (*(vat_str(v, i)));
+        /*char *expr = *(char **)v_at(v, i);*/
+
+        LOG(__FILE__, expr);
+        /*check__expr_assess(expr, operands, operators, " ");*/
+    }
+
+    
+    vputs_str(v);
+    vdelete_str(&v);
+    
+    /*v_delete(&v);*/
+
+
+    /*
+    vector *v = v_new(_str_);
+    char *str = NULL;
+
+    _str_->copy = NULL;
+
+    str = strdup("string1");
+    v_pushb(v, &str);
+
+    str = strdup("string2");
+    v_pushb(v, &str);
+
+    v_puts(v);
+
+    v_delete(&v);
+    */
+
+    /*
+    vector_str *v = vnew_str();
+    char *str = NULL;
+
+    _str_->copy = NULL;
+
+    str = strdup("string1");
+    vpushbptr_str(v, &str);
+
+    str = strdup("string2");
+    vpushbptr_str(v, &str);
+
+    vputs_str(v);
+    vdelete_str(&v);
+    */
+
+    /*
+    vector_str *v = vnew_str();
+
+    vpushb_str(v, "string1");
+    vpushb_str(v, "string2");
+
+    vputs_str(v);
+    vdelete_str(&v);
+    */
+    
+    return EXIT_SUCCESS;
+}
+
+void check__arg_check(int argc, const char *argv[]) {
+    uint32_t i = 0;
+    char msg[4096];
+    size_t input_len = 0;
+
+    i += sprintf(msg + i,
+                 KNRM "\n\n%s\n",
+                 "USAGE:\n./check" KWHT_b " [input string]" KNRM);
+
+    i += sprintf(msg + i,
+                 "\n%s\n%s\n\n",
+                 "Argument count (argc) must be 2; argument "
+                 "values are \"./check\" and [input "
+                 "string].",
+                 "[input_string] must have a length greater than 0.");
+
+    i += sprintf(msg + i,
+                 "%s\n\n",
+                 "The " KWHT_b "[input string]" KNRM
+                 " consists of one or more " KWHT_b "expressions." KNRM);
+
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "An " KWHT_b "expression" KNRM
+                 " is comprised of multiple " KWHT_b "tokens" KNRM " --");
+    i += sprintf(msg + i,
+                 "%s\n\n",
+                 "which will denote an " KWHT_b "operand" KNRM "," KWHT_b
+                 " operator" KNRM ", or " KWHT_b "delimiter." KNRM);
+
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "Possible operands: { \"false\", \"true\", "
+                 "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", "
+                 "\"6\", \"7\", \"8\", \"9\" }");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "Possible operators: { \"AND\", \"OR\", "
+                 "\"NOT\", \"+\", \"-\", \"*\", \"/\" }" KNRM);
+    i += sprintf(msg + i, "%s\n\n", "Possible delimiters: { \" \", \";\" }");
+
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "The delimiter \" \" (one character of "
+                 "whitespace) must appear:");
+    i += sprintf(msg + i, "\t%s\n", "after every operand and operator,");
+    i += sprintf(msg + i,
+                 "\t\t%s\n",
+                 "except for the last operand that ends the input string.");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "The delimiter \";\" must appear after each expression,");
+    i += sprintf(msg + i,
+                 "\t%s\n",
+                 "except for the last expression of an input string --");
+    i += sprintf(msg + i,
+                 "\t\t%s\n\n",
+                 "if and only if the input string has at least 2 expressions.");
+
+    i += sprintf(msg + i, "%s\n", "Both \"false\" and \"true\"");
+    i +=
+        sprintf(msg + i, "\t%s\n\n", "are " KWHT_b "logical" KNRM " operands.");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", "
+                 "\"6\", \"7\", \"8\", and \"9\"");
+    i += sprintf(msg + i,
+                 "\t%s\n\n",
+                 "are " KWHT_b "arithmetic" KNRM " operands.");
+
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "NOT is a " KWHT_b "unary logical" KNRM " operator.");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "An legal expression consisting of a unary logical operator");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "has one logical operand, which appears to "
+                 "the right of the operator, like this:");
+    i += sprintf(msg + i, "\t%s\n\n", "\"NOT true\"");
+
+    i += sprintf(msg + i, "%s\n", "AND and OR are " KWHT_b "binary logical" KNRM " operators.");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "Legal expressions consisting of a binary logical operator");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "have two logical operands, which appear on "
+                 "each side of the operator; they can look "
+                 "like this:");
+    i += sprintf(msg + i, "\t%s\n", "\"true OR false\"");
+    i += sprintf(msg + i, "\t%s\n", "\"false AND true\"");
+    i += sprintf(msg + i, "\t%s\n\n", "\"true OR false; false AND true\"");
+
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "+, -, *, and / are " KWHT_b "binary arithmetic" KNRM
+                 " operators.");
+    i +=
+        sprintf(msg + i,
+                "%s\n",
+                "Legal expressions consisting of a binary arithmetic operator");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "have two arithmetic operands, which appear "
+                 "on each side of the operator; they can look "
+                 "like this:");
+    i += sprintf(msg + i, "\t%s\n", "\"2 + 2\"");
+    i += sprintf(msg + i, "\t%s\n", "\"9 - 5\"");
+    i += sprintf(msg + i, "\t%s\n\n", "\"2 * 2; 9 / 5\"");
+
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "There is no limit as to how many "
+                 "expressions can go in an input string,");
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "and logical/arithmetic expressions may "
+                 "coexist within the same input string.");
+    i += sprintf(msg + i,
+                 "\t%s\n",
+                 "However, mixing logical operands with arithmetic operators,");
+    i += sprintf(msg + i,
+                 "\t%s\n\n",
+                 "or arithmetic operands with logical operators is illegal.");
+
+    i += sprintf(msg + i,
+                 "%s\n",
+                 "Sample usage cases (program invocation and input string):");
+    i += sprintf(msg + i, "\t%s\n", "./check \"2 + 2\"");
+    i += sprintf(msg + i, "\t%s\n", "./check \"2 + 2; true OR false\"");
+    i += sprintf(msg + i,
+                 "\t%s\n",
+                 "./check \"false AND false; NOT true; 9 / 5\"");
+
+    input_len = argc >= 2 ? gcs__strlen(argv[1]) : input_len;
+    massert((argc == 2) && (input_len > 0), msg);
+}
+
+int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
+    char buffer[BUFFER_SIZE];
+    int j = 0;
+
+    j = sprintf(buffer + j,
+                "Found %s%d%s expressions: %s%d%s logical and %s%d%s "
+                "arithmetic.",
+                KWHT_b,
+                ct_expr,
+                KNRM,
+                KWHT_b,
+                ct_logical,
+                KNRM,
+                KWHT_b,
+                ct_arithmetic,
+                KNRM);
+
+    return fprintf(dest, "%s\n", buffer);
+}
+
+int check__fexpr_err(FILE *dest,
+                     const char *err_type,
+                     const char *desc,
+                     const char *expr_fragmt,
+                     uint32_t ct_expr,
+                     int index) {
+    char buffer[BUFFER_SIZE];
+    char spaces[BUFFER_SIZE];
+    int i = 0;
+    int j = 0;
+
+    gcs__strcpy(spaces, "\t");
+
+    if (index > -1) {
+        for (i = 1; i <= index + 1; i++) {
+            *(spaces + i) = ' ';
+        }
+    }
+
+    j += sprintf(buffer + j,
+                 "%s: " KWHT_b "%s" KNRM " in " KMAG_b "expression %d" KNRM
+                 ": %s in\n\t\"%s\"\n",
+                 KRED_b "Error" KNRM,
+                 err_type,
+                 ct_expr,
+                 desc,
+                 expr_fragmt);
+
+    if (index > -1) {
+        j += sprintf(buffer + j, "%s%s", spaces, KYEL_b "^" KNRM);
+    }
+
+    return fprintf(dest, "%s\n", buffer);
+}
+
+void check__expr_populate(vector_str *v, char *input_string, const char *delimiter) {
+    char *pos = input_string;
+    size_t len = gcs__strlen(pos);
+
+    /**
+     *  Failsafe,
+     *  in case the graders end up having
+     *  argv[1] come from a text file.
+     *
+     *  If first non-whitespace char is a '"',
+     *  advance pos one character.
+     *
+     *  (We do not want the introductory '"' from the input string
+     *   to be included in the first tokenized expression)
+     */
+    pos += (*pos) == '"' ? 1 : 0;
+
+    /**
+     *  Failsafe,
+     *  in case the graders end up having
+     *  argv[1] come from a text file.
+     *
+     *  If the last char in pos is a '"', null terminate pos.
+     *  Otherwise, leave it alone (it will be assigned whatever it is now)
+     *
+     *  (We do not want the '"' char prior to the null terminator
+     *   to be included in the last tokenized expression)
+     */
+    *(pos + (len - 2)) = *(pos + (len - 2)) == '\"' ? '\0' : *(pos + (len - 2));
+
+    /**
+     *  Initialize the tokenizer by invoking gcs__strtok
+     *  with the position string, pos, that points to the
+     *  current character within input_string.
+     *
+     *  Capture the token in expr and append it
+     *  to the vector_str instance.
+     *
+     *  (Since gcs__strtok mutates pos each time
+     *   it is invoked, we must deep copy expr into
+     *   the vector.)
+     */
+    pos = gcs__strtok(pos, delimiter);
+    vpushbptr_str(v, &pos);
+
+    /**
+     *  While valid non-null tokens can be parsed,
+     *  assign them to expr and push expr
+     *  to the vector.
+     */
+    while ((pos = gcs__strtok(NULL, delimiter)) != NULL) {
+        vpushbptr_str(v, &pos);
+    }
+}
+
+void check__expr_populate_v(vector *v, char *input_string, const char *delimiter) {
+    char *expr = NULL;
+    char *pos = input_string;
+    size_t len = gcs__strlen(pos);
+
+    /**
+     *  Failsafe,
+     *  in case the graders end up having
+     *  argv[1] come from a text file.
+     *
+     *  If first non-whitespace char is a '"',
+     *  advance pos one character.
+     *
+     *  (We do not want the introductory '"' from the input string
+     *   to be included in the first tokenized expression)
+     */
+    pos += (*pos) == '"' ? 1 : 0;
+
+    /**
+     *  Failsafe,
+     *  in case the graders end up having
+     *  argv[1] come from a text file.
+     *
+     *  If the last char in pos is a '"', null terminate pos.
+     *  Otherwise, leave it alone (it will be assigned whatever it is now)
+     *
+     *  (We do not want the '"' char prior to the null terminator
+     *   to be included in the last tokenized expression)
+     */
+    *(pos + (len - 2)) = *(pos + (len - 2)) == '\"' ? '\0' : *(pos + (len - 2));
+
+    /**
+     *  Initialize the tokenizer by invoking gcs__strtok
+     *  with the position string, pos, that points to the
+     *  current character within input_string.
+     *
+     *  Capture the token in expr and append it
+     *  to the vector_str instance.
+     *
+     *  (Since gcs__strtok mutates pos each time
+     *   it is invoked, we must deep copy expr into
+     *   the vector.)
+     */
+    pos = gcs__strtok(pos, delimiter);
+    expr = gcs__strdup(pos);
+    v_pushb(v, &expr);
+
+    /**
+     *  While valid non-null tokens can be parsed,
+     *  assign them to expr and push expr
+     *  to the vector.
+     */
+    while ((pos = gcs__strtok(NULL, delimiter)) != NULL) {
+        expr = gcs__strdup(pos);
+        v_pushb(v, &expr);
+    }
+
+}
+
+bool check__expr_assess(const char *expr,
+                        const char *operands[],
+                        const char *operators[],
+                        const char *delim) {
+    char str[256];
+    sprintf(str, "expr: %s", expr);
+    LOG(__FILE__, str);
+    return false;
+}
+
 void *str_copy(void *arg, const void *other) {
     char **target = (char **)(arg);
     char **source = (char **)(other);
@@ -1590,6 +2397,7 @@ static void vdeinit_str(vector_str *v) {
     v->ttbl = NULL;
 }
 
+#if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
 char *gcs__strcpy(char *dst, const char *src) {
     /*
     char ch = ' ';
@@ -1819,3 +2627,171 @@ int gcs__memcmp(const void *s1, const void *s2, size_t n) {}
 #else
 
 #endif /* !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_) */
+
+/**
+ *  Determine the memory "block" distance between two addresses,
+ *  beg and end, by their "block" widths, determined by sizeof(TYPENAME)
+ *
+ *  @param[in]  beg     the beginning address
+ *  @param[in]  end     the ending address
+ *  @param[in]  width   sizeof(TYPENAME), or size in bytes of TYPENAME
+ *
+ *  @return     distance between beg and end
+ *
+ *  Precondition: beg and end must be non-NULL and pointing to memory
+ *                of the same data type
+ */
+ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width) {
+    char *start = (((char *)(beg)) + (width));
+    char *finish = (((char *)(end)) + (width));
+
+    return ((finish - start) / width);
+}
+
+/**
+ *  Utility function for debugging/error messages
+ *
+ *  @param[in]      dest        stream destination
+ *  @param[in]      level       literals "LOG" or "ERROR"
+ *  @param[in]      file        macro __FILE__ is to be used here (by client)
+ *  @param[in]      func        macro __func__ is to be used here
+ *  @param[in]      line        macro __LINE__ is to be used here
+ *  @param[in]      fmt         formatting to be used
+ *
+ *  @return         character count of buffer (from fprintf)
+ */
+int ulog(FILE *dest,
+         const char *level,
+         const char *file,
+         const char *func,
+         long double line,
+         const char *fmt,
+         ...) {
+
+    char buffer[MAXIMUM_STACK_BUFFER_SIZE];
+    char temp[BUFFER_SIZE];
+
+    const char *color = KNRM;
+    const char *blink = "";
+
+    bool found = false;
+    bool is_integer = false;
+    bool is_currency = *file == '$';
+
+    int j = 0;
+
+    if (found == false) {
+        if (streql(level, "[LOG]")) {
+            color = KCYN_b;
+            found = true;
+        }
+    }
+
+    if (found == false) {
+        if (streql(level, "[ERROR]")) {
+            color = KRED_b;
+            blink = KBNK;
+            found = true;
+        }
+    }
+
+    sprintf(temp, "%Lf", line);
+
+/* char digit = strchr(temp, '.'); */
+
+#if __STD_VERSION__ >= 199901L
+    is_integer = line / (long long int)(line) == 1.000000 || line == 0.00000;
+#else
+    is_integer = line / (long int)(line) == 1.000000 || line == 0.00000;
+#endif
+
+    is_integer = is_currency ? false : is_integer;
+
+    if (ulog_attrs_disable[DATE] == false) {
+        char date[1024];
+        sprintf(date, "%s%s%s ", KGRY, __DATE__, KNRM);
+
+        j += sprintf(buffer + j, "%s", date);
+    }
+
+    if (ulog_attrs_disable[TIME] == false) {
+        char time[1024];
+        sprintf(time, "%s%s%s ", KGRY, __TIME__, KNRM);
+
+        j += sprintf(buffer + j, "%s", time);
+    }
+
+    if (ulog_attrs_disable[LEVEL] == false) {
+        char leveltype[1024];
+        sprintf(leveltype, "%s%s%s%s ", blink, color, level, KNRM);
+
+        j += sprintf(buffer + j, "%s", leveltype);
+    }
+
+    if (ulog_attrs_disable[FILENAME] == false && ulog_attrs_disable[LINE]) {
+        char filename[1024];
+        sprintf(filename, "[%s] ", file);
+
+        j += sprintf(buffer + j, "%s", filename);
+    } else if (ulog_attrs_disable[FILENAME] && ulog_attrs_disable[LINE] == false) {
+        char linenumber[1024];
+
+        if (is_integer) {
+#if __STD_VERSION__ >= 199901L
+            sprintf(linenumber, "[%lli] ", (long long int)(line));
+#else
+            sprintf(linenumber, "[%li] ", (long int)(line));
+#endif
+        } else {
+            if (is_currency) {
+                sprintf(linenumber, "[%0.2Lf] ", line);
+            } else {
+                sprintf(linenumber, "[%Lf] ", line);
+            }
+        }
+
+        j += sprintf(buffer + j, "%s", linenumber);
+    } else if (ulog_attrs_disable[FILENAME] == false && ulog_attrs_disable[LINE] == false) {
+        char fileline[1024];
+
+        if (is_integer) {
+#if __STD_VERSION__ >= 199901L
+            sprintf(fileline, "[%s:%lli] ", file, (long long int)(line));
+#else
+            sprintf(fileline, "[%s:%li] ", file, (long int)(line));
+#endif
+        } else {
+            if (is_currency) {
+                sprintf(fileline, "[%s%0.2Lf] ", file, line);
+            } else {
+                sprintf(fileline, "[%s:%Lf] ", file, line);
+            }
+        }
+
+        j += sprintf(buffer + j, "%s", fileline);
+    }
+
+    if (ulog_attrs_disable[FUNCTION] == false) {
+        char function[1024];
+        sprintf(function, "%s%s", KCYN, func);
+
+        j += sprintf(buffer + j, "%s", function);
+    }
+
+    if (ulog_attrs_disable[FUNCTION] == false && ulog_attrs_disable[MESSAGE] == false) {
+        j += sprintf(buffer + j, "%s", " ");
+    }
+
+    if (ulog_attrs_disable[MESSAGE] == false) {
+        char message[4096];
+        va_list args;
+
+        va_start(args, fmt);
+        vsprintf(message, fmt, args);
+        va_end(args);
+
+        j += sprintf(buffer + j, "%s%s%s", KNRM_b, message, KNRM);
+    }
+
+    return fprintf(dest, "%s\n", buffer);
+}
