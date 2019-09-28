@@ -377,177 +377,26 @@ struct gcs__vstr {
 typedef struct gcs__vstr gcs__vstr;
 #define GCS__VSTR_INITIAL_SIZE 4
 
-/*#define GCS__VSTR_INLINED_FUNCTIONS*/
-#ifdef GCS__VSTR_INLINED_FUNCTIONS
-#define gcs__vstr_ctor(v)                                                      \
-    do {                                                                       \
-        v.impl.start = NULL;                                                   \
-        v.impl.finish = NULL;                                                  \
-        v.impl.end_of_storage = NULL;                                          \
-    } while (0)
+/*#define GCS__VSTR_DEEP_COPY*/
 
-#define gcs__vstr_initializer()                                                \
-    {                                                                          \
-        { NULL, NULL, NULL }                                                   \
-    }
+void gcs__vstr_init(gcs__vstr *v, size_t capacity);
+void gcs__vstr_deinit(gcs__vstr *v);
 
-#define gcs__vstr_init(v, capacity)                                            \
-    do {                                                                       \
-        v.impl.start = calloc(capacity, sizeof *v.impl.start);                 \
-        massert_calloc(v.impl.start);                                          \
-                                                                               \
-        v.impl.finish = v.impl.start;                                          \
-        v.impl.end_of_storage = ((v.impl.start) + (capacity));                 \
-    } while (0)
+size_t gcs__vstr_size(gcs__vstr *v);
+size_t gcs__vstr_capacity(gcs__vstr *v);
+bool gcs__vstr_empty(gcs__vstr *v);
 
-#define gcs__vstr_deinit(v)                                                    \
-    do {                                                                       \
-        free(v.impl.start);                                                    \
-        v.impl.start = v.impl.finish = v.impl.end_of_storage = NULL;           \
-    } while (0)
+char **gcs__vstr_at(gcs__vstr *v, size_t index);
+char **gcs__vstr_front(gcs__vstr *v);
+char **gcs__vstr_back(gcs__vstr *v);
 
-#define gcs__vstr_size(v) ((v.impl.finish) - (v.impl.start))
-#define gcs__vstr_capacity(v) ((v.impl.end_of_storage) - (v.impl.start))
-#define gcs__vstr_empty(v) ((v.impl.start) == (v.impl.finish))
-#define gcs__vstr_out_of_storage(v) ((v.impl.finish) == (v.impl.end_of_storage))
+void gcs__vstr_resize(gcs__vstr *v, size_t n);
 
-#define gcs__vstr_at(v, n) (v.impl.start + n)
+void gcs__vstr_pushb(gcs__vstr *v, char **straddr);
+void gcs__vstr_popb(gcs__vstr *v);
+void gcs__vstr_clear(gcs__vstr *v);
 
-#define gcs__vstr_resize(v, newsize)                                           \
-    do {                                                                       \
-        char **new_start = NULL;                                               \
-        size_t size = gcs__vstr_size(v);\
-        size_t old_capacity = gcs__vstr_capacity(v);\
-\
-        new_start = realloc(v.impl.start, ((sizeof *new_start) * (newsize)));  \
-        massert_realloc(new_start);                                            \
-        \
-        size = ((newsize) < (old_capacity)) ? (newsize) : (size);\
-        v.impl.start = new_start;                                              \
-        v.impl.finish = v.impl.start + newsize;                                \
-        v.impl.end_of_storage = v.impl.start + (newsize);                      \
-    } while (0)
-
-#define gcs__vstr_pushb(v, str)                                                \
-    do {                                                                       \
-        if (gcs__vstr_out_of_storage(v)) {                                     \
-            size_t capacity = gcs__vstr_capacity(v);                           \
-            gcs__vstr_resize(v, capacity * 2);                                 \
-        }                                                                      \
-                                                                               \
-        *(v.impl.finish++) = str;                                              \
-    } while (0)
-
-#define gcs__vstr_popb(v, str)                                                 \
-    do {                                                                       \
-        v.impl.finish -= (gcs__vstr_empty(v) == (false)) ? (1) : (0);          \
-    } while (0)
-
-#define gcs__vstr_puts(v)                                                      \
-    do {                                                                       \
-        char **start = v.impl.start;                                           \
-        char **pos = start;                                                    \
-        while ((pos = (start++)) != v.impl.finish) {                           \
-            LOG(__FILE__, *(pos));                                             \
-        }                                                                      \
-    } while (0)
-
-#else
-
-void gcs__vstr_init(gcs__vstr *v, size_t capacity) {
-    v->impl.start = calloc(capacity, sizeof *v->impl.start);
-    massert_calloc(v->impl.start);
-
-    v->impl.finish = v->impl.start;
-    v->impl.end_of_storage = v->impl.start + capacity;
-}
-
-void gcs__vstr_deinit(gcs__vstr *v) {
-    /*
-    while (--v->impl.finish != v->impl.start) {
-        free(*(v->impl.finish));
-        *(v->impl.finish) = NULL;
-    }
-    
-    free(*(v->impl.start));
-    *(v->impl.start) = NULL;
-    */
-
-    free(v->impl.start);
-    v->impl.start = v->impl.finish = v->impl.end_of_storage = NULL;
-}
-
-size_t gcs__vstr_size(gcs__vstr *v) {
-    return v->impl.finish - v->impl.start;
-}
-
-size_t gcs__vstr_capacity(gcs__vstr *v) {
-    return v->impl.end_of_storage - v->impl.start;
-}
-
-bool gcs__vstr_empty(gcs__vstr *v) {
-    return v->impl.start == v->impl.finish;
-}
-
-bool gcs__vstr_out_of_storage(gcs__vstr *v) {
-    return v->impl.finish == v->impl.end_of_storage;
-}
-
-char **gcs__vstr_at(gcs__vstr *v, size_t index) {
-    return v->impl.start + index;
-}
-
-void gcs__vstr_resize(gcs__vstr *v, size_t n) {
-    char **new_start = NULL;
-    size_t size = gcs__vstr_size(v);
-    size_t old_capacity = gcs__vstr_capacity(v);
-
-    new_start = realloc(v->impl.start, sizeof *new_start * n);
-    massert_realloc(new_start);
-
-    size = n < old_capacity ? n : size;
-
-    v->impl.start = new_start;
-    v->impl.finish = v->impl.start + size;
-    v->impl.end_of_storage = v->impl.start + n;
-}
-
-void gcs__vstr_pushb(gcs__vstr *v, char **straddr) {
-    if (gcs__vstr_out_of_storage(v)) {
-        size_t capacity = gcs__vstr_capacity(v);
-        gcs__vstr_resize(v, capacity * 2);
-    }
-
-    *(v->impl.finish++) = (*straddr);
-
-    /*
-    *(v->impl.finish) = malloc(gcs__strlen((*straddr)) + 1);
-    gcs__strcpy(*(v->impl.finish++), (*straddr));
-    */
-}
-
-void gcs__vstr_popb(gcs__vstr *v) {
-    v->impl.finish -= gcs__vstr_empty(v) == false ? 1 : 0;
-
-    /*
-    if (gcs__vstr_empty(v) == false) {
-        free(*(v->impl.finish));
-        *(v->impl.finish) = NULL;
-
-        --v->impl.finish;
-    }
-    */
-}
-
-void gcs__vstr_puts(gcs__vstr *v) {
-    char **start = v->impl.start;
-    char **pos = start;
-    while ((pos = (start++)) != v->impl.finish) {
-        LOG(__FILE__, *(pos));
-    }
-}
-
-#endif 
+void gcs__vstr_puts(gcs__vstr *v);
 
 /**
  *  @brief  Program execution begins here
@@ -558,66 +407,6 @@ void gcs__vstr_puts(gcs__vstr *v) {
  *  @return     0 on success, else failure
  */
 int main(int argc, const char *argv[]) {
-    /*
-    const char *operands[] = { CHECK__OPERANDS };
-    const char *operators[] = { CHECK__OPERATORS };
-
-    const char *input_string = argv[1];
-    const char *delimiter = NULL;
-
-    char *buff = NULL;
-
-    size_t size = 0;
-    size_t i = 0;
-    char *curr = NULL;
-
-    gcs__vstr v = gcs__vstr_initializer();
-
-    check__arg_check(argc, argv);
-    gcs__strdup(buff, input_string);
-
-    gcs__vstr_init(v, GCS__VSTR_INITIAL_SIZE);
-
-    delimiter = ";";
-    curr = gcs__strtok(buff, delimiter);
-
-    gcs__vstr_pushb(v, curr);
-
-    while ((curr = gcs__strtok(NULL, delimiter)) != NULL) {
-        gcs__vstr_pushb(v, curr);
-    }
-
-    size = gcs__vstr_size(v);
-    delimiter = " ";
-
-    ulog(stdout, "" KWHT_b "[BEG]" KNRM "", __FILE__, __func__, __LINE__, "%s", "======");
-    for (i = 0; i < size; i++) {
-        char *curr = NULL;
-        char *expr = NULL;
-        char *token = NULL;
-
-        curr = *(v.impl.start + i);
-
-        ulog(stdout, "" KYEL_b "[EXP]" KNRM "", __FILE__, __func__, __LINE__, "%s", curr);
-        ulog(stdout, "[beg]", __FILE__, __func__, __LINE__, "%s", "------");
-        token = gcs__strtok(curr, delimiter);
-
-        ulog(stdout, "" KCYN_b "[TOK]" KNRM "", __FILE__, __func__, __LINE__, "%s", token);
-
-        while ((token = gcs__strtok(NULL, curr)) != NULL) {
-            ulog(stdout, "" KCYN_b "[TOK]" KNRM "", __FILE__, __func__, __LINE__, "%s", token);
-        }
-
-        ulog(stdout, "[end]", __FILE__, __func__, __LINE__, "%s", "------");
-    }
-    ulog(stdout, "" KWHT_b "[END]" KNRM "", __FILE__, __func__, __LINE__, "%s", "======");
-
-    gcs__vstr_deinit(v);
-
-    free(buff);
-    buff = NULL;
-    */
-
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
 
@@ -886,6 +675,145 @@ void check__arg_check(int argc, const char *argv[]) {
     input_len = argc >= 2 ? gcs__strlen(argv[1]) : input_len;
     massert((argc == 2) && (input_len > 0), msg);
 }
+
+void gcs__vstr_init(gcs__vstr *v, size_t capacity) {
+    v->impl.start = calloc(capacity, sizeof *v->impl.start);
+    massert_calloc(v->impl.start);
+
+    v->impl.finish = v->impl.start;
+    v->impl.end_of_storage = v->impl.start + capacity;
+}
+
+void gcs__vstr_deinit(gcs__vstr *v) {
+    gcs__vstr_clear(v);
+
+    free(v->impl.start);
+    v->impl.start = v->impl.finish = v->impl.end_of_storage = NULL;
+}
+
+size_t gcs__vstr_size(gcs__vstr *v) {
+    massert_ptr(v);
+    return v->impl.finish - v->impl.start;
+}
+
+size_t gcs__vstr_capacity(gcs__vstr *v) {
+    massert_ptr(v);
+    return v->impl.end_of_storage - v->impl.start;
+}
+
+bool gcs__vstr_empty(gcs__vstr *v) {
+    massert_ptr(v);
+    return v->impl.start == v->impl.finish;
+}
+
+char **gcs__vstr_at(gcs__vstr *v, size_t index) {
+    massert_ptr(v);
+    return index < gcs__vstr_size(v) ? (v->impl.start + index) : (NULL);
+}
+
+char **gcs__vstr_front(gcs__vstr *v) {
+    massert_ptr(v);
+    return v->impl.start != v->impl.finish ? (v->impl.start) : NULL;
+}
+
+char **gcs__vstr_back(gcs__vstr *v) {
+    massert_ptr(v);
+    return v->impl.start != v->impl.finish ? (v->impl.finish - 1) : NULL;
+}
+
+void gcs__vstr_resize(gcs__vstr *v, size_t n) {
+    char **new_start = NULL;
+    size_t size = gcs__vstr_size(v);
+    size_t old_capacity = gcs__vstr_capacity(v);
+
+    #ifdef GCS__VSTR_DEEP_COPY
+
+    if (n < size) {
+        char **sentinel = v->impl.start + n;
+        while (--v->impl.finish != sentinel) {
+            free(*(v->impl.finish));
+            *(v->impl.finish) = NULL;
+        }
+    }
+    
+    #endif
+
+    new_start = realloc(v->impl.start, sizeof *new_start * n);
+    massert_realloc(new_start);
+
+    size = n < old_capacity ? n : size;
+
+    v->impl.start = new_start;
+    v->impl.finish = v->impl.start + size;
+    v->impl.end_of_storage = v->impl.start + n;
+}
+
+void gcs__vstr_pushb(gcs__vstr *v, char **straddr) {
+    massert_ptr(v);
+
+    if (v->impl.finish == v->impl.end_of_storage) {
+        size_t capacity = gcs__vstr_capacity(v);
+        gcs__vstr_resize(v, capacity * 2);
+    }
+
+    #ifdef GCS__VSTR_DEEP_COPY
+
+    *(v->impl.finish) = malloc(gcs__strlen((*straddr)) + 1);
+    massert_malloc(*(v->impl.finish));
+    gcs__strcpy(*(v->impl.finish++), (*straddr));
+
+    #else
+
+    *(v->impl.finish++) = (*straddr);
+
+    #endif
+}
+
+void gcs__vstr_popb(gcs__vstr *v) {
+    #ifdef GCS__VSTR_DEEP_COPY
+
+    if (gcs__vstr_empty(v) == false) {
+        free(*(v->impl.finish));
+        *(v->impl.finish) = NULL;
+
+        --v->impl.finish;
+    }
+
+    #else
+
+    v->impl.finish -= gcs__vstr_empty(v) == false ? 1 : 0;
+
+    #endif
+}
+
+void gcs__vstr_clear(gcs__vstr *v) {
+    massert_ptr(v);
+
+    #ifdef GCS__VSTR_DEEP_COPY    
+    
+    while (--v->impl.finish != v->impl.start) {
+        free(*(v->impl.finish));
+        *(v->impl.finish) = NULL;
+    }
+    
+    free(*(v->impl.start));
+    *(v->impl.start) = NULL;
+
+    #else
+
+    v->impl.finish = v->impl.start;
+
+    #endif
+}
+
+void gcs__vstr_puts(gcs__vstr *v) {
+    char **start = v->impl.start;
+    char **pos = start;
+    while ((pos = (start++)) != v->impl.finish) {
+        LOG(__FILE__, *(pos));
+    }
+}
+
 
 #if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
 
