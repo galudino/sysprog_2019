@@ -366,6 +366,10 @@ enum check__operator_type {
     CHECK__NOT
 };
 
+/**
+ *  @struct     vstr
+ *  @brief      Represents a dynamic array ADT specialized for (char *)
+ */
 struct gcs__vstr {
     struct gcs__vstr_base {
         char **start;
@@ -375,27 +379,40 @@ struct gcs__vstr {
 };
 
 typedef struct gcs__vstr gcs__vstr;
+
 #define GCS__VSTR_INITIAL_SIZE 4
 
+/**
+ *  @define GCS__VSTR_DEEP_COPY
+ *  @brief  Define this directive to enable deep copies of elements into vstr
+ */
 /*#define GCS__VSTR_DEEP_COPY*/
 
+/**< gcs__vstr: constructor/destructor functions */
 void gcs__vstr_init(gcs__vstr *v, size_t capacity);
 void gcs__vstr_deinit(gcs__vstr *v);
 
+/**< gcs__vstr: size/capacity functions */
 size_t gcs__vstr_size(gcs__vstr *v);
 size_t gcs__vstr_capacity(gcs__vstr *v);
 bool gcs__vstr_empty(gcs__vstr *v);
 
+/**< gcs__vstr: element access functions */
 char **gcs__vstr_at(gcs__vstr *v, size_t index);
 char **gcs__vstr_front(gcs__vstr *v);
 char **gcs__vstr_back(gcs__vstr *v);
 
+/**< gcs__vstr: reallocation function */
 void gcs__vstr_resize(gcs__vstr *v, size_t n);
 
+/**< gcs__vstr: stack functions, push/pop */
 void gcs__vstr_pushb(gcs__vstr *v, char **straddr);
 void gcs__vstr_popb(gcs__vstr *v);
+
+/**< gcs__vstr: clear elements */
 void gcs__vstr_clear(gcs__vstr *v);
 
+/**< gcs__vstr: print contents to stream (stdout) */
 void gcs__vstr_puts(gcs__vstr *v);
 
 /**
@@ -410,10 +427,8 @@ int main(int argc, const char *argv[]) {
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
 
-    const char *input_string = argv[1];
+    const char *input_string = NULL;
     const char *delimiter = NULL;
-
-    char *buff = NULL;
 
     size_t size = 0;
     size_t i = 0;
@@ -423,19 +438,30 @@ int main(int argc, const char *argv[]) {
     gcs__vstr *v = &vec_str;
 
     check__arg_check(argc, argv);
-    gcs__strdup(buff, input_string);
+    input_string = argv[1];
 
     gcs__vstr_init(v, GCS__VSTR_INITIAL_SIZE);
 
     delimiter = ";";
-    curr = gcs__strtok(buff, delimiter);
 
+    /**
+     *  start function: check__expr_populate
+     */
+    curr = gcs__strtok((char *)(input_string), delimiter);
+
+    printf("%s\n", curr);
     gcs__vstr_pushb(v, &curr);
 
     while ((curr = gcs__strtok(NULL, delimiter)) != NULL) {
         gcs__vstr_pushb(v, &curr);
     }
+    /**
+     *  end function: check__expr_populate
+     */ 
 
+    /**
+     *  start function: check__expr_assess
+     */
     size = gcs__vstr_size(v);
     delimiter = " ";
 
@@ -449,7 +475,9 @@ int main(int argc, const char *argv[]) {
         curr = *(gcs__vstr_at(v, i));
 
         ulog(stdout, "" KYEL_b "[EXP]" KNRM "", __FILE__, __func__, __LINE__, "%s", curr);
+
         ulog(stdout, "[beg]", __FILE__, __func__, __LINE__, "%s", "------");
+
         token = gcs__strtok(curr, delimiter);
 
         ulog(stdout, "" KCYN_b "[TOK]" KNRM "", __FILE__, __func__, __LINE__, "%s", token);
@@ -462,11 +490,11 @@ int main(int argc, const char *argv[]) {
     }
 
     ulog(stdout, "" KWHT_b "[END]" KNRM "", __FILE__, __func__, __LINE__, "%s", "======");
+    /**
+     *  end function: check__expr_assess
+     */
 
     gcs__vstr_deinit(v);
-
-    free(buff);
-    buff = NULL;
 
     return EXIT_SUCCESS;
 }
@@ -676,57 +704,135 @@ void check__arg_check(int argc, const char *argv[]) {
     massert((argc == 2) && (input_len > 0), msg);
 }
 
+/**
+ *  @brief  "Constructor" function, initializes vstr
+ *
+ *  @param[in]  v           pointer to vstr
+ *  @param[in]  capacity    capacity desired for vstr
+ */
 void gcs__vstr_init(gcs__vstr *v, size_t capacity) {
-    v->impl.start = calloc(capacity, sizeof *v->impl.start);
-    massert_calloc(v->impl.start);
+    char **start = NULL;
 
+    if (capacity <= 0) {
+        WARNING(__FILE__, "Provided input capacity was less than or equal to 0. Will default to capacity of 1.");
+        capacity = 1;
+    } 
+
+    start = calloc(capacity, sizeof *v->impl.start);
+    massert_calloc(start);
+
+    v->impl.start = start;
     v->impl.finish = v->impl.start;
     v->impl.end_of_storage = v->impl.start + capacity;
 }
 
+/**
+ *  @brief  "Destructor" function, deinitializes vector
+ *  
+ *  @param[in]  v   pointer to vstr
+ *
+ *  If deep copies are enabled, any memory allocated by vstr
+ *  will be released -- otherwise, the client will be responsible
+ *  for any memory to be freed per element.
+ */
 void gcs__vstr_deinit(gcs__vstr *v) {
     gcs__vstr_clear(v);
 
     free(v->impl.start);
-    v->impl.start = v->impl.finish = v->impl.end_of_storage = NULL;
+    v->impl.start = NULL;
+    v->impl.finish = NULL;
+    v->impl.end_of_storage = NULL;
 }
 
+/**
+ *  @brief  Returns the logical length of vstr
+ *
+ *  @param[in]  v   pointer to vstr
+ *
+ *  @return     logical length of vstr
+ */
 size_t gcs__vstr_size(gcs__vstr *v) {
     massert_ptr(v);
     return v->impl.finish - v->impl.start;
 }
 
+/**
+ *  @brief  Returns the amount of blocks allocated for vstr's buffer
+ *
+ *  @param[in]  v   pointer to vstr
+ *
+ *  @return     capacity of vstr
+ */
 size_t gcs__vstr_capacity(gcs__vstr *v) {
     massert_ptr(v);
     return v->impl.end_of_storage - v->impl.start;
 }
 
+/**
+ *  @brief  Determines if vstr is empty, or not
+ *
+ *  @param[in]  v   pointer to vstr
+ *
+ *  @return     true if v->impl.start == v->impl.finish, false otherwise
+ */
 bool gcs__vstr_empty(gcs__vstr *v) {
     massert_ptr(v);
     return v->impl.start == v->impl.finish;
 }
 
+/**
+ *  @brief  Retrieves the address of an element from vstr at index
+ *
+ *  @param[in]  v       pointer to vstr
+ *  @param[in]  index   index of desired element
+ * 
+ *  @return     address of element at index (dereference for front element)
+ */
 char **gcs__vstr_at(gcs__vstr *v, size_t index) {
     massert_ptr(v);
     return index < gcs__vstr_size(v) ? (v->impl.start + index) : (NULL);
 }
 
+/**
+ *  @brief  Retrieves the address of vstr's front element
+ *
+ *  @param[in]  v       pointer to vstr
+ *  
+ *  @return     v->impl.start (dereference for front element)
+ */
 char **gcs__vstr_front(gcs__vstr *v) {
     massert_ptr(v);
     return v->impl.start != v->impl.finish ? (v->impl.start) : NULL;
 }
 
+/**
+ *  @brief  Retrieves the address of vstr's back element
+ *
+ *  @param[in]  v       pointer to vstr
+ *  
+ *  @return     v->impl.start (dereference for back element)
+ */
 char **gcs__vstr_back(gcs__vstr *v) {
     massert_ptr(v);
     return v->impl.start != v->impl.finish ? (v->impl.finish - 1) : NULL;
 }
 
+/**
+ *  @brief  Resizes vstr to size n
+ *
+ *  @param[in]  v   pointer to vstr
+ *  @param[in]  n   desired size for vstr
+ *
+ *  If n is less than the current logical length (vstr_size(v)),
+ *  v's buffer will be truncated (excess elements are destroyed),
+ *  otherwise, v's capacity will be extended.
+ */
 void gcs__vstr_resize(gcs__vstr *v, size_t n) {
     char **new_start = NULL;
     size_t size = gcs__vstr_size(v);
     size_t old_capacity = gcs__vstr_capacity(v);
 
-    #ifdef GCS__VSTR_DEEP_COPY
+#ifdef GCS__VSTR_DEEP_COPY
 
     if (n < size) {
         char **sentinel = v->impl.start + n;
@@ -735,8 +841,8 @@ void gcs__vstr_resize(gcs__vstr *v, size_t n) {
             *(v->impl.finish) = NULL;
         }
     }
-    
-    #endif
+
+#endif
 
     new_start = realloc(v->impl.start, sizeof *new_start * n);
     massert_realloc(new_start);
@@ -748,6 +854,17 @@ void gcs__vstr_resize(gcs__vstr *v, size_t n) {
     v->impl.end_of_storage = v->impl.start + n;
 }
 
+/**
+ *  @brief  Appends an element to the rear of vstr
+ *
+ *  @param[in]  v       pointer to vstr
+ *  @param[in]  val     element to be copied
+ *
+ *  If deep copies are enabled using the directive GCS__VSTR_DEEP_COPY,
+ *  (*straddr) will be duplicated into vstr's buffer and will be
+ *  freed during vstr_popb/vstr_clear/vstr_deinit --
+ *  otherwise, a shallow copy by assignment is made.
+ */
 void gcs__vstr_pushb(gcs__vstr *v, char **straddr) {
     massert_ptr(v);
 
@@ -756,21 +873,31 @@ void gcs__vstr_pushb(gcs__vstr *v, char **straddr) {
         gcs__vstr_resize(v, capacity * 2);
     }
 
-    #ifdef GCS__VSTR_DEEP_COPY
+#ifdef GCS__VSTR_DEEP_COPY
 
     *(v->impl.finish) = malloc(gcs__strlen((*straddr)) + 1);
     massert_malloc(*(v->impl.finish));
     gcs__strcpy(*(v->impl.finish++), (*straddr));
 
-    #else
+#else
 
     *(v->impl.finish++) = (*straddr);
 
-    #endif
+#endif
 }
 
+/**
+ *  @brief  Removes element at the rear of the vector
+ *
+ *  @param[in]  v   pointer to vstr
+ *
+ *  If deep copies are enabled using the directive GCS__VSTR_DEEP_COPY,
+ *  any memory at the rear of vstr's buffer will be freed --
+ *  otherwise, v->impl.finish is decremented and will be overwritten
+ *  when a new address takes its place.
+ */
 void gcs__vstr_popb(gcs__vstr *v) {
-    #ifdef GCS__VSTR_DEEP_COPY
+#ifdef GCS__VSTR_DEEP_COPY
 
     if (gcs__vstr_empty(v) == false) {
         free(*(v->impl.finish));
@@ -779,33 +906,41 @@ void gcs__vstr_popb(gcs__vstr *v) {
         --v->impl.finish;
     }
 
-    #else
+#else
 
     v->impl.finish -= gcs__vstr_empty(v) == false ? 1 : 0;
 
-    #endif
+#endif
 }
 
+/**
+ *  @brief  Destroys elements from within v, but vstr's buffer will persist.
+ *
+ *  @param[in]  v   pointer to vstr
+ */
 void gcs__vstr_clear(gcs__vstr *v) {
     massert_ptr(v);
 
-    #ifdef GCS__VSTR_DEEP_COPY    
-    
+#ifdef GCS__VSTR_DEEP_COPY
+
     while (--v->impl.finish != v->impl.start) {
         free(*(v->impl.finish));
         *(v->impl.finish) = NULL;
     }
-    
+
     free(*(v->impl.start));
     *(v->impl.start) = NULL;
 
-    #else
+#else
 
     v->impl.finish = v->impl.start;
 
-    #endif
+#endif
 }
 
+/**
+ *  @brief  Print the contents of vstr to stdout
+ */
 void gcs__vstr_puts(gcs__vstr *v) {
     char **start = v->impl.start;
     char **pos = start;
@@ -813,7 +948,6 @@ void gcs__vstr_puts(gcs__vstr *v) {
         LOG(__FILE__, *(pos));
     }
 }
-
 
 #if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
 
