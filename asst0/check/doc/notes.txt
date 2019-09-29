@@ -105,3 +105,54 @@ third:
 
 
 
+
+printf("\"");
+for (tokno = 0; tokno < vt_size; tokno++) {
+    char *s = *(gcs__vstr_at(vt, tokno));
+    s += s[0] == (*delimiter_token) ? 1 : 0;
+    printf("%s", s);
+    if (tokno < vt_size - 1) {
+        printf(" ");
+    }
+}
+printf("\"");
+
+
+int check__fexpr_err(FILE *dest,
+                     const char *err_type,
+                     const char *desc,
+                     const char *expr_fragmt,
+                     uint32_t ct_expr,
+                     int index) {
+    char buffer[BUFFER_SIZE];
+    char spaces[BUFFER_SIZE];
+    int i = 0;
+    int j = 0;
+
+    gcs__strcpy(spaces, "\t");
+
+    if (index > -1) {
+        for (i = 1; i <= index + 1; i++) {
+            *(spaces + i) = ' ';
+        }
+    }
+
+    j += sprintf(buffer + j,
+                 "%s: " KWHT_b "%s" KNRM " in " KMAG_b "expression %d" KNRM
+                 ": %s in\n\t\"%s\"\n",
+                 KRED_b "Error" KNRM,
+                 err_type,
+                 ct_expr,
+                 desc,
+                 expr_fragmt);
+
+    /* TODO: implementation of '^', appears under problematic character.
+    if (index > -1) {
+        j += sprintf(buffer + j, "%s%s", spaces, KYEL_b "^" KNRM);
+    }
+    */
+
+    j += fprintf(dest, "%s\n", buffer);
+
+    return j;
+}

@@ -359,21 +359,23 @@ typedef int check__operand_t;
 typedef int check__operator_t;
 
 enum check__err_type {
-    ERR_OPERAND_UNKNOWN,
-    ERR_OPERAND_UNEXPECTED,
-    ERR_OPERAND_MISSING,
-    ERR_OPERAND_TYPE_MISMATCH,
-    ERR_OPERATOR_UNKNOWN,
-    ERR_OPERATOR_UNEXPECTED,
-    ERR_OPERATOR_MISSING,
-    ERR_OPERATOR_TYPE_MISMATCH,
-    ERR_TYPE_MISMATCH,
-    ERR_IDENTIFIER_UNKNOWN,
-    ERR_EXPRESSION_UNENDED,
-    ERR_EXPRESSION_INCOMPLETE
+    ERR_UNSPECIFIED = -1,
+    ERR_OPERAND_UNKNOWN = 0,
+    ERR_OPERAND_UNEXPECTED = 1,
+    ERR_OPERAND_MISSING = 2,
+    ERR_OPERAND_TYPE_MISMATCH = 3,
+    ERR_OPERATOR_UNKNOWN = 4,
+    ERR_OPERATOR_UNEXPECTED = 5,
+    ERR_OPERATOR_MISSING = 6,
+    ERR_OPERATOR_TYPE_MISMATCH = 7,
+    ERR_TYPE_MISMATCH = 8,
+    ERR_IDENTIFIER_UNKNOWN = 9,
+    ERR_EXPRESSION_UNENDED = 10,
+    ERR_EXPRESSION_INCOMPLETE = 11
 };
 
 enum check__operand_type {
+    TYPE_OPERAND_UNSPECIFIED = 3,
     TYPE_OPERAND_EMPTY = -2,
     TYPE_OPERAND_UNKNOWN = -1,
     TYPE_OPERAND_ARITHMETIC = 0,
@@ -381,6 +383,7 @@ enum check__operand_type {
 };
 
 enum check__operator_type {
+    TYPE_OPERATOR_UNSPECIFIED = -3,
     TYPE_OPERATOR_EMPTY = -2,
     TYPE_OPERATOR_UNKNOWN = -1,
     TYPE_OPERATOR_BINARY_ARITHMETIC = 0,
@@ -458,7 +461,7 @@ int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t
 int check__fexpr_err(FILE *dest,
                      const char *err_type,
                      const char *desc,
-                     const char *expr_fragmt,
+                     gcs__vstr *vt,
                      uint32_t ct_expr,
                      int index);
 void check__arg_check(int argc, const char *argv[]);
@@ -477,6 +480,7 @@ bool check__expr_parse(gcs__vstr *v,
                        const char *operators_arithmetic_binary[],
                        const char *delimiter_expr,
                        const char *delimiter_token,
+                       bool delimiter_at_end,
                        const char *error_desc[]);
 
 check__operator_t check__get_operator_type(const char *token,
@@ -539,6 +543,7 @@ int main(int argc, const char *argv[]) {
     const char *input_string = NULL;
     const char *delimiter_expr = ";";
     const char *delimiter_token = " ";
+    bool delimiter_at_end = false;
 
     /**
      *  gcs__vstr is an ADT representing a dynamically-sized array,
@@ -565,6 +570,7 @@ int main(int argc, const char *argv[]) {
      *  After the sanity check, input_string is assigned argv[1].
      */
     input_string = argv[1];
+    delimiter_at_end = input_string[gcs__strlen(input_string) - 1] == (*delimiter_expr);
 
     /**
      *  Initialize gcs__vstr's buffer/internal pointers.
@@ -596,6 +602,7 @@ int main(int argc, const char *argv[]) {
                       operators_arithmetic_binary,
                       delimiter_expr,
                       delimiter_token,
+                      delimiter_at_end,
                       error_descriptions);
 
     /**
@@ -656,6 +663,7 @@ bool check__expr_parse(gcs__vstr *v,
                        const char *operators_arithmetic_binary[],
                        const char *delimiter_expr,
                        const char *delimiter_token,
+                       bool delimiter_at_end,
                        const char *error_desc[]) {
     const size_t v_size = gcs__vstr_size(v);
 
@@ -687,20 +695,31 @@ bool check__expr_parse(gcs__vstr *v,
         bool second = false;
         bool third = false;
 
-        bool operand_expected = false;
-        bool operator_expected = false;
+        bool operator_expected_unary_logical = true;
+        bool operator_expected_binary_logical = false;
+        bool operator_expected_binary_arithmetic = false;
+
+        bool operand_expected_logical = true;
+        bool operand_expected_arithmetic = true;
         bool endexpr_expected = false;
-        bool unary_expected = false;
-        bool binary_expected = false;
-        bool logical_expected = false;
-        bool arithmetic_expected = false;
+
+        bool operator_curr_unary_logical = false;
+        bool operator_curr_binary_logical = false;
+        bool operator_curr_binary_arithmetic = false;
+        bool operator_curr_unknown = false;
+        bool operator_curr_empty = false;
+
+        bool operand_curr_logical = false;
+        bool operand_curr_arithmetic = false;
+        bool operand_curr_unknown = false;
 
         bool one_leading_token_delimiter = false;
 
-        check__operator_t operator_curr = TYPE_OPERATOR_UNKNOWN;
+        check__operator_t operator_curr = TYPE_OPERATOR_UNSPECIFIED;
+        check__operator_t operator_prev = TYPE_OPERATOR_UNSPECIFIED;
 
-        check__operator_t operand_curr = TYPE_OPERAND_UNKNOWN;
-        check__operator_t operand_prev = TYPE_OPERAND_UNKNOWN;
+        check__operator_t operand_curr = TYPE_OPERAND_UNSPECIFIED;
+        check__operator_t operand_prev = TYPE_OPERAND_UNSPECIFIED;
 
         /**
          *  Initializing vstr's buffer and assigning a pointer
@@ -772,7 +791,7 @@ bool check__expr_parse(gcs__vstr *v,
             curr_tok = *(gcs__vstr_at(vt, tokno));
             prev_tok = tokno > 0 ? *(gcs__vstr_at(vt, tokno - 1)) : NULL;
             tlen = gcs__strlen(curr_tok);
-            
+
             /**
              *  This will advance curr_tok one character if
              *  its first char is a delimiter token.
@@ -794,9 +813,17 @@ bool check__expr_parse(gcs__vstr *v,
              *           If tok 0 had "NOT" instead, it would yield a
              *              "parse error: unexpected operand" error.
              */
-            if (curr_tok[0] == (*delimiter_token)) {
-                one_leading_token_delimiter = true;
+            if (expno == 0 && curr_tok[0] == (*delimiter_token)) {
+                /**
+                 *  If we are on the first expression of the input string,
+                 *  and the first character of the
+                 */
+                ++ct_errors;
+                error_parse_identifier_unknown(vt, expno, 0);
                 curr_tok += 1;
+            } else if (expno > 0 && tokno == 0 && curr_tok[0] != (*delimiter_token)) {
+                ++ct_errors;
+                error_parse_operand_unexpected(vt, expno, 0);
             }
 
             printf("curr: %s\nprev: %s\n", curr_tok, prev_tok);
@@ -808,46 +835,94 @@ bool check__expr_parse(gcs__vstr *v,
                                                      delimiter_expr,
                                                      delimiter_token);
 
-            operand_curr = check__get_operand_type(curr_tok, 
-                                                   operands_logical,
-                                                   operands_arithmetic,
-                                                   delimiter_expr,
-                                                   delimiter_token);
+            if (operator_curr != TYPE_OPERATOR_UNARY_LOGICAL) {
+                operand_curr = check__get_operand_type(curr_tok,
+                                                       operands_logical,
+                                                       operands_arithmetic,
+                                                       delimiter_expr,
+                                                       delimiter_token);
+            }
 
-            switch (operator_curr) {
-            case TYPE_OPERATOR_EMPTY:
-                printf("%s: operator empty\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_UNKNOWN:
-                printf("%s: operator unknown\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_BINARY_ARITHMETIC:
-                printf("%s: binary arithmetic\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_UNARY_LOGICAL:
-                printf("%s: unary logical\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_BINARY_LOGICAL:
-                printf("%s: binary logical\n", curr_tok);
-                break;
-            };
+            if (prev_tok) {
+                operator_prev = check__get_operator_type(prev_tok,
+                                                         operators_logical_unary,
+                                                         operators_logical_binary,
+                                                         operators_arithmetic_binary,
+                                                         delimiter_expr,
+                                                         delimiter_token);
 
-            switch (operand_curr) {
-            case TYPE_OPERAND_EMPTY:
-                printf("%s: operand empty\n", curr_tok);
-                break;
-            case TYPE_OPERAND_UNKNOWN:
-                printf("%s: operand unknown\n", curr_tok);
-                break;
-            case TYPE_OPERAND_ARITHMETIC:
-                printf("%s: operand arithmetic\n", curr_tok);
-                break;
-            case TYPE_OPERAND_LOGICAL:
-                printf("%s: operand logical\n", curr_tok);
-                break;
-            };
+                if (operator_prev != TYPE_OPERATOR_UNARY_LOGICAL) {
+                    operand_prev = check__get_operand_type(prev_tok,
+                                                           operands_logical,
+                                                           operands_arithmetic,
+                                                           delimiter_expr,
+                                                           delimiter_token);
+                }
+            }
+
+            if (operator_expected_unary_logical) {
+                if (operator_curr == TYPE_OPERATOR_UNARY_LOGICAL) {
+                    operator_expected_unary_logical = false;
+                    operator_expected_binary_logical = false;
+                    operator_expected_binary_arithmetic = false;
+                    operand_expected_arithmetic = false;
+
+                    operand_expected_logical = true;
+                    endexpr_expected = true;
+                } else {
+                }
+            } else if (operator_expected_binary_logical) {
+                if (operator_curr == TYPE_OPERATOR_BINARY_LOGICAL) {
+                    operator_expected_binary_logical = false;
+                    operator_expected_unary_logical = false;
+                    operator_expected_binary_arithmetic = false;
+                    operand_expected_arithmetic = false;
+
+                    operand_expected_logical = true;
+                } else {
+                }
+            } else if (operator_expected_binary_arithmetic) {
+                if (operator_curr == TYPE_OPERATOR_BINARY_ARITHMETIC) {
+                    operator_expected_binary_arithmetic = false;
+                    operator_expected_unary_logical = false;
+                    operator_expected_binary_logical = false;
+                    operand_expected_logical = false;
+
+                    operand_expected_arithmetic = true;
+                } else {
+                }
+            }
+
+            if (operand_expected_logical) {
+                if (operand_curr == TYPE_OPERAND_LOGICAL) {
+                    operand_expected_logical = false;
+                    operand_expected_arithmetic = false;
+                } else {
+                }
+            } else if (operand_expected_arithmetic) {
+                if (operand_curr == TYPE_OPERAND_ARITHMETIC) {
+                    operand_expected_arithmetic = false;
+                } else {
+                }
+            }
+
+            if (tokno == vt_size - 1) {
+                if (endexpr_expected) {
+
+                } else {
+                }
+            }
+
+            /*
+            operator_prev = operator_curr;
+            operand_prev = operand_curr;
+            */
 
             printf("\n");
+        }
+
+        if (delimiter_at_end && tokno == vt_size) {
+            error_parse_expression_incomplete(vt, expno, 0);
         }
 
         /**
@@ -887,6 +962,10 @@ check__operator_t check__get_operator_type(const char *token,
                                            const char *delimiter_token) {
     size_t i = 0;
 
+    if (gcs__strlen(token) == 0) {
+        return TYPE_OPERATOR_EMPTY;
+    }
+
     for (i = 0; i < CHECK__OPERATORS_LOGICAL_UNARY_COUNT; i++) {
         if (gcs__strcmp(operators_logical_unary[i], token) == 0) {
             return TYPE_OPERATOR_UNARY_LOGICAL;
@@ -915,6 +994,10 @@ check__operand_t check__get_operand_type(const char *token,
                                          const char *delimiter_token) {
     size_t i = 0;
 
+    if (gcs__strlen(token) == 0) {
+        return TYPE_OPERATOR_EMPTY;
+    }
+
     for (i = 0; i < CHECK__OPERANDS_LOGICAL_COUNT; i++) {
         if (gcs__strcmp(operands_logical[i], token) == 0) {
             return TYPE_OPERAND_LOGICAL;
@@ -926,7 +1009,7 @@ check__operand_t check__get_operand_type(const char *token,
             return TYPE_OPERAND_ARITHMETIC;
         }
     }
-    
+
     return TYPE_OPERAND_UNKNOWN;
 }
 
@@ -953,19 +1036,35 @@ int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t
 int check__fexpr_err(FILE *dest,
                      const char *err_type,
                      const char *desc,
-                     const char *expr_fragmt,
+                     gcs__vstr *vt,
                      uint32_t ct_expr,
                      int index) {
     char buffer[BUFFER_SIZE];
     char spaces[BUFFER_SIZE];
+    char expr_fragmt[BUFFER_SIZE];
     int i = 0;
     int j = 0;
+    int k = 0;
+    size_t vt_size = gcs__vstr_size(vt);
 
     gcs__strcpy(spaces, "\t");
 
     if (index > -1) {
         for (i = 1; i <= index + 1; i++) {
             *(spaces + i) = ' ';
+        }
+    }
+
+    for (i = 0; i < vt_size; i++) {
+        char *t = *(gcs__vstr_at(vt, i));
+        /*
+        t += t[0] == ' ' ? 1 : 0;
+        */
+
+        k += sprintf(expr_fragmt + k, "%s", t);
+
+        if (i < vt_size - 1) {
+            k += sprintf(expr_fragmt + k, "%s", " ");
         }
     }
 
