@@ -1017,7 +1017,7 @@ int check__fexpr_log(FILE *dest, size_t ct_expr, size_t ct_logical, size_t ct_ar
     int j = 0;
 
     j = sprintf(buffer + j,
-                "Found %s%d%s expressions: %s%d%s logical and %s%d%s "
+                "Found %s%lu%s expressions: %s%lu%s logical and %s%lu%s "
                 "arithmetic.",
                 KWHT_b,
                 ct_expr,
