@@ -41,7 +41,6 @@
 #define true 1
 typedef unsigned char bool;
 typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
 #endif /* __STD_VERSION__ >= 19990L */
 
 #define BUFFER_SIZE 256
@@ -457,12 +456,12 @@ enum check__operator_type {
     check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_EXPRESSION_INCOMPLETE], expr, expno, err_index);
 
 /**< check: client functions - logging/errors */
-int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic);
+int check__fexpr_log(FILE *dest, size_t ct_expr, size_t ct_logical, size_t ct_arithmetic);
 int check__fexpr_err(FILE *dest,
                      const char *err_type,
                      const char *desc,
                      gcs__vstr *vt,
-                     uint32_t ct_expr,
+                     size_t ct_expr,
                      int index);
 void check__arg_check(int argc, const char *argv[]);
 
@@ -472,7 +471,7 @@ void check__arg_check(int argc, const char *argv[]);
 void check__expr_scan(gcs__vstr *v, char *input_string, const char *delimiter);
 
 /**< check: client functions - parse */
-bool check__expr_parse(gcs__vstr *v,
+void check__expr_parse(gcs__vstr *v,
                        const char *operands_logical[],
                        const char *operands_arithmetic[],
                        const char *operators_logical_unary[],
@@ -655,7 +654,7 @@ void check__expr_scan(gcs__vstr *v, char *input_string, const char *delimiter_ex
      */
 }
 
-bool check__expr_parse(gcs__vstr *v,
+void check__expr_parse(gcs__vstr *v,
                        const char *operands_logical[],
                        const char *operands_arithmetic[],
                        const char *operators_logical_unary[],
@@ -665,13 +664,13 @@ bool check__expr_parse(gcs__vstr *v,
                        const char *delimiter_token,
                        bool delimiter_at_end,
                        const char *error_desc[]) {
-    const size_t v_size = gcs__vstr_size(v);
+    size_t v_size = gcs__vstr_size(v);
 
     size_t ct_found = 0;
     size_t ct_arithmetic = 0;
     size_t ct_logical = 0;
     size_t expno = 0;
-
+   
     for (expno = 0; expno < v_size; expno++) {
         /**
          *  A vstr of expr substrings (tokens)
@@ -1013,7 +1012,7 @@ check__operand_t check__get_operand_type(const char *token,
     return TYPE_OPERAND_UNKNOWN;
 }
 
-int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
+int check__fexpr_log(FILE *dest, size_t ct_expr, size_t ct_logical, size_t ct_arithmetic) {
     char buffer[BUFFER_SIZE];
     int j = 0;
 
@@ -1037,7 +1036,7 @@ int check__fexpr_err(FILE *dest,
                      const char *err_type,
                      const char *desc,
                      gcs__vstr *vt,
-                     uint32_t ct_expr,
+                     size_t ct_expr,
                      int index) {
     char buffer[BUFFER_SIZE];
     char spaces[BUFFER_SIZE];
@@ -1089,7 +1088,7 @@ int check__fexpr_err(FILE *dest,
 }
 
 void check__arg_check(int argc, const char *argv[]) {
-    uint32_t i = 0;
+    size_t i = 0;
     char msg[4096];
     size_t input_len = 0;
 

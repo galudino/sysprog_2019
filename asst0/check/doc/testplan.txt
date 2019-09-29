@@ -1,2 +1,257 @@
-/* Asst0 test plan goes here. */
+/**
+ *  @file       testplan.txt
+ *  @brief      Test plan documentation for Asst0
+ *
+ *  @author     Gemuele Aludino
+ *  @date       29 Sep 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+Gemuele (Gem) Aludino
+01:198:214 Systems Programming
+Asst0 - Walking in GCC's footsteps
+(test plan)
+
+This code is designed to work for both ANSI-C (C89),
+but if the user compiles for C99 or newer, certain
+headers will be included/used. Being that this course is
+focused on C89, all of my testing was for C89 in mind.
+
+To ensure that I conformed strictly to C89 specifications
+(this increases portability between platforms as well),
+during debugging, I compiling using the following:
+
+$ gcc check.c -std=c89 -pedantic-errors -o ./check
+
+-std=c89 -pedantic-errors
+ensures that I stick to the C89 standards,
+-pedantic creates warnings for any breach of the standards,
+and -pedantic-errors turns those warnings into errors
+(program won't compile with any errors found,
+even if they would have been warnings).
+I could have also used -ansi in place of -std=c89.
+
+This has no negative effect on compiling for what we were
+assigned for originally, which was to compile for
+
+$ gcc check.c -o check
+
+I merely wanted to write C89-compliant code,
+mainly for portability reasons. 
+
+I've found that newer standards of C,
+while they have nice features, 
+    - such as scoped loop control variables for for loops
+        for (int i = 0; i < n; i++) { }
+    - variable-length arrays/flexible array members
+        struct s {
+            int i;
+            /* more members... */
+            char array[];   /* flexible array member */
+        };
+
+        char array[argc]; /* variable length array */
+    - built-in _Bool type with <stdbool.h> for bool
+    = variadic macros
+...there is simply less support for C99 and newer versions
+as you test on different platforms.
+
+In the event that I lose access to the iLabs
+(which did happen earlier this week),
+I must be able to continue working,
+-- my host OS is macOS 10.14 Mojave,
+and this program still runs successfully
+on that platform as well.
+
+With that said,
+all my testing was done on the iLabs (pwd.cs.rutgers.edu)
+which runs CentOS Linux,
+using Visual Studio Code, the remote SSH plugin,
+and the built-in terminal.
+
+I had already been using VIM as my primary text editor
+for a few years, and tmux is excellent for having split
+terminal windows -- but Visual Studio Code is like having
+a text editor with some IDE features, like a symbol browser
+for your variables/functions, multiple panels/windows,
+built-in terminal, refactoring tools, etc.
+
+I also used valgrind to check for memory leaks,
+and all heap blocks are freed by program end,
+as well as 0 errors in 0 contexts. =)
+
+I started by implementing a "bool" type
+by typedef'ing an unsigned char to bool,
+and setting macros for false = 0 and true = 0;
+
+Since we are primarily testing for C89,
+stdint.h is not typically included,
+and although the iLabs have stdint.h,
+I decided to typedef unsigned char to uint8_t
+as well. (If on C99 or newer, stdbool.h and stdint.h
+will be included, instead of the types I rolled myself)
+
+I then took parts of my own C library, titled gcslib,
+for use in this project.
+
+One of the components is a function called ulog,
+which is used for diagnostic messages,
+and my own custom assert, called massert,
+which works like the original assert in assert.h,
+but allows me to provide a custom message.
+ulog also supports colors, so I have provided
+the macros that change text colors in the terminal as well.
+
+I then implemented my own versions of the various 
+string functions that would have been found in string.h,
+like:
+    strcpy
+    strlen
+    strcmp
+    strncmp
+    strtok
+    memcpy
+    memmove
+    memset
+I've defined them with their own "namespace",
+and prefixed each function with gcs__, so that they
+are not confused with the functions in string.h.
+
+In order to test to ensure that my functions work 
+similarly to the string.h functions, I created macros
+to replace my identifiers with the string.h identifiers,
+and included string.h to compare my implementations with
+the gcs implementations.
+
+gcs__strtok is slightly modified from the real strtok --
+the real strtok removes leading and trailing delimiters,
+but since I needed to retain leading whitespace for this project,
+I modifed gcs__strtok so leading whitespaces would not be
+removed, but retained.
+
+If an identifier has one char of leading whitespace,
+the token will have one char of leading whitespace
+attached to it.
+
+If an identifier has two chars of leading whitespace,
+it will yield a "" token, as well as a second token with no
+leading whitespace.
+
+Finally, I've created a simplied version of one of my data structures,
+called vstr, which is a vector data structure (like C++'s std::vector)
+that is specialized for (char *). It supports both deep and shallow copies
+of its (char *) arguments, but I've disabled deep copies to reduce
+the amount of dynamic memory allocations (I've found that deep copies
+were not necessary.)
+
+After that, I followed the instructions in the FAQ --
+Break the input line into expressions,
+store each expression into the vector.
+
+For all expressions in the vector,
+create a temporary vector of tokens,
+and break up each expression into its component tokens,
+store each token in the vector.
+
+assess the vector of tokens and determine if a valid
+expression can be built.
+Print any errors that come up.
+Show the final diagnostic - if no errors, print ok.
+Then release the memory for the temporary vector
+and start the next expression.
+
+The input strings I tested for were:
+
+"NOT true"  
+well formed unary logical expression
+
+"3 + 2"     
+well formed binary arithmetic expression
+
+"true OR false"
+well formed binary logical expression
+
+" NOT true"
+unary logical expression with one leading whitespace
+(need to see if leading whitespace is attached to "NOT")
+(parse error - unexpected operator/operand)
+
+"  NOT true"
+unary logical expression with two leading whitespaces
+(need to see if two leading whitespaces end up as a "" token)
+(scan error - incomplete expression)
+
+" 3 + 2"
+binary arithmetic expression with one leading whitespace
+(need to see if leading whitespace is attached to "3")
+(parse error - unexpected operator/operand)
+
+"  3 + 2"
+binary arithmetic expression with two leading whitespaces
+(need to see if two leading whitespaces end up as a "" token)
+(scan error - incomplete expression)
+
+" true OR false"
+binary logical expression with one leading whitespace
+(need to see if leading whitespace is attached to "true")
+(parse error - unexpected operator/operand)
+
+"  true OR false"
+binary logical expression with two leading whitespaces
+(need to see if two leading whitespaces end up as a "" token)
+(scan error - incomplete expression)
+
+"3 + 2; NOT true; true OR false; 9 / 5"
+well formed multi-expression line
+
+" 3 + 2; NOT true; true OR false; 9 / 5"
+multi-expression line with one leading whitespace
+(need to see if leading whitespace is attached to "3")
+(parse error - unexpected operator/operand)
+
+"  3 + 2; NOT true; true OR false; 9 / 5"
+multi-expression line with two leading whitespaces
+(need to see if two leading whitespaces end up as a "" token)
+(scan error - incomplete expression)
+
+"1 a 2"
+(unknown operator)
+
+"+ 2"
+(unexpected operator)
+
+"1"
+(missing operator)
+
+"1 AND 2"
+(unexpected operator)
+
+"true + 2"
+(operator mismatch)
+
+"1 + a"
+(unknown operand)
+
+"a NOT true"
+(unknown identifier)
+
+"1 + 2 1"
+(expression unended)
+(unexpected operand)
+
+"1 + "
+(missing operand)
+
+"1 + 2 3 4 5 6 7 8 9"
+(expression wasn't ended)
+(unexpected operand)
+(unexpected operand)
+(unexpected operand)
+(unexpected operand)
+(unexpected operand)
+(unexpected operand)
+(unexpected operand)
+
+"1 + 3;"
+(expression incomplete)
 
