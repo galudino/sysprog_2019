@@ -1068,7 +1068,7 @@ int check__fexpr_err(FILE *dest,
     }
 
     j += sprintf(buffer + j,
-                 "%s: " KWHT_b "%s" KNRM " in " KMAG_b "expression %d" KNRM
+                 "%s: " KWHT_b "%s" KNRM " in " KMAG_b "expression %lu" KNRM
                  ": %s in\n\t\"%s\"\n",
                  KRED_b "Error" KNRM,
                  err_type,
