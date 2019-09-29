@@ -4,7 +4,6 @@
 
 CLIENT="check.c"
 EXECUTABLE="check"
-INPUT_FILE=check_input.txt
 
 CC="gcc"
 
@@ -21,13 +20,29 @@ CFLAGS="$CSTD $PEDANTIC$ERRORS"
 
 RELEASE_FLAG="release"
 
+input() {
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "3 + 2"
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "NOT true"
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "9 / 5"
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "3 + 2; NOT true; 9 / 5"
+
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "  3 + 2
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "3 + 2  "
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "3 + true"
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "NOT 5"
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "true - false"
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "3 + +"
+    #$CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "a + b"
+    $CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "2 + 2;NOT true; 9 / 5"
+}
+
 if [ -z $1 ]
 then
-    $CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "$(< $INPUT_FILE)"
+    input
 else
     if [ $1 == $RELEASE_FLAG ]
     then
         CFLAGS=""
     fi
-    $CC $CLIENT $CFLAGS -o $EXECUTABLE; ./$EXECUTABLE "$(< $INPUT_FILE)"
+    input
 fi

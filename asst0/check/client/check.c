@@ -312,9 +312,9 @@ void *gcs__memset(void *dst, int ch, size_t n);
  */
 struct gcs__vstr {
     struct gcs__vstr_base {
-        char **start;
-        char **finish;
-        char **end_of_storage;
+        char **start;          /**< pointer to calloc'ed block of (char *) */
+        char **finish;         /**< pointer to one-past the last element */
+        char **end_of_storage; /**< pointer to last block of (char *) */
     } impl;
 };
 
@@ -371,14 +371,18 @@ void check__arg_check(int argc, const char *argv[]);
 #define check__expr_err(err_type, desc, expr_fragmt, ct_expr, index)           \
     fexpr_err(stderr, err_type, desc, expr_fragmt, ct_expr, index)
 
-#define check__fexpr_ok(dest) fprintf(dest, "%s%s%s", KGRN_b, "OK.", KNRM)
+#define check__fexpr_ok(dest) fprintf(dest, "%s%s%s\n\n", KGRN_b, "[OK]", KNRM)
 #define check__expr_ok() fexpr_ok(stdout)
 
 /**< check: client functions - scan */
 void check__expr_scan(gcs__vstr *v, char *input_string, const char *delimiter);
 
 /**< check: client functions - parse */
-bool check__expr_parse(gcs__vstr *v, const char *operands[], const char *operators[], const char *delimiter);
+bool check__expr_parse(gcs__vstr *v,
+                       const char *operands[],
+                       const char *operators[],
+                       const char *delimiter_expr,
+                       const char *delimiter_token);
 
 #define CHECK__OPERANDS                                                        \
     "false", "true", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
@@ -387,31 +391,26 @@ bool check__expr_parse(gcs__vstr *v, const char *operands[], const char *operato
 
 #define CHECK__USAGE "USAGE: ./check [input string]"
 
-enum check__operand_type {
-    CHECK_false,
-    CHECK_true,
-    CHECK_0,
-    CHECK_1,
-    CHECK_2,
-    CHECK_3,
-    CHECK_4,
-    CHECK_5,
-    CHECK_6,
-    CHECK_7,
-    CHECK_8,
-    CHECK_9
+enum check__err_type {
+    OPERAND_UNKNOWN,
+    OPERAND_UNEXPECTED,
+    OPERAND_MISSING,
+    OPERAND_TYPE_MISMATCH,
+    OPERATOR_UNKNOWN,
+    OPERATOR_UNEXPECTED,
+    OPERATOR_MISSING,
+    OPERATOR_TYPE_MISMATCH,
+    TYPE_MISMATCH,
+    IDENTIFIER_UNKNOWN,
+    EXPRESSION_UNENDED,
+    EXPRESSION_INCOMPLETE
 };
 
-enum check__operator_type {
-    CHECK__plus,
-    CHECK__minus,
-    CHECK__multiply,
-    CHECK__divide,
-    CHECK__AND,
-    CHECK__OR,
-    CHECK__NOT
-};
-
+#define CHECK__ERR_DESCRIPTIONS                                                \
+    "unknown operand", "unexpected operand", "missing operand",                \
+        "operand type mismatch", "unknown operator", "unexpected operator",    \
+        "missing operator", "operator type mismatch", "type mismatch",         \
+        "unknown identifier", "expression unended", "expression incomplete"
 
 /**
  *  @brief  Program execution begins here
@@ -422,78 +421,209 @@ enum check__operator_type {
  *  @return     0 on success, else failure
  */
 int main(int argc, const char *argv[]) {
+    /**
+     *  Defining legal operands and operators.
+     *
+     *  Legal operands:
+     *      Arithmetic: { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }
+     *      Logical   : { false, true }
+     *  Legal operators:
+     *      Arithmetic: { +, -, *, / }
+     *      Logical   : { AND, OR, NOT }
+     *
+     *  All operators EXCEPT for logical NOT are binary operators -
+     *  binary operators require a left-hand/right-hand side operand.
+     *  (e.g. "2 + 2", "true OR false")
+     *
+     *  Logical NOT is a unary operator -
+     *  it has one operand to its right.
+     *  (e.g. "NOT false", "NOT true")
+     */
     const char *operands[] = { CHECK__OPERANDS };
     const char *operators[] = { CHECK__OPERATORS };
+    const char *error_descriptions[] = { CHECK__ERR_DESCRIPTIONS };
 
+    /**
+     *  input_string will (eventually) be assigned to argv[1],
+     *  pending a sanity check.
+     *
+     *  (*delimiter), for this application, will be
+     *      ';' for expressions
+     *      ' ' for tokens
+     */
     const char *input_string = NULL;
-    const char *delimiter = NULL;
+    const char *delimiter_expr = ";";
+    const char *delimiter_token = " ";
 
-    char *curr = NULL;
-
+    /**
+     *  gcs__vstr is an ADT representing a dynamically-sized array,
+     *  specialized for (char *). This application has defined gcs__vstr
+     *  to shallow copy its elements - all strings pushed to gcs__vstr
+     *  will be substrings of input_string.
+     *
+     *  gcs__vstr can also support deep copying of its elements,
+     *  but it was not found to be necessary for this application.
+     *
+     *  vec_str is the actual struct, v will be a pointer to vec_str.
+     */
     gcs__vstr vec_str = { { NULL, NULL, NULL } };
-    gcs__vstr *v = &vec_str;
+    gcs__vstr *v = NULL;
 
+    /**
+     *  This application will not continue past this point if:
+     *      argc != 2
+     *          ("./[executable name]", and input_string)
+     */
     check__arg_check(argc, argv);
+
+    /**
+     *  After the sanity check, input_string is assigned argv[1].
+     */
     input_string = argv[1];
 
+    /**
+     *  Initialize gcs__vstr's buffer/internal pointers.
+     */
+    v = &vec_str;
     gcs__vstr_init(v, GCS__VSTR_INITIAL_SIZE);
 
-    delimiter = ";";
-    check__expr_scan(v, (char *)(input_string), delimiter);
+    /**
+     *  Scan for expressions.
+     *
+     *  gcs__strtok will return pointers to substrings from within input_string,
+     *  and gcs__vstr will hold those pointers by shallow copy.
+     */
+    check__expr_scan(v, (char *)(input_string), delimiter_expr);
 
-    delimiter = " ";
-    check__expr_parse(v, operators, operands, delimiter);
+    /**
+     *  Parse tokens from expressions and analyze.
+     *
+     *  gcs__strtok will return pointers to substrings from within the current
+     *  expression, and will be assessed within check__expr parse.
+     *
+     *  Any errors/diagnostic messages will appear from this function.
+     */
+    check__expr_parse(v, operands, operators, delimiter_expr, delimiter_token);
 
+    /**
+     *  Release memory allocated by gcs__vstr.
+     *  (if deep copies were enabled, memory for copied strings
+     *   would be released by this function as well.)
+     */
     gcs__vstr_deinit(v);
 
+    /**
+     *  Program ended successfully.
+     */
     return EXIT_SUCCESS;
 }
 
-void check__expr_scan(gcs__vstr *v, 
-                      char *input_string, 
-                      const char *delimiter) {
+void check__expr_scan(gcs__vstr *v, char *input_string, const char *delimiter_expr) {
     char *curr = NULL;
 
-    curr = gcs__strtok(input_string, delimiter);
+    /**
+     *  For gcs__strtok's first reading,
+     *  we provide the input_string explicitly.
+     *
+     *  Each subsequent call will refer to a static int and static (char *)
+     *  from within gcs__strtok, that reflects the current position index
+     *  in input_string.
+     *
+     *  The substring returned from gcs__strtok is stored in curr,
+     *  and pushed to gcs__vstr by means of shallow copy.
+     */
+    curr = gcs__strtok(input_string, delimiter_expr);
     gcs__vstr_pushb(v, &curr);
 
-    while ((curr = gcs__strtok(NULL, delimiter)) != NULL) {
+    while ((curr = gcs__strtok(NULL, delimiter_expr))) {
+        /**
+         *  For the remainder of gcs__strtok's readings,
+         *  gcs__strtok's first argument will be NULL --
+         *  this tells the function to use the static int variable
+         *  referring to the static (char *), reflecting the current
+         *  position in input_string.
+         *
+         *  The substring returned will be stored in curr,
+         *  and pushed to gcs__vstr by means of shallow copy.
+         */
         gcs__vstr_pushb(v, &curr);
     }
 }
 
-bool check__expr_parse(gcs__vstr *v, 
-                       const char *operands[], 
-                       const char *operators[], 
-                       const char *delimiter) {
-    const size_t size = gcs__vstr_size(v);
+bool check__expr_parse(gcs__vstr *v,
+                       const char *operands[],
+                       const char *operators[],
+                       const char *delimiter_expr,
+                       const char *delimiter_token) {
+    const size_t v_size = gcs__vstr_size(v);
     size_t i = 0;
 
-    ulog(stdout, "" KWHT_b "[BEG]" KNRM "", __FILE__, __func__, __LINE__, "%s", "======");
+    size_t ct_found = 0;
+    size_t ct_arithmetic = 0;
+    size_t ct_logical = 0;
 
-    for (i = 0; i < size; i++) {
-        char *curr = NULL;
+    for (i = 0; i < v_size; i++) {
+        gcs__vstr vec_str_tok = { { NULL, NULL, NULL } };
+        gcs__vstr *vt = NULL;
+
+        size_t vt_size = 0;
+        size_t j = 0;
+
         char *expr = NULL;
+        char *expr_display = NULL;
         char *token = NULL;
+        size_t ct_errors = 0;
 
-        curr = *(gcs__vstr_at(v, i));
+        gcs__vstr_init(&vec_str_tok, GCS__VSTR_INITIAL_SIZE);
+        vt = &vec_str_tok;
 
-        ulog(stdout, "" KYEL_b "[EXP]" KNRM "", __FILE__, __func__, __LINE__, "%s", curr);
+        expr = *(gcs__vstr_at(v, i));
 
-        ulog(stdout, "[beg]", __FILE__, __func__, __LINE__, "%s", "------");
+        expr_display = malloc(gcs__strlen(expr) + 1);
+        massert_malloc(expr_display);
+        gcs__strcpy(expr_display, expr);
 
-        token = gcs__strtok(curr, delimiter);
+        ulog(stdout, "[EXP]", __FILE__, "expression", __LINE__, "%lu:\t%s\n", i, expr);
 
-        ulog(stdout, "" KCYN_b "[TOK]" KNRM "", __FILE__, __func__, __LINE__, "%s", token);
+        token = gcs__strtok(expr, delimiter_token);
+        gcs__vstr_pushb(vt, &token);
 
-        while ((token = gcs__strtok(NULL, delimiter)) != NULL) {
-            ulog(stdout, "" KCYN_b "[TOK]" KNRM "", __FILE__, __func__, __LINE__, "%s", token);
+        while ((token = gcs__strtok(NULL, delimiter_token))) {
+            gcs__vstr_pushb(vt, &token);
         }
 
-        ulog(stdout, "[end]", __FILE__, __func__, __LINE__, "%s", "------");
-    }
+        vt_size = gcs__vstr_size(vt);
 
-    ulog(stdout, "" KWHT_b "[END]" KNRM "", __FILE__, __func__, __LINE__, "%s", "======");
+        ulog(stdout, "[TOK]", __FILE__, "tokens beg", __LINE__, "------");
+        gcs__vstr_puts(vt);
+        ulog(stdout, "[TOK]", __FILE__, "tokens end", __LINE__, "------\n");
+
+        for (j = 0; j < vt_size; j++) {
+            bool operand_expected = false;
+            bool operator_expected = false;
+            bool endexpr_expected = false;
+            bool unary_expected = false;
+            bool binary_expected = false;
+            bool logical_expected = false;
+            bool arithmetic_expected = false;
+            size_t index = 3;
+
+            printf("current expr: %s\n", expr_display);
+
+            check__fexpr_err(stderr, "[error type]", "[description]", expr_display, i, index);
+        }
+
+        free(expr_display);
+        expr_display = NULL;
+
+        gcs__vstr_deinit(vt);
+
+        check__fexpr_log(stdout, ++ct_found, ct_logical, ct_arithmetic);
+
+        if (ct_errors == 0) {
+            check__fexpr_ok(stdout);
+        }
+    }
 }
 
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
@@ -701,9 +831,11 @@ void gcs__vstr_init(gcs__vstr *v, size_t capacity) {
     char **start = NULL;
 
     if (capacity <= 0) {
-        WARNING(__FILE__, "Provided input capacity was less than or equal to 0. Will default to capacity of 1.");
+        WARNING(__FILE__,
+                "Provided input capacity was less than or equal to "
+                "0. Will default to capacity of 1.");
         capacity = 1;
-    } 
+    }
 
     start = calloc(capacity, sizeof *v->impl.start);
     massert_calloc(start);
@@ -715,7 +847,7 @@ void gcs__vstr_init(gcs__vstr *v, size_t capacity) {
 
 /**
  *  @brief  "Destructor" function, deinitializes vector
- *  
+ *
  *  @param[in]  v   pointer to vstr
  *
  *  If deep copies are enabled, any memory allocated by vstr
@@ -772,7 +904,7 @@ bool gcs__vstr_empty(gcs__vstr *v) {
  *
  *  @param[in]  v       pointer to vstr
  *  @param[in]  index   index of desired element
- * 
+ *
  *  @return     address of element at index (dereference for front element)
  */
 char **gcs__vstr_at(gcs__vstr *v, size_t index) {
@@ -784,7 +916,7 @@ char **gcs__vstr_at(gcs__vstr *v, size_t index) {
  *  @brief  Retrieves the address of vstr's front element
  *
  *  @param[in]  v       pointer to vstr
- *  
+ *
  *  @return     v->impl.start (dereference for front element)
  */
 char **gcs__vstr_front(gcs__vstr *v) {
@@ -796,7 +928,7 @@ char **gcs__vstr_front(gcs__vstr *v) {
  *  @brief  Retrieves the address of vstr's back element
  *
  *  @param[in]  v       pointer to vstr
- *  
+ *
  *  @return     v->impl.start (dereference for back element)
  */
 char **gcs__vstr_back(gcs__vstr *v) {
