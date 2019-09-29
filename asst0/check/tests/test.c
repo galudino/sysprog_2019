@@ -57,74 +57,6 @@ typedef unsigned char bool;
 
 #include "header.h"
 
-struct gcs__typetable {
-    size_t width;
-    
-    void *(*copy)(void *);
-    void (*dtor)(void *);
-    void (*swap)(void *, void *);
-
-    int (*compare)(const void *, const void *);
-    void (*print)(const void *, FILE *dest);
-};
-
-typedef char *str;
-
-void *gcs__str_copy(void *arg);
-void gcs__str_dtor(void *arg);
-void gcs__str_swap(void *c1, void *c2);
-
-int gcs__str_compare(const void *c1, const void *c2);
-void gcs__str_print(const void *arg, FILE *dest);
-
-struct gcs__typetable ttbl_str;
-struct gcs__typetable *_str_;
-
-struct gcs__vstr {
-    struct gcs__vstr_base {
-        char **start;
-        char **finish;
-        char **end_of_storage;
-    } impl;
-
-    struct gcs__typetable *ttbl;
-};
-
-typedef struct gcs__vstr gcs__vstr;
-
-
-
-gcs__vstr *gcs__vstr_allocate(void);
-void gcs__vstr_init(vstr *v, size_t capacity);
-void gcs__vstr_deinit(vstr *v);
-
-gcs__vstr *gcs__vstr_new(void);
-gcs__vstr *gcs__vstr_newr(size_t capacity);
-void gcs__vstr_delete(vstr **v);
-
-char **gcs__vstr_at(vstr *v, size_t n);
-char **gcs__vstr_front(vstr *v);
-char **gcs__vstr_back(vstr *v);
-char ***gcs__vstr_data(vstr *v);
-
-size_t gcs__vstr_size(vstr *v);
-size_t gcs__vstr_capacity(vstr *v);
-bool gcs__vstr_empty(vstr *v);
-
-void gcs__vstr_resize(vstr *v, size_t n);
-void gcs__vstr_shrinktofit(vstr *v);
-
-void gcs__vstr_pushb(vstr *v, const char **straddr);
-void gcs__vstr_popb(vstr *v);
-
-void gcs__vstr_clear(vstr *v);
-
-void gcs__vstr_puts(vstr *v);
-void gcs__vstr_putsf(vstr *v, const char *before, const char *after, const char *postelem, const char *empty, size_t breaklim);
-void gcs__vstr_fputs(vstr *v, FILE *dest);
-void gcs__vstr_fputsf(vstr *v, FILE *dest, const char *before, const char *after, const char *postelem, const char *empty, size_t breaklim);
-
-
 /**
  *  @brief  Program execution begins here
  *
@@ -135,14 +67,17 @@ void gcs__vstr_fputsf(vstr *v, FILE *dest, const char *before, const char *after
  */
 int main(int argc, const char *argv[]) {
     /* Enter source code here... */
+    char str[] = "3 + 3; 9 * 5";
+    char *curr = NULL;
+
+    curr = strtok(str, ";");
+    printf("%s\n", curr);
+
+    curr = strtok(NULL, ";");
+    printf("%s\n", curr);
+
 
 
 
     return EXIT_SUCCESS;
-}
-
-gcs__vstr *gcs__vstr_allocate(void) {
-    vstr *v = NULL;
-    v = malloc(sizeof *v);
-    return v;
 }

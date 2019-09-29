@@ -71,3 +71,34 @@ input_string (unprocessed input) is now:
 reset index to 0.
 repeat until input_string depleted of chars.
 
+
+first:
+    operands allowed:
+        arithmetic
+        logical
+    operators allowed:
+        logical NOT
+second:
+    operands allowed:
+        if logical NOT at first:
+            logical
+                if no more expr, no semicolon
+                else must have semicolon before next expr
+                go back to first
+    operators allowed:
+        if arithmetic at first:
+            arithmetic
+        else if logical at first:
+            logical
+third:
+    operands allowed:
+        if arithmetic at second:
+            arithmetic
+                if no more expr, no semicolon
+                else must have semicolon before next expr
+                go back to first
+        else if logical at second:
+            logical
+                if no more expr, no semicolon
+                else must have semicolon before next expr
+                go back to first

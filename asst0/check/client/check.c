@@ -306,66 +306,6 @@ void *gcs__memset(void *dst, int ch, size_t n);
         gcs__strcpy(dst, src);                                                 \
     } while (0)
 
-/**< check: client functions - logging/errors */
-int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic);
-int check__fexpr_err(FILE *dest,
-                     const char *err_type,
-                     const char *desc,
-                     const char *expr_fragmt,
-                     uint32_t ct_expr,
-                     int index);
-void check__arg_check(int argc, const char *argv[]);
-
-#define check__expr_log(ct_expr, ct_logical, ct_arithmetic)                    \
-    fexpr_log(stdout, ct_expr, ct_logical, ct_arithmetic)
-
-#define check__expr_err(err_type, desc, expr_fragmt, ct_expr, index)           \
-    fexpr_err(stderr, err_type, desc, expr_fragmt, ct_expr, index)
-
-#define check__fexpr_ok(dest) fprintf(dest, "%s%s%s", KGRN_b, "OK.", KNRM)
-#define check__expr_ok() fexpr_ok(stdout)
-
-/**< check: client functions - tokenize */
-void check__expr_populate(char **expr, char *input_string, const char *delimiter);
-
-/**< check: client functions - assess */
-bool check__expr_assess(const char *expr,
-                        const char *operands[],
-                        const char *operators[],
-                        const char *delimiter);
-
-#define CHECK__OPERANDS                                                        \
-    "false", "true", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
-
-#define CHECK__OPERATORS "+", "-", "*", "/", "AND", "OR", "NOT"
-
-#define CHECK__USAGE "USAGE: ./check [input string]"
-
-enum check__operand_type {
-    CHECK_false,
-    CHECK_true,
-    CHECK_0,
-    CHECK_1,
-    CHECK_2,
-    CHECK_3,
-    CHECK_4,
-    CHECK_5,
-    CHECK_6,
-    CHECK_7,
-    CHECK_8,
-    CHECK_9
-};
-
-enum check__operator_type {
-    CHECK__plus,
-    CHECK__minus,
-    CHECK__multiply,
-    CHECK__divide,
-    CHECK__AND,
-    CHECK__OR,
-    CHECK__NOT
-};
-
 /**
  *  @struct     vstr
  *  @brief      Represents a dynamic array ADT specialized for (char *)
@@ -415,6 +355,64 @@ void gcs__vstr_clear(gcs__vstr *v);
 /**< gcs__vstr: print contents to stream (stdout) */
 void gcs__vstr_puts(gcs__vstr *v);
 
+/**< check: client functions - logging/errors */
+int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic);
+int check__fexpr_err(FILE *dest,
+                     const char *err_type,
+                     const char *desc,
+                     const char *expr_fragmt,
+                     uint32_t ct_expr,
+                     int index);
+void check__arg_check(int argc, const char *argv[]);
+
+#define check__expr_log(ct_expr, ct_logical, ct_arithmetic)                    \
+    fexpr_log(stdout, ct_expr, ct_logical, ct_arithmetic)
+
+#define check__expr_err(err_type, desc, expr_fragmt, ct_expr, index)           \
+    fexpr_err(stderr, err_type, desc, expr_fragmt, ct_expr, index)
+
+#define check__fexpr_ok(dest) fprintf(dest, "%s%s%s", KGRN_b, "OK.", KNRM)
+#define check__expr_ok() fexpr_ok(stdout)
+
+/**< check: client functions - scan */
+void check__expr_scan(gcs__vstr *v, char *input_string, const char *delimiter);
+
+/**< check: client functions - parse */
+bool check__expr_parse(gcs__vstr *v, const char *operands[], const char *operators[], const char *delimiter);
+
+#define CHECK__OPERANDS                                                        \
+    "false", "true", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+
+#define CHECK__OPERATORS "+", "-", "*", "/", "AND", "OR", "NOT"
+
+#define CHECK__USAGE "USAGE: ./check [input string]"
+
+enum check__operand_type {
+    CHECK_false,
+    CHECK_true,
+    CHECK_0,
+    CHECK_1,
+    CHECK_2,
+    CHECK_3,
+    CHECK_4,
+    CHECK_5,
+    CHECK_6,
+    CHECK_7,
+    CHECK_8,
+    CHECK_9
+};
+
+enum check__operator_type {
+    CHECK__plus,
+    CHECK__minus,
+    CHECK__multiply,
+    CHECK__divide,
+    CHECK__AND,
+    CHECK__OR,
+    CHECK__NOT
+};
+
+
 /**
  *  @brief  Program execution begins here
  *
@@ -430,8 +428,6 @@ int main(int argc, const char *argv[]) {
     const char *input_string = NULL;
     const char *delimiter = NULL;
 
-    size_t size = 0;
-    size_t i = 0;
     char *curr = NULL;
 
     gcs__vstr vec_str = { { NULL, NULL, NULL } };
@@ -443,27 +439,35 @@ int main(int argc, const char *argv[]) {
     gcs__vstr_init(v, GCS__VSTR_INITIAL_SIZE);
 
     delimiter = ";";
+    check__expr_scan(v, (char *)(input_string), delimiter);
 
-    /**
-     *  start function: check__expr_populate
-     */
-    curr = gcs__strtok((char *)(input_string), delimiter);
+    delimiter = " ";
+    check__expr_parse(v, operators, operands, delimiter);
 
-    printf("%s\n", curr);
+    gcs__vstr_deinit(v);
+
+    return EXIT_SUCCESS;
+}
+
+void check__expr_scan(gcs__vstr *v, 
+                      char *input_string, 
+                      const char *delimiter) {
+    char *curr = NULL;
+
+    curr = gcs__strtok(input_string, delimiter);
     gcs__vstr_pushb(v, &curr);
 
     while ((curr = gcs__strtok(NULL, delimiter)) != NULL) {
         gcs__vstr_pushb(v, &curr);
     }
-    /**
-     *  end function: check__expr_populate
-     */ 
+}
 
-    /**
-     *  start function: check__expr_assess
-     */
-    size = gcs__vstr_size(v);
-    delimiter = " ";
+bool check__expr_parse(gcs__vstr *v, 
+                       const char *operands[], 
+                       const char *operators[], 
+                       const char *delimiter) {
+    const size_t size = gcs__vstr_size(v);
+    size_t i = 0;
 
     ulog(stdout, "" KWHT_b "[BEG]" KNRM "", __FILE__, __func__, __LINE__, "%s", "======");
 
@@ -482,7 +486,7 @@ int main(int argc, const char *argv[]) {
 
         ulog(stdout, "" KCYN_b "[TOK]" KNRM "", __FILE__, __func__, __LINE__, "%s", token);
 
-        while ((token = gcs__strtok(NULL, curr)) != NULL) {
+        while ((token = gcs__strtok(NULL, delimiter)) != NULL) {
             ulog(stdout, "" KCYN_b "[TOK]" KNRM "", __FILE__, __func__, __LINE__, "%s", token);
         }
 
@@ -490,23 +494,6 @@ int main(int argc, const char *argv[]) {
     }
 
     ulog(stdout, "" KWHT_b "[END]" KNRM "", __FILE__, __func__, __LINE__, "%s", "======");
-    /**
-     *  end function: check__expr_assess
-     */
-
-    gcs__vstr_deinit(v);
-
-    return EXIT_SUCCESS;
-}
-
-bool check__expr_assess(const char *expr,
-                        const char *operands[],
-                        const char *operators[],
-                        const char *delim) {
-    char str[256];
-    sprintf(str, "expr: %s", expr);
-    LOG(__FILE__, str);
-    return false;
 }
 
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
