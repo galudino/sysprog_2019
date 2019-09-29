@@ -355,6 +355,104 @@ void gcs__vstr_clear(gcs__vstr *v);
 /**< gcs__vstr: print contents to stream (stdout) */
 void gcs__vstr_puts(gcs__vstr *v);
 
+typedef int check__operand_t;
+typedef int check__operator_t;
+
+enum check__err_type {
+    ERR_OPERAND_UNKNOWN,
+    ERR_OPERAND_UNEXPECTED,
+    ERR_OPERAND_MISSING,
+    ERR_OPERAND_TYPE_MISMATCH,
+    ERR_OPERATOR_UNKNOWN,
+    ERR_OPERATOR_UNEXPECTED,
+    ERR_OPERATOR_MISSING,
+    ERR_OPERATOR_TYPE_MISMATCH,
+    ERR_TYPE_MISMATCH,
+    ERR_IDENTIFIER_UNKNOWN,
+    ERR_EXPRESSION_UNENDED,
+    ERR_EXPRESSION_INCOMPLETE
+};
+
+enum check__operand_type {
+    TYPE_OPERAND_EMPTY = -2,
+    TYPE_OPERAND_UNKNOWN = -1,
+    TYPE_OPERAND_ARITHMETIC = 0,
+    TYPE_OPERAND_LOGICAL = 1
+};
+
+enum check__operator_type {
+    TYPE_OPERATOR_EMPTY = -2,
+    TYPE_OPERATOR_UNKNOWN = -1,
+    TYPE_OPERATOR_BINARY_ARITHMETIC = 0,
+    TYPE_OPERATOR_UNARY_LOGICAL = 1,
+    TYPE_OPERATOR_BINARY_LOGICAL = 2
+};
+
+#define CHECK__OPERANDS_LOGICAL "false", "true"
+#define CHECK__OPERANDS_ARITHMETIC                                             \
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+
+#define CHECK__OPERATORS_LOGICAL_UNARY "NOT"
+#define CHECK__OPERATORS_LOGICAL_BINARY "AND", "OR"
+#define CHECK__OPERATORS_ARITHMETIC_BINARY "+", "-", "*", "/"
+
+#define CHECK__OPERANDS_LOGICAL_COUNT 2
+#define CHECK__OPERANDS_ARITHMETIC_COUNT 10
+
+#define CHECK__OPERATORS_LOGICAL_UNARY_COUNT 1
+#define CHECK__OPERATORS_LOGICAL_BINARY_COUNT 2
+#define CHECK__OPERATORS_ARITHMETIC_BINARY_COUNT 4
+
+#define CHECK__USAGE "USAGE: ./check [input string]"
+
+#define CHECK__ERR_DESCRIPTIONS                                                \
+    "unknown operand", "unexpected operand", "missing operand",                \
+        "operand type mismatch", "unknown operator", "unexpected operator",    \
+        "missing operator", "operator type mismatch", "type mismatch",         \
+        "unknown identifier", "expression unended", "expression incomplete"
+
+#define CHECK__ERR_SCAN "Scan error"
+#define CHECK__ERR_PARSE "Parse error"
+
+#define error_scan_expression_incomplete(expr, expno, err_index)               \
+    check__fexpr_err(stderr, CHECK__ERR_SCAN, error_desc[ERR_EXPRESSION_INCOMPLETE], expr, expno, err_index);
+
+#define error_parse_operand_unknown(expr, expno, err_index)                    \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_OPERAND_UNKNOWN], expr, expno, err_index);
+
+#define error_parse_operand_unexpected(expr, expno, err_index)                 \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_OPERAND_UNEXPECTED], expr, expno, err_index);
+
+#define error_parse_operand_missing(expr, expno, err_index)                    \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_OPERAND_MISSING], expr, expno, err_index);
+
+#define error_parse_operand_type_mismatch(expr, expno, err_index)              \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_OPERAND_TYPE_MISMATCH], expr, expno, err_index);
+
+#define error_parse_operator_unknown(expr, expno, err_index)                   \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_OPERATOR_UNKNOWN], expr, expno, err_index);
+
+#define error_parse_operator_unexpected(expr, expno, err_index)                \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_OPERATOR_UNEXPECTED], expr, expno, err_index);
+
+#define error_parse_operator_missing(expr, expno, err_index)                   \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_OPERATOR_MISSING], expr, expno, err_index);
+
+#define error_parse_operator_type_mismatch(expr, expno, err_index)             \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_OPERATOR_TYPE_MISMATCH], expr, expno, err_index);
+
+#define error_parse_type_mismatch(expr, expno, err_index)                      \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_TYPE_MISMATCH], expr, expno, err_index);
+
+#define error_parse_identifier_unknown(expr, expno, err_index)                 \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_IDENTIFIER_UNKNOWN], expr, expno, err_index);
+
+#define error_parse_expression_unended(expr, expno, err_index)                 \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_EXPRESSION_UNENDED], expr, expno, err_index);
+
+#define error_parse_expression_incomplete(expr, expno, err_index)              \
+    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[ERR_EXPRESSION_INCOMPLETE], expr, expno, err_index);
+
 /**< check: client functions - logging/errors */
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic);
 int check__fexpr_err(FILE *dest,
@@ -372,81 +470,27 @@ void check__expr_scan(gcs__vstr *v, char *input_string, const char *delimiter);
 
 /**< check: client functions - parse */
 bool check__expr_parse(gcs__vstr *v,
-                       const char *operands[],
-                       const char *operators[],
+                       const char *operands_logical[],
+                       const char *operands_arithmetic[],
+                       const char *operators_logical_unary[],
+                       const char *operators_logical_binary[],
+                       const char *operators_arithmetic_binary[],
                        const char *delimiter_expr,
                        const char *delimiter_token,
                        const char *error_desc[]);
 
-#define CHECK__OPERANDS                                                        \
-    "false", "true", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+check__operator_t check__get_operator_type(const char *token,
+                                           const char *operators_logical_unary[],
+                                           const char *operators_logical_binary[],
+                                           const char *operators_arithmetic_binary[],
+                                           const char *delimiter_expr,
+                                           const char *delimiter_token);
 
-#define CHECK__OPERATORS "+", "-", "*", "/", "AND", "OR", "NOT"
-
-#define CHECK__USAGE "USAGE: ./check [input string]"
-
-#define CHECK__ERR_DESCRIPTIONS                                                \
-    "unknown operand", "unexpected operand", "missing operand",                \
-        "operand type mismatch", "unknown operator", "unexpected operator",    \
-        "missing operator", "operator type mismatch", "type mismatch",         \
-        "unknown identifier", "expression unended", "expression incomplete"
-
-enum check__err_type {
-    OPERAND_UNKNOWN,
-    OPERAND_UNEXPECTED,
-    OPERAND_MISSING,
-    OPERAND_TYPE_MISMATCH,
-    OPERATOR_UNKNOWN,
-    OPERATOR_UNEXPECTED,
-    OPERATOR_MISSING,
-    OPERATOR_TYPE_MISMATCH,
-    TYPE_MISMATCH,
-    IDENTIFIER_UNKNOWN,
-    EXPRESSION_UNENDED,
-    EXPRESSION_INCOMPLETE
-};
-
-#define CHECK__ERR_SCAN "Scan error"
-#define CHECK__ERR_PARSE "Parse error"
-
-#define error_scan_operand_missing(expr, expno, err_index)                     \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERAND_MISSING], expr, expno, err_index);
-
-#define error_parse_operand_unexpected(expr, expno, err_index)                 \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERAND_UNEXPECTED], expr, expno, err_index);
-
-#define error_parse_operand_missing(expr, expno, err_index)                    \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERAND_MISSING], expr, expno, err_index);
-
-#define error_parse_operand_type_mismatch(expr, expno, err_index)              \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERAND_TYPE_MISMATCH], expr, expno, err_index);
-
-#define error_parse_operand_unknown(expr, expno, err_index)                    \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERAND_UNKNOWN], expr, expno, err_index);
-
-#define error_parse_operator_unknown(expr, expno, err_index)                   \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERATOR_UNKNOWN], expr, expno, err_index);
-
-#define error_parse_operator_unexpected(expr, expno, err_index)                \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERATOR_UNEXPECTED], expr, expno, err_index);
-
-#define error_parse_operator_missing(expr, expno, err_index)                   \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERATOR_MISSING], expr, expno, err_index);
-
-#define error_parse_operator_type_mismatch(expr, expno, err_index)             \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[OPERATOR_TYPE_MISMATCH], expr, expno, err_index);
-
-#define error_parse_type_mismatch(expr, expno, err_index)                      \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[TYPE_MISMATCH], expr, expno, err_index);
-
-#define error_parse_identifier_unknown(expr, expno, err_index)                 \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[IDENTIFIER_UNKNOWN], expr, expno, err_index);
-
-#define error_parse_expression_unended(expr, expno, err_index)                 \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[EXPRESSION_UNENDED], expr, expno, err_index);
-
-#define error_parse_expression_incomplete(expr, expno, err_index)              \
-    check__fexpr_err(stderr, CHECK__ERR_PARSE, error_desc[EXPRESSION_INCOMPLETE], expr, expno, err_index);
+check__operand_t check__get_operand_type(const char *token,
+                                         const char *operands_logical[],
+                                         const char *operands_arithmetic[],
+                                         const char *delimiter_expr,
+                                         const char *delimiter_token);
 
 /**
  *  @brief  Program execution begins here
@@ -475,8 +519,13 @@ int main(int argc, const char *argv[]) {
      *  it has one operand to its right.
      *  (e.g. "NOT false", "NOT true")
      */
-    const char *operands[] = { CHECK__OPERANDS };
-    const char *operators[] = { CHECK__OPERATORS };
+    const char *operands_logical[] = { CHECK__OPERANDS_LOGICAL };
+    const char *operands_arithmetic[] = { CHECK__OPERANDS_ARITHMETIC };
+
+    const char *operators_logical_unary[] = { CHECK__OPERATORS_LOGICAL_UNARY };
+    const char *operators_logical_binary[] = { CHECK__OPERATORS_LOGICAL_BINARY };
+    const char *operators_arithmetic_binary[] = { CHECK__OPERATORS_ARITHMETIC_BINARY };
+
     const char *error_descriptions[] = { CHECK__ERR_DESCRIPTIONS };
 
     /**
@@ -539,7 +588,15 @@ int main(int argc, const char *argv[]) {
      *
      *  Any errors/diagnostic messages will appear from this function.
      */
-    check__expr_parse(v, operands, operators, delimiter_expr, delimiter_token, error_descriptions);
+    check__expr_parse(v,
+                      operands_logical,
+                      operands_arithmetic,
+                      operators_logical_unary,
+                      operators_logical_binary,
+                      operators_arithmetic_binary,
+                      delimiter_expr,
+                      delimiter_token,
+                      error_descriptions);
 
     /**
      *  Release memory allocated by gcs__vstr.
@@ -584,22 +641,30 @@ void check__expr_scan(gcs__vstr *v, char *input_string, const char *delimiter_ex
          */
         gcs__vstr_pushb(v, &curr);
     }
+
+    /**
+     *  Pointers to substrings within input_string now exist
+     *  in v->impl.start. They are delimited by delimiter_expr.
+     */
 }
 
 bool check__expr_parse(gcs__vstr *v,
-                       const char *operands[],
-                       const char *operators[],
+                       const char *operands_logical[],
+                       const char *operands_arithmetic[],
+                       const char *operators_logical_unary[],
+                       const char *operators_logical_binary[],
+                       const char *operators_arithmetic_binary[],
                        const char *delimiter_expr,
                        const char *delimiter_token,
                        const char *error_desc[]) {
     const size_t v_size = gcs__vstr_size(v);
-    size_t i = 0;
 
     size_t ct_found = 0;
     size_t ct_arithmetic = 0;
     size_t ct_logical = 0;
+    size_t expno = 0;
 
-    for (i = 0; i < v_size; i++) {
+    for (expno = 0; expno < v_size; expno++) {
         /**
          *  A vstr of expr substrings (tokens)
          *  will be kept for expression analysis.
@@ -608,12 +673,34 @@ bool check__expr_parse(gcs__vstr *v,
         gcs__vstr *vt = NULL;
 
         size_t vt_size = 0;
-        size_t j = 0;
+        size_t tokno = 0;
 
         char *expr = NULL;
-        char *expr_display = NULL;
+        char *expr_base = NULL;
         char *token = NULL;
         size_t ct_errors = 0;
+
+        char *curr_tok = NULL;
+        char *prev_tok = NULL;
+
+        bool first = true;
+        bool second = false;
+        bool third = false;
+
+        bool operand_expected = false;
+        bool operator_expected = false;
+        bool endexpr_expected = false;
+        bool unary_expected = false;
+        bool binary_expected = false;
+        bool logical_expected = false;
+        bool arithmetic_expected = false;
+
+        bool one_leading_token_delimiter = false;
+
+        check__operator_t operator_curr = TYPE_OPERATOR_UNKNOWN;
+
+        check__operator_t operand_curr = TYPE_OPERAND_UNKNOWN;
+        check__operator_t operand_prev = TYPE_OPERAND_UNKNOWN;
 
         /**
          *  Initializing vstr's buffer and assigning a pointer
@@ -628,21 +715,19 @@ bool check__expr_parse(gcs__vstr *v,
          *  for vstr vt - vt will consist of the component
          *  tokens that make up expr.
          */
-        expr = *(gcs__vstr_at(v, i));
+        expr = *(gcs__vstr_at(v, expno));
 
         /**
-         *  Since expr will be mutated as its being
-         *  split into substrings, we must make a copy
-         *  of expr for the error message printouts.
-         *
-         *  This memory will be released after expr
-         *  is analyzed.
+         *  Since expr's base address will be mutated
+         *  as it is being split into substrings (tokens),
+         *  we must retain a copy of expr so that it can
+         *  be printed during error messages.
          */
-        expr_display = malloc(gcs__strlen(expr) + 1);
-        massert_malloc(expr_display);
-        gcs__strcpy(expr_display, expr);
+        expr_base = malloc(gcs__strlen(expr) + 1);
+        massert_malloc(expr_base);
+        gcs__strcpy(expr_base, expr);
 
-        ulog(stdout, "[EXP]", __FILE__, "expression", __LINE__, "%lu:\t%s\n", i, expr);
+        ulog(stdout, "[EXP]", __FILE__, "expression", __LINE__, "%lu:\t%s\n", expno, expr);
 
         /**
          *  Just as in check__expr_scan,
@@ -671,37 +756,106 @@ bool check__expr_parse(gcs__vstr *v,
         gcs__vstr_puts(vt);
         ulog(stdout, "[TOK]", __FILE__, "tokens end", __LINE__, "------\n");
 
-        printf("current expr: %s\n", expr_display);
+        printf("current expr: %s\n", expr_base);
 
-        for (j = 0; j < vt_size; j++) {
-            bool operand_expected = false;
-            bool operator_expected = false;
-            bool endexpr_expected = false;
-            bool unary_expected = false;
-            bool binary_expected = false;
-            bool logical_expected = false;
-            bool arithmetic_expected = false;
-
+        for (tokno = 0; tokno < vt_size; tokno++) {
             size_t index = 0;
-
-            char *curr = NULL;
+            size_t tlen = 0;
 
             /**
-             *  curr is the current token 
+             *  curr is the current token
              *  for the current expression
              *  (as described by expr_display)
              *
              *  Use curr for token analysis.
              */
-            curr = *(gcs__vstr_at(vt, j));
+            curr_tok = *(gcs__vstr_at(vt, tokno));
+            prev_tok = tokno > 0 ? *(gcs__vstr_at(vt, tokno - 1)) : NULL;
+            tlen = gcs__strlen(curr_tok);
+            
+            /**
+             *  This will advance curr_tok one character if
+             *  its first char is a delimiter token.
+             *
+             *  For all expressions except for the first,
+             *  the starting token for each expression will have
+             *  one character consisting of a leading delimiter.
+             *  (this is good -- input strings with multiple expressions
+             *   will behave this way.)
+             *
+             *  example scenario, in vstr v:
+             *  expr 0: "3 + 2"
+             *  expr 1: " NOT true"
+             *
+             *  "3 + 2; NOT true"
+             *         ^ this begins the first token of expr 1.
+             *           " NOT true" is expr 1, tok 0 of expr 1 is " NOT".
+             *           " NOT" will be advanced to "NOT" for comparisons sake.
+             *           If tok 0 had "NOT" instead, it would yield a
+             *              "parse error: unexpected operand" error.
+             */
+            if (curr_tok[0] == (*delimiter_token)) {
+                one_leading_token_delimiter = true;
+                curr_tok += 1;
+            }
+
+            printf("curr: %s\nprev: %s\n", curr_tok, prev_tok);
+
+            operator_curr = check__get_operator_type(curr_tok,
+                                                     operators_logical_unary,
+                                                     operators_logical_binary,
+                                                     operators_arithmetic_binary,
+                                                     delimiter_expr,
+                                                     delimiter_token);
+
+            operand_curr = check__get_operand_type(curr_tok, 
+                                                   operands_logical,
+                                                   operands_arithmetic,
+                                                   delimiter_expr,
+                                                   delimiter_token);
+
+            switch (operator_curr) {
+            case TYPE_OPERATOR_EMPTY:
+                printf("%s: operator empty\n", curr_tok);
+                break;
+            case TYPE_OPERATOR_UNKNOWN:
+                printf("%s: operator unknown\n", curr_tok);
+                break;
+            case TYPE_OPERATOR_BINARY_ARITHMETIC:
+                printf("%s: binary arithmetic\n", curr_tok);
+                break;
+            case TYPE_OPERATOR_UNARY_LOGICAL:
+                printf("%s: unary logical\n", curr_tok);
+                break;
+            case TYPE_OPERATOR_BINARY_LOGICAL:
+                printf("%s: binary logical\n", curr_tok);
+                break;
+            };
+
+            switch (operand_curr) {
+            case TYPE_OPERAND_EMPTY:
+                printf("%s: operand empty\n", curr_tok);
+                break;
+            case TYPE_OPERAND_UNKNOWN:
+                printf("%s: operand unknown\n", curr_tok);
+                break;
+            case TYPE_OPERAND_ARITHMETIC:
+                printf("%s: operand arithmetic\n", curr_tok);
+                break;
+            case TYPE_OPERAND_LOGICAL:
+                printf("%s: operand logical\n", curr_tok);
+                break;
+            };
+
+            printf("\n");
         }
 
         /**
          *  Release the copied expression string
          *  used for printing error messages.
          */
-        free(expr_display);
-        expr_display = NULL;
+        free(expr_base);
+        expr_base = NULL;
 
         /**
          *  Release the vstr of (char *) consisting
@@ -723,6 +877,57 @@ bool check__expr_parse(gcs__vstr *v,
             check__fexpr_ok(stdout);
         }
     }
+}
+
+check__operator_t check__get_operator_type(const char *token,
+                                           const char *operators_logical_unary[],
+                                           const char *operators_logical_binary[],
+                                           const char *operators_arithmetic_binary[],
+                                           const char *delimiter_expr,
+                                           const char *delimiter_token) {
+    size_t i = 0;
+
+    for (i = 0; i < CHECK__OPERATORS_LOGICAL_UNARY_COUNT; i++) {
+        if (gcs__strcmp(operators_logical_unary[i], token) == 0) {
+            return TYPE_OPERATOR_UNARY_LOGICAL;
+        }
+    }
+
+    for (i = 0; i < CHECK__OPERATORS_LOGICAL_BINARY_COUNT; i++) {
+        if (gcs__strcmp(operators_logical_binary[i], token) == 0) {
+            return TYPE_OPERATOR_BINARY_LOGICAL;
+        }
+    }
+
+    for (i = 0; i < CHECK__OPERATORS_ARITHMETIC_BINARY_COUNT; i++) {
+        if (gcs__strcmp(operators_arithmetic_binary[i], token) == 0) {
+            return TYPE_OPERATOR_BINARY_ARITHMETIC;
+        }
+    }
+
+    return TYPE_OPERATOR_UNKNOWN;
+}
+
+check__operand_t check__get_operand_type(const char *token,
+                                         const char *operands_logical[],
+                                         const char *operands_arithmetic[],
+                                         const char *delimiter_expr,
+                                         const char *delimiter_token) {
+    size_t i = 0;
+
+    for (i = 0; i < CHECK__OPERANDS_LOGICAL_COUNT; i++) {
+        if (gcs__strcmp(operands_logical[i], token) == 0) {
+            return TYPE_OPERAND_LOGICAL;
+        }
+    }
+
+    for (i = 0; i < CHECK__OPERANDS_ARITHMETIC_COUNT; i++) {
+        if (gcs__strcmp(operands_arithmetic[i], token) == 0) {
+            return TYPE_OPERAND_ARITHMETIC;
+        }
+    }
+    
+    return TYPE_OPERAND_UNKNOWN;
 }
 
 int check__fexpr_log(FILE *dest, uint32_t ct_expr, uint32_t ct_logical, uint32_t ct_arithmetic) {
