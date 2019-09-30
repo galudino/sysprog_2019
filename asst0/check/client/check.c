@@ -744,6 +744,8 @@ void check__expr_parse(gcs__vstr *v,
         printf("current expr: %s\n", expr_base);
         */
 
+        puts("");
+
         for (tokno = 0; tokno < vt_size; tokno++) {
             size_t index = 0;
             size_t tlen = 0;
@@ -1004,6 +1006,8 @@ void check__expr_parse(gcs__vstr *v,
                         default:
                             break;
                         };
+
+                        prev = curr;
                     }
                 } else {
                     prev = curr;
