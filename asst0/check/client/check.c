@@ -556,6 +556,7 @@ int main(int argc, const char *argv[]) {
      *          ("./[executable name]", and input_string)
      */
     check__arg_check(argc, argv);
+    puts(""); /**< line break before anything else shows up. */
 
     /**
      *  After the sanity check, input_string is assigned argv[1].
@@ -689,9 +690,6 @@ void check__expr_parse(gcs__vstr *v,
         bool first = true;
         bool second = false;
         bool third = false;
-
-        bool expected_operator = false;
-        bool expected_operand = false;
 
         /**
          *  Initializing vstr's buffer and assigning a pointer
