@@ -165,6 +165,13 @@ For all expr in v {
 
 destroy v
 
+If you are curious,
+you can check the contents of the vectors at:
+
+line 585-587 - gcs__vstr *v, vstr of expression substrings
+line 751-753 - gcs__vstr *vt, vstr of token substrings per element in v
+
+These statements are commented out for release.
 
 The input strings I tested for were:
 

@@ -3,7 +3,7 @@
  *  @brief      Client source file for Asst0
  *
  *  @author     Gemuele Aludino
- *  @date       19 Sep 2019
+ *  @date       29 Sep 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -32,6 +32,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>
+
+#define CHECK__RELEASE_MODE
 
 #if __STD_VERSION__ >= 19990L
 #include <stdbool.h>
@@ -574,6 +576,16 @@ int main(int argc, const char *argv[]) {
      */
     check__expr_scan(v, (char *)(input_string), delimiter_expr);
 
+/**
+ *  Grader's note: you can see what expressions ended up
+ *  in v here:
+ *
+ *  (comment out the #ifndef CHECK__RELEASE_MODE and #endif directives)
+ */
+#ifndef CHECK__RELEASE_MODE
+    gcs__vstr_puts(v);
+#endif
+
     /**
      *  Parse tokens from expressions and analyze.
      *
@@ -708,10 +720,6 @@ void check__expr_parse(gcs__vstr *v,
         expr_base = malloc(gcs__strlen(expr) + 1);
         massert_malloc(expr_base);
         gcs__strcpy(expr_base, expr);
-        
-        /*
-        ulog(stdout, "[EXP]", __FILE__, "expression", __LINE__, "%lu:\t%s\n", expno, expr);
-        */
 
         /**
          *  Just as in check__expr_scan,
@@ -734,17 +742,18 @@ void check__expr_parse(gcs__vstr *v,
             gcs__vstr_pushb(vt, &token);
         }
 
+/**
+ *  Grader's note: you can see what tokens ended up
+ *  in v here:
+ *
+ *  (comment out the #ifndef CHECK__RELEASE_MODE and #endif directives)
+ */
+#ifndef CHECK__RELEASE_MODE
+        gcs__vstr_puts(v);
+#endif
+
         vt_size = gcs__vstr_size(vt);
-
-        /*
-        ulog(stdout, "[TOK]", __FILE__, "tokens beg", __LINE__, "------");
-        gcs__vstr_puts(vt);
-        ulog(stdout, "[TOK]", __FILE__, "tokens end", __LINE__, "------\n");
-
-        printf("current expr: %s\n", expr_base);
-        */
-
-        puts("");
+        vt_size -= delimiter_at_end ? 1 : 0;
 
         for (tokno = 0; tokno < vt_size; tokno++) {
             size_t index = 0;
@@ -819,18 +828,6 @@ void check__expr_parse(gcs__vstr *v,
                     }
                 }
             }
-
-            /*
-            printf("curr: %s\nprev: %s\n", curr_tok, prev_tok);
-
-            if (first) {
-                printf("status: first\n");
-            } else if (second) {
-                printf("status: second\n");
-            } else if (third) {
-                printf("status: third\n");
-            }
-            */
 
             if (first) {
                 curr = check__get_operator_type(curr_tok,
@@ -1034,18 +1031,18 @@ void check__expr_parse(gcs__vstr *v,
                         }
                     } else {
                         switch (curr) {
-                            case TYPE_OPERAND_EMPTY:
+                        case TYPE_OPERAND_EMPTY:
                             error_parse_operand_missing(vt, expno, tokno);
                             break;
 
-                            case TYPE_OPERAND_UNKNOWN:
+                        case TYPE_OPERAND_UNKNOWN:
                             error_parse_operand_unknown(vt, expno, tokno);
                             break;
 
-                            case TYPE_OPERAND_ARITHMETIC:
+                        case TYPE_OPERAND_ARITHMETIC:
                             error_parse_operand_type_mismatch(vt, expno, tokno);
                             break;
-                            default:
+                        default:
                             break;
                         };
 
@@ -1071,18 +1068,18 @@ void check__expr_parse(gcs__vstr *v,
                         }
                     } else {
                         switch (curr) {
-                            case TYPE_OPERAND_EMPTY:
+                        case TYPE_OPERAND_EMPTY:
                             error_parse_operand_missing(vt, expno, tokno);
                             break;
 
-                            case TYPE_OPERAND_UNKNOWN:
+                        case TYPE_OPERAND_UNKNOWN:
                             error_parse_operand_unknown(vt, expno, tokno);
                             break;
 
-                            case TYPE_OPERAND_LOGICAL:
+                        case TYPE_OPERAND_LOGICAL:
                             error_parse_operand_type_mismatch(vt, expno, tokno);
                             break;
-                            default:
+                        default:
 
                             break;
                         };
@@ -1099,45 +1096,12 @@ void check__expr_parse(gcs__vstr *v,
                     prev = curr;
                 }
             }
-
-            /*
-            switch (curr) {
-            case TYPE_UNSPECIFIED:
-                printf("%s: type unspecified\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_EMPTY:
-                printf("%s: operator empty\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_UNKNOWN:
-                printf("%s: operator unknown\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_BINARY_ARITHMETIC:
-                printf("%s: binary arithmetic\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_UNARY_LOGICAL:
-                printf("%s: unary logical\n", curr_tok);
-                break;
-            case TYPE_OPERATOR_BINARY_LOGICAL:
-                printf("%s: binary logical\n", curr_tok);
-                break;
-            case TYPE_OPERAND_EMPTY:
-                printf("%s: operand empty\n", curr_tok);
-                break;
-            case TYPE_OPERAND_UNKNOWN:
-                printf("%s: operand unknown\n", curr_tok);
-                break;
-            case TYPE_OPERAND_ARITHMETIC:
-                printf("%s: operand arithmetic\n", curr_tok);
-                break;
-            case TYPE_OPERAND_LOGICAL:
-                printf("%s: operand logical\n", curr_tok);
-                break;
-            };
-            */
         }
 
         if (delimiter_at_end && tokno == vt_size) {
             error_parse_expression_incomplete(vt, expno, tokno);
+            fprintf(stderr, "\t(delimiter '%c' found after fragment '%s')\n\n", 
+            (*delimiter_expr), *(gcs__vstr_at(vt, tokno)));
         }
 
         /**
@@ -1683,9 +1647,14 @@ void gcs__vstr_clear(gcs__vstr *v) {
 void gcs__vstr_puts(gcs__vstr *v) {
     char **start = v->impl.start;
     char **pos = start;
+
+    LOG(__FILE__, "***** gcs__vstr begin *****");
+
     while ((pos = (start++)) != v->impl.finish) {
         LOG(__FILE__, *(pos));
     }
+
+    LOG(__FILE__, "***** gcs__vstr end   *****\n");
 }
 
 #if !defined(_STRING_H) || __APPLE__ && !defined(_STRING_H_)
