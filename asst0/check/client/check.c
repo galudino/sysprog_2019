@@ -385,25 +385,6 @@ enum check__oper_type {
     TYPE_OPERATOR_BINARY_LOGICAL
 };
 
-/*
-enum check__operand_type {
-    TYPE_OPERAND_UNSPECIFIED = -3,
-    TYPE_OPERAND_EMPTY = -2,
-    TYPE_OPERAND_UNKNOWN = -1,
-    TYPE_OPERAND_ARITHMETIC = 0,
-    TYPE_OPERAND_LOGICAL = 1
-};
-
-enum check__operator_type {
-    TYPE_OPERATOR_UNSPECIFIED = -3,
-    TYPE_OPERATOR_EMPTY = -2,
-    TYPE_OPERATOR_UNKNOWN = -1,
-    TYPE_OPERATOR_BINARY_ARITHMETIC = 0,
-    TYPE_OPERATOR_UNARY_LOGICAL = 1,
-    TYPE_OPERATOR_BINARY_LOGICAL = 2
-};
-*/
-
 #define CHECK__OPERANDS_LOGICAL "false", "true"
 #define CHECK__OPERANDS_ARITHMETIC                                             \
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
@@ -471,12 +452,7 @@ enum check__operator_type {
 
 /**< check: client functions - logging/errors */
 int check__fexpr_log(FILE *dest, size_t ct_expr, size_t ct_logical, size_t ct_arithmetic);
-int check__fexpr_err(FILE *dest,
-                     const char *err_type,
-                     const char *desc,
-                     gcs__vstr *vt,
-                     size_t ct_expr,
-                     int index);
+int check__fexpr_err(FILE *dest, const char *err_type, const char *desc, gcs__vstr *vt, size_t ct_expr, int index);
 void check__arg_check(int argc, const char *argv[]);
 
 #define check__fexpr_ok(dest) fprintf(dest, "%s%s%s\n\n", KGRN_b, "[OK]", KNRM)
@@ -497,17 +473,17 @@ void check__expr_parse(gcs__vstr *v,
                        const char *error_desc[]);
 
 check__oper_t check__get_operator_type(const char *token,
-                                           const char *operators_logical_unary[],
-                                           const char *operators_logical_binary[],
-                                           const char *operators_arithmetic_binary[],
-                                           const char *delimiter_expr,
-                                           const char *delimiter_token);
+                                       const char *operators_logical_unary[],
+                                       const char *operators_logical_binary[],
+                                       const char *operators_arithmetic_binary[],
+                                       const char *delimiter_expr,
+                                       const char *delimiter_token);
 
 check__oper_t check__get_operand_type(const char *token,
-                                         const char *operands_logical[],
-                                         const char *operands_arithmetic[],
-                                         const char *delimiter_expr,
-                                         const char *delimiter_token);
+                                      const char *operands_logical[],
+                                      const char *operands_arithmetic[],
+                                      const char *delimiter_expr,
+                                      const char *delimiter_token);
 /**
  *  @brief  Program execution begins here
  *
@@ -705,12 +681,8 @@ void check__expr_parse(gcs__vstr *v,
         bool second = false;
         bool third = false;
 
-        bool operator_unary_logical_found = false;
-        bool operator_binary_logical_found = false;
-        bool operand_logical_first_found = false;
-        bool operand_logical_second_found = false;
-
-        bool one_leading_token_delimiter = false;
+        bool expected_operator = false;
+        bool expected_operand = false;
 
         /**
          *  Initializing vstr's buffer and assigning a pointer
@@ -833,8 +805,8 @@ void check__expr_parse(gcs__vstr *v,
                         curr_tok += 1;
                     } else {
                         /**
-                         *  Operand unexpected. We were expecting a 
-                         *  (*delimiter_token). 
+                         *  Operand unexpected. We were expecting a
+                         *  (*delimiter_token).
                          */
                         ++ct_errors;
                         error_parse_operand_unexpected(vt, expno, 0);
@@ -845,6 +817,14 @@ void check__expr_parse(gcs__vstr *v,
             printf("curr: %s\nprev: %s\n", curr_tok, prev_tok);
 
             if (first) {
+                printf("status: first\n");
+            } else if (second) {
+                printf("status: second\n");
+            } else if (third) {
+                printf("status: third\n");
+            }
+
+            if (first) {
                 curr = check__get_operator_type(curr_tok,
                                                 operators_logical_unary,
                                                 operators_logical_binary,
@@ -852,7 +832,9 @@ void check__expr_parse(gcs__vstr *v,
                                                 delimiter_expr,
                                                 delimiter_token);
 
-                if (curr != TYPE_OPERATOR_UNARY_LOGICAL) {
+                if (curr != TYPE_OPERATOR_UNARY_LOGICAL
+                    && curr != TYPE_OPERATOR_BINARY_ARITHMETIC
+                    && curr != TYPE_OPERATOR_BINARY_LOGICAL) {
                     curr = check__get_operand_type(curr_tok,
                                                    operands_logical,
                                                    operands_arithmetic,
@@ -860,35 +842,65 @@ void check__expr_parse(gcs__vstr *v,
                                                    delimiter_token);
                 }
 
-                if (curr == TYPE_OPERATOR_UNARY_LOGICAL) {
+                if (curr == TYPE_OPERATOR_UNARY_LOGICAL ||
+                    curr == TYPE_OPERAND_LOGICAL || 
+                    curr == TYPE_OPERAND_ARITHMETIC) {
                     first = false;
                     second = true;
                     third = false;
 
                     prev = curr;
-                } else if (curr == TYPE_OPERAND_LOGICAL 
-                || curr == TYPE_OPERAND_ARITHMETIC) {
-                    first = false;
-                    second = true;
-                    third = false;
+                } else {
+                    switch (curr) {
+                    case TYPE_OPERAND_EMPTY:
+                        first = true;
+                        second = false;
+                        third = false;
 
-                    prev = curr;
-                } else if (curr == TYPE_OPERAND_EMPTY) {
-                    first = true;
-                    second = false;
-                    third = false;
+                        error_scan_expression_incomplete(vt, expno, 0);
+                        prev = curr;
+                        break;
+                    case TYPE_OPERAND_UNKNOWN:
+                        first = true;
+                        second = false;
+                        third = false;
 
-                    error_scan_expression_incomplete(vt, expno, 0);
+                        error_parse_identifier_unknown(vt, expno, 0);
+                        prev = curr;
+                        break;
+                    case TYPE_OPERATOR_EMPTY:
+                        first = true;
+                        second = false;
+                        third = false;
 
-                    prev = curr;
-                } else if (curr == TYPE_OPERAND_UNKNOWN) {
-                    first = true;
-                    second = false;
-                    third = false;
+                        error_scan_expression_incomplete(vt, expno, 0);
+                        prev = curr;
+                        break;
+                    case TYPE_OPERATOR_UNKNOWN:
+                        first = true;
+                        second = false;
+                        third = false;
 
-                    error_parse_identifier_unknown(vt, expno, 0);
+                        error_scan_expression_incomplete(vt, expno, 0);
+                        prev = curr;
+                        break;
+                    case TYPE_OPERATOR_BINARY_ARITHMETIC:
+                        first = true;
+                        second = false;
+                        third = false;
 
-                    prev = curr;
+                        error_parse_operator_unexpected(vt, expno, 0);
+                        prev = curr;
+                        break;
+                    case TYPE_OPERATOR_BINARY_LOGICAL:
+                        first = true;
+                        second = false;
+                        third = false;
+
+                        error_parse_operator_unexpected(vt, expno, 0);
+                        prev = curr;
+                        break;
+                    };
                 }
             } else if (second) {
                 if (prev == TYPE_OPERATOR_UNARY_LOGICAL) {
@@ -902,10 +914,79 @@ void check__expr_parse(gcs__vstr *v,
                                                    delimiter_expr,
                                                    delimiter_token);
 
-                    if (curr != TYPE_OPERAND_LOGICAL) {
+                    if (curr == TYPE_OPERAND_LOGICAL) {
+                        ++ct_logical;
+
+                        first = true;
+                        second = false;
+                        third = false;
+
+                        if (tokno < vt_size - 1) {
+                            error_parse_expression_unended(vt, expno, 0);
+                        }
+                    } else {
+                        switch (curr) {
+                        case TYPE_OPERAND_EMPTY:
+                        error_scan_expression_incomplete(vt, expno, 0);
+                        break;
+                        case TYPE_OPERAND_UNKNOWN:
+                        error_parse_operand_unknown(vt, expno, 0);
+                        break;
+                        case TYPE_OPERAND_ARITHMETIC:
                         error_parse_operand_type_mismatch(vt, expno, 0);
+                        break;
+                        };
+                    }
+
+                    prev = curr;
+                } else if (prev == TYPE_OPERAND_LOGICAL || prev == TYPE_OPERAND_ARITHMETIC) {
+
+                } else {
+                  
+                }
+
+                if (prev == TYPE_OPERATOR_UNARY_LOGICAL) {
+                    first = false;
+                    second = false;
+                    third = true;
+
+                    curr = check__get_operand_type(curr_tok,
+                                                   operands_logical,
+                                                   operands_arithmetic,
+                                                   delimiter_expr,
+                                                   delimiter_token);
+
+                    if (curr != TYPE_OPERAND_LOGICAL) {
+                        switch (curr) {
+                        case TYPE_OPERAND_ARITHMETIC:
+                            error_parse_operand_type_mismatch(vt, expno, 0);
+                            break;
+
+                        case TYPE_OPERAND_EMPTY:
+                            error_parse_identifier_unknown(vt, expno, 0);
+                            break;
+
+                        case TYPE_OPERAND_UNKNOWN:
+                            error_parse_operand_unknown(vt, expno, 0);
+                            break;
+
+                        case TYPE_OPERATOR_BINARY_ARITHMETIC:
+                            error_parse_operator_unexpected(vt, expno, 0);
+                            break;
+
+                        case TYPE_OPERATOR_BINARY_LOGICAL:
+                            error_parse_operator_unexpected(vt, expno, 0);
+                            break;
+
+                        default:
+                            break;
+                        };
                     } else {
                         ++ct_logical;
+
+                        first = true;
+                        second = false;
+                        third = false;
 
                         if (tokno < vt_size - 1) {
                             error_parse_expression_unended(vt, expno, 0);
@@ -926,7 +1007,19 @@ void check__expr_parse(gcs__vstr *v,
                                                     delimiter_token);
 
                     if (curr != TYPE_OPERATOR_BINARY_LOGICAL) {
+                        switch (curr) {
+                        case TYPE_OPERAND_ARITHMETIC:
+                            break;
+                        case TYPE_OPERAND_EMPTY:
+                            break;
+                        case TYPE_OPERAND_UNKNOWN:
+                            break;
+                        case TYPE_OPERAND_LOGICAL:
+                            break;
+                        };
+
                         error_parse_operator_type_mismatch(vt, expno, 0);
+                    } else {
                     }
 
                     prev = curr;
@@ -974,6 +1067,7 @@ void check__expr_parse(gcs__vstr *v,
                         ++ct_logical;
 
                         if (tokno < vt_size - 1) {
+                            third = true;
                             error_parse_expression_unended(vt, expno, 0);
                         }
                     }
@@ -996,6 +1090,7 @@ void check__expr_parse(gcs__vstr *v,
                         ++ct_arithmetic;
 
                         if (tokno < vt_size - 1) {
+                            third = true;
                             error_parse_expression_unended(vt, expno, 0);
                         }
                     }
@@ -1043,7 +1138,6 @@ void check__expr_parse(gcs__vstr *v,
                 printf("%s: operand logical\n", curr_tok);
                 break;
             };
-
         }
 
         if (delimiter_at_end && tokno == vt_size) {
@@ -1080,11 +1174,11 @@ void check__expr_parse(gcs__vstr *v,
 }
 
 check__oper_t check__get_operator_type(const char *token,
-                                           const char *operators_logical_unary[],
-                                           const char *operators_logical_binary[],
-                                           const char *operators_arithmetic_binary[],
-                                           const char *delimiter_expr,
-                                           const char *delimiter_token) {
+                                       const char *operators_logical_unary[],
+                                       const char *operators_logical_binary[],
+                                       const char *operators_arithmetic_binary[],
+                                       const char *delimiter_expr,
+                                       const char *delimiter_token) {
     size_t i = 0;
 
     if (gcs__strlen(token) == 0) {
@@ -1113,10 +1207,10 @@ check__oper_t check__get_operator_type(const char *token,
 }
 
 check__oper_t check__get_operand_type(const char *token,
-                                         const char *operands_logical[],
-                                         const char *operands_arithmetic[],
-                                         const char *delimiter_expr,
-                                         const char *delimiter_token) {
+                                      const char *operands_logical[],
+                                      const char *operands_arithmetic[],
+                                      const char *delimiter_expr,
+                                      const char *delimiter_token) {
     size_t i = 0;
 
     if (gcs__strlen(token) == 0) {
@@ -1158,12 +1252,7 @@ int check__fexpr_log(FILE *dest, size_t ct_expr, size_t ct_logical, size_t ct_ar
     return fprintf(dest, "%s\n", buffer);
 }
 
-int check__fexpr_err(FILE *dest,
-                     const char *err_type,
-                     const char *desc,
-                     gcs__vstr *vt,
-                     size_t ct_expr,
-                     int index) {
+int check__fexpr_err(FILE *dest, const char *err_type, const char *desc, gcs__vstr *vt, size_t ct_expr, int index) {
     char buffer[BUFFER_SIZE];
     char spaces[BUFFER_SIZE];
     char expr_fragmt[BUFFER_SIZE];
