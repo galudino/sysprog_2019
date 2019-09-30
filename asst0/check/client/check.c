@@ -832,9 +832,8 @@ void check__expr_parse(gcs__vstr *v,
                                                 delimiter_expr,
                                                 delimiter_token);
 
-                if (curr != TYPE_OPERATOR_UNARY_LOGICAL
-                    && curr != TYPE_OPERATOR_BINARY_ARITHMETIC
-                    && curr != TYPE_OPERATOR_BINARY_LOGICAL) {
+                if (curr != TYPE_OPERATOR_UNARY_LOGICAL && curr != TYPE_OPERATOR_BINARY_ARITHMETIC &&
+                    curr != TYPE_OPERATOR_BINARY_LOGICAL) {
                     curr = check__get_operand_type(curr_tok,
                                                    operands_logical,
                                                    operands_arithmetic,
@@ -843,8 +842,7 @@ void check__expr_parse(gcs__vstr *v,
                 }
 
                 if (curr == TYPE_OPERATOR_UNARY_LOGICAL ||
-                    curr == TYPE_OPERAND_LOGICAL || 
-                    curr == TYPE_OPERAND_ARITHMETIC) {
+                    curr == TYPE_OPERAND_LOGICAL || curr == TYPE_OPERAND_ARITHMETIC) {
                     first = false;
                     second = true;
                     third = false;
@@ -857,48 +855,48 @@ void check__expr_parse(gcs__vstr *v,
                         second = false;
                         third = false;
 
-                        error_scan_expression_incomplete(vt, expno, 0);
                         prev = curr;
+                        error_scan_expression_incomplete(vt, expno, 0);
                         break;
                     case TYPE_OPERAND_UNKNOWN:
                         first = true;
                         second = false;
                         third = false;
 
-                        error_parse_identifier_unknown(vt, expno, 0);
                         prev = curr;
+                        error_parse_identifier_unknown(vt, expno, 0);
                         break;
                     case TYPE_OPERATOR_EMPTY:
                         first = true;
                         second = false;
                         third = false;
 
-                        error_scan_expression_incomplete(vt, expno, 0);
                         prev = curr;
+                        error_scan_expression_incomplete(vt, expno, 0);
                         break;
                     case TYPE_OPERATOR_UNKNOWN:
                         first = true;
                         second = false;
                         third = false;
 
-                        error_scan_expression_incomplete(vt, expno, 0);
                         prev = curr;
+                        error_scan_expression_incomplete(vt, expno, 0);
                         break;
                     case TYPE_OPERATOR_BINARY_ARITHMETIC:
                         first = true;
                         second = false;
                         third = false;
 
-                        error_parse_operator_unexpected(vt, expno, 0);
                         prev = curr;
+                        error_parse_operator_unexpected(vt, expno, 0);
                         break;
                     case TYPE_OPERATOR_BINARY_LOGICAL:
                         first = true;
                         second = false;
                         third = false;
 
-                        error_parse_operator_unexpected(vt, expno, 0);
                         prev = curr;
+                        error_parse_operator_unexpected(vt, expno, 0);
                         break;
                     };
                 }
@@ -924,76 +922,23 @@ void check__expr_parse(gcs__vstr *v,
                         if (tokno < vt_size - 1) {
                             error_parse_expression_unended(vt, expno, 0);
                         }
+
+                        prev = curr;
                     } else {
                         switch (curr) {
                         case TYPE_OPERAND_EMPTY:
-                        error_scan_expression_incomplete(vt, expno, 0);
-                        break;
-                        case TYPE_OPERAND_UNKNOWN:
-                        error_parse_operand_unknown(vt, expno, 0);
-                        break;
-                        case TYPE_OPERAND_ARITHMETIC:
-                        error_parse_operand_type_mismatch(vt, expno, 0);
-                        break;
-                        };
-                    }
-
-                    prev = curr;
-                } else if (prev == TYPE_OPERAND_LOGICAL || prev == TYPE_OPERAND_ARITHMETIC) {
-
-                } else {
-                  
-                }
-
-                if (prev == TYPE_OPERATOR_UNARY_LOGICAL) {
-                    first = false;
-                    second = false;
-                    third = true;
-
-                    curr = check__get_operand_type(curr_tok,
-                                                   operands_logical,
-                                                   operands_arithmetic,
-                                                   delimiter_expr,
-                                                   delimiter_token);
-
-                    if (curr != TYPE_OPERAND_LOGICAL) {
-                        switch (curr) {
-                        case TYPE_OPERAND_ARITHMETIC:
-                            error_parse_operand_type_mismatch(vt, expno, 0);
+                            error_scan_expression_incomplete(vt, expno, 0);
                             break;
-
-                        case TYPE_OPERAND_EMPTY:
-                            error_parse_identifier_unknown(vt, expno, 0);
-                            break;
-
                         case TYPE_OPERAND_UNKNOWN:
                             error_parse_operand_unknown(vt, expno, 0);
                             break;
-
-                        case TYPE_OPERATOR_BINARY_ARITHMETIC:
-                            error_parse_operator_unexpected(vt, expno, 0);
-                            break;
-
-                        case TYPE_OPERATOR_BINARY_LOGICAL:
-                            error_parse_operator_unexpected(vt, expno, 0);
-                            break;
-
-                        default:
+                        case TYPE_OPERAND_ARITHMETIC:
+                            error_parse_operand_type_mismatch(vt, expno, 0);
                             break;
                         };
-                    } else {
-                        ++ct_logical;
 
-                        first = true;
-                        second = false;
-                        third = false;
-
-                        if (tokno < vt_size - 1) {
-                            error_parse_expression_unended(vt, expno, 0);
-                        }
+                        prev = curr;
                     }
-
-                    prev = curr;
                 } else if (prev == TYPE_OPERAND_LOGICAL) {
                     first = false;
                     second = false;
@@ -1006,24 +951,19 @@ void check__expr_parse(gcs__vstr *v,
                                                     delimiter_expr,
                                                     delimiter_token);
 
-                    if (curr != TYPE_OPERATOR_BINARY_LOGICAL) {
-                        switch (curr) {
-                        case TYPE_OPERAND_ARITHMETIC:
-                            break;
-                        case TYPE_OPERAND_EMPTY:
-                            break;
-                        case TYPE_OPERAND_UNKNOWN:
-                            break;
-                        case TYPE_OPERAND_LOGICAL:
-                            break;
-                        };
+                    if (curr == TYPE_OPERATOR_BINARY_LOGICAL) {
 
-                        error_parse_operator_type_mismatch(vt, expno, 0);
+                        prev = curr;
                     } else {
+                        prev = curr;
                     }
-
-                    prev = curr;
                 } else if (prev == TYPE_OPERAND_ARITHMETIC) {
+                    curr = check__get_operator_type(curr_tok,
+                                                    operators_logical_unary,
+                                                    operators_logical_binary,
+                                                    operators_arithmetic_binary,
+                                                    delimiter_expr,
+                                                    delimiter_token);
                     first = false;
                     second = false;
                     third = true;
@@ -1035,20 +975,16 @@ void check__expr_parse(gcs__vstr *v,
                                                     delimiter_expr,
                                                     delimiter_token);
 
-                    if (curr != TYPE_OPERATOR_BINARY_ARITHMETIC) {
-                        error_parse_operator_type_mismatch(vt, expno, 0);
+                    if (curr == TYPE_OPERATOR_BINARY_ARITHMETIC) {
+                        prev = curr;
+                    } else {
+                        prev = curr;
                     }
 
-                    prev = curr;
                 } else {
-                    first = false;
-                    second = false;
-                    third = false;
-
-                    /* error */
-
                     prev = curr;
                 }
+
             } else if (third) {
                 if (prev == TYPE_OPERATOR_BINARY_LOGICAL) {
                     first = false;
@@ -1061,18 +997,17 @@ void check__expr_parse(gcs__vstr *v,
                                                    delimiter_expr,
                                                    delimiter_token);
 
-                    if (curr != TYPE_OPERAND_LOGICAL) {
-                        error_parse_operand_type_mismatch(vt, expno, 0);
-                    } else {
+                    if (curr == TYPE_OPERAND_LOGICAL) {
                         ++ct_logical;
-
+                        prev = curr;
                         if (tokno < vt_size - 1) {
                             third = true;
                             error_parse_expression_unended(vt, expno, 0);
                         }
+                    } else {
+                        prev = curr;
+                        error_parse_operand_type_mismatch(vt, expno, 0);
                     }
-
-                    prev = curr;
                 } else if (prev == TYPE_OPERATOR_BINARY_ARITHMETIC) {
                     first = false;
                     second = false;
@@ -1083,19 +1018,19 @@ void check__expr_parse(gcs__vstr *v,
                                                    operands_arithmetic,
                                                    delimiter_expr,
                                                    delimiter_token);
-
-                    if (curr != TYPE_OPERAND_ARITHMETIC) {
-                        error_parse_operand_type_mismatch(vt, expno, 0);
-                    } else {
+                    if (curr == TYPE_OPERAND_ARITHMETIC) {
                         ++ct_arithmetic;
 
+                        prev = curr;
                         if (tokno < vt_size - 1) {
                             third = true;
                             error_parse_expression_unended(vt, expno, 0);
                         }
+                    } else {
+                        prev = curr;
+                        error_parse_operand_type_mismatch(vt, expno, 0);
                     }
 
-                    prev = curr;
                 } else {
                     first = false;
                     second = false;
