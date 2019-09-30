@@ -156,3 +156,110 @@ int check__fexpr_err(FILE *dest,
 
     return j;
 }
+
+
+
+for all expr in v {
+    vt = all tok in expr
+
+    for all tok in vt {
+        if (first) {
+
+        } else if (second) {
+
+        } else if (third) {
+
+        }
+
+        if (third && )
+    }
+}
+
+for (int expno = 0; expno < v_size; expno++) {
+    char *expr = v[expno];
+
+    vt = all tok in expr
+
+    oper_t curr;
+    oper_t prev;
+
+    for (int tokno = 0; tokno < vt_size; tokno++) {
+        curr = get_type();
+
+        if (first) {
+            if (curr == operator_unary_logical) {
+                first = false;
+                second = true;
+                third = false;
+
+                prev = oper_t
+            } else if (curr == operand_logical || curr == operand_arithmetic) {
+                first = false;
+                second = true;
+                third = false;
+
+                prev = oper_t
+            } else {
+                // error
+            }
+        } else if (second) {
+            if (curr == operand_logical) {
+                first = false;
+                second = false;
+                third = true;
+
+                if (prev == operator_unary_logical) {
+                    ++ct_logical;
+                    if (tokno < vt_size - 1) {
+                        // not last token
+                        //expression never ended
+                    }
+                }
+            } else if (curr == operator_binary_logical) {
+                first = false;
+                second = false;
+                third = true;
+
+                if (prev != operand_logical) {
+                    // error - operator mismatch
+                }
+            } else if (curr == operator_binary_arithmetic) {
+                first = false;
+                second = false;
+                third = true;
+
+                if (prev != operand_arithmetic) {
+                    // error - operator mismatch
+                }
+            } else {
+                // unknown operator
+            }
+        } else if (third) {
+            if (curr == operand_logical) {
+                first = false;
+                second = false;
+                third = false;
+
+                if (prev == operator_binary_logical) {
+                    ++ct_logical;
+                    if (tokno < vt_size - 1) {
+                        // not last token
+                        // expression never ended
+                    }
+                }
+            } else if (curr == operand_arithmetic) {
+                if (prev == operator_binary_arithmetic) {
+                    ++ct_arithmetic;
+                    if (tokno < vt_size - 1) {
+                        // not last token
+                        // expression never ended
+                    }
+                }
+            }
+        }
+
+        if (third && tokno < vt_size) {
+            expression never ended
+        }
+    }
+}
