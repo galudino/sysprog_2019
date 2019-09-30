@@ -856,7 +856,7 @@ void check__expr_parse(gcs__vstr *v,
                         third = false;
 
                         prev = curr;
-                        error_scan_expression_incomplete(vt, expno, 0);
+                        error_scan_expression_incomplete(vt, expno, tokno);
                         break;
                     case TYPE_OPERAND_UNKNOWN:
                         first = true;
@@ -864,7 +864,7 @@ void check__expr_parse(gcs__vstr *v,
                         third = false;
 
                         prev = curr;
-                        error_parse_identifier_unknown(vt, expno, 0);
+                        error_parse_identifier_unknown(vt, expno, tokno);
                         break;
                     case TYPE_OPERATOR_EMPTY:
                         first = true;
@@ -872,7 +872,7 @@ void check__expr_parse(gcs__vstr *v,
                         third = false;
 
                         prev = curr;
-                        error_scan_expression_incomplete(vt, expno, 0);
+                        error_scan_expression_incomplete(vt, expno, tokno);
                         break;
                     case TYPE_OPERATOR_UNKNOWN:
                         first = true;
@@ -880,7 +880,7 @@ void check__expr_parse(gcs__vstr *v,
                         third = false;
 
                         prev = curr;
-                        error_scan_expression_incomplete(vt, expno, 0);
+                        error_scan_expression_incomplete(vt, expno, tokno);
                         break;
                     case TYPE_OPERATOR_BINARY_ARITHMETIC:
                         first = true;
@@ -888,7 +888,7 @@ void check__expr_parse(gcs__vstr *v,
                         third = false;
 
                         prev = curr;
-                        error_parse_operator_unexpected(vt, expno, 0);
+                        error_parse_operator_unexpected(vt, expno, tokno);
                         break;
                     case TYPE_OPERATOR_BINARY_LOGICAL:
                         first = true;
@@ -896,7 +896,7 @@ void check__expr_parse(gcs__vstr *v,
                         third = false;
 
                         prev = curr;
-                        error_parse_operator_unexpected(vt, expno, 0);
+                        error_parse_operator_unexpected(vt, expno, tokno);
                         break;
                     };
                 }
@@ -920,20 +920,20 @@ void check__expr_parse(gcs__vstr *v,
                         third = false;
 
                         if (tokno < vt_size - 1) {
-                            error_parse_expression_unended(vt, expno, 0);
+                            error_parse_expression_unended(vt, expno, tokno);
                         }
 
                         prev = curr;
                     } else {
                         switch (curr) {
                         case TYPE_OPERAND_EMPTY:
-                            error_scan_expression_incomplete(vt, expno, 0);
+                            error_scan_expression_incomplete(vt, expno, tokno);
                             break;
                         case TYPE_OPERAND_UNKNOWN:
-                            error_parse_operand_unknown(vt, expno, 0);
+                            error_parse_operand_unknown(vt, expno, tokno);
                             break;
                         case TYPE_OPERAND_ARITHMETIC:
-                            error_parse_operand_type_mismatch(vt, expno, 0);
+                            error_parse_operand_type_mismatch(vt, expno, tokno);
                             break;
                         };
 
@@ -952,18 +952,25 @@ void check__expr_parse(gcs__vstr *v,
                                                     delimiter_token);
 
                     if (curr == TYPE_OPERATOR_BINARY_LOGICAL) {
-
                         prev = curr;
                     } else {
+                        switch (curr) {
+                        case TYPE_OPERATOR_EMPTY:
+                            error_parse_operator_missing(vt, expno, tokno);
+                            break;
+                        case TYPE_OPERATOR_UNKNOWN:
+                            error_parse_operator_unknown(vt, expno, tokno);
+                            break;
+                        case TYPE_OPERATOR_BINARY_ARITHMETIC:
+                            error_parse_operator_type_mismatch(vt, expno, tokno);
+                            break;
+                        default:
+                            break;
+                        };
+
                         prev = curr;
                     }
                 } else if (prev == TYPE_OPERAND_ARITHMETIC) {
-                    curr = check__get_operator_type(curr_tok,
-                                                    operators_logical_unary,
-                                                    operators_logical_binary,
-                                                    operators_arithmetic_binary,
-                                                    delimiter_expr,
-                                                    delimiter_token);
                     first = false;
                     second = false;
                     third = true;
@@ -978,13 +985,23 @@ void check__expr_parse(gcs__vstr *v,
                     if (curr == TYPE_OPERATOR_BINARY_ARITHMETIC) {
                         prev = curr;
                     } else {
-                        prev = curr;
+                        switch (curr) {
+                        case TYPE_OPERATOR_EMPTY:
+                            error_parse_operator_missing(vt, expno, tokno);
+                            break;
+                        case TYPE_OPERATOR_UNKNOWN:
+                            error_parse_operator_unknown(vt, expno, tokno);
+                            break;
+                        case TYPE_OPERATOR_BINARY_LOGICAL:
+                            error_parse_operator_type_mismatch(vt, expno, tokno);
+                            break;
+                        default:
+                            break;
+                        };
                     }
-
                 } else {
                     prev = curr;
                 }
-
             } else if (third) {
                 if (prev == TYPE_OPERATOR_BINARY_LOGICAL) {
                     first = false;
@@ -1000,13 +1017,29 @@ void check__expr_parse(gcs__vstr *v,
                     if (curr == TYPE_OPERAND_LOGICAL) {
                         ++ct_logical;
                         prev = curr;
+
                         if (tokno < vt_size - 1) {
                             third = true;
-                            error_parse_expression_unended(vt, expno, 0);
+                            error_parse_expression_unended(vt, expno, tokno);
                         }
                     } else {
+                        switch (curr) {
+                            case TYPE_OPERAND_EMPTY:
+                            error_parse_operand_missing(vt, expno, tokno);
+                            break;
+
+                            case TYPE_OPERAND_UNKNOWN:
+                            error_parse_operand_unknown(vt, expno, tokno);
+                            break;
+
+                            case TYPE_OPERAND_ARITHMETIC:
+                            error_parse_operand_type_mismatch(vt, expno, tokno);
+                            break;
+                            default:
+                            break;
+                        };
+
                         prev = curr;
-                        error_parse_operand_type_mismatch(vt, expno, 0);
                     }
                 } else if (prev == TYPE_OPERATOR_BINARY_ARITHMETIC) {
                     first = false;
@@ -1020,15 +1053,31 @@ void check__expr_parse(gcs__vstr *v,
                                                    delimiter_token);
                     if (curr == TYPE_OPERAND_ARITHMETIC) {
                         ++ct_arithmetic;
-
                         prev = curr;
+
                         if (tokno < vt_size - 1) {
                             third = true;
-                            error_parse_expression_unended(vt, expno, 0);
+                            error_parse_expression_unended(vt, expno, tokno);
                         }
                     } else {
+                        switch (curr) {
+                            case TYPE_OPERAND_EMPTY:
+                            error_parse_operand_missing(vt, expno, tokno);
+                            break;
+
+                            case TYPE_OPERAND_UNKNOWN:
+                            error_parse_operand_unknown(vt, expno, tokno);
+                            break;
+
+                            case TYPE_OPERAND_LOGICAL:
+                            error_parse_operand_type_mismatch(vt, expno, tokno);
+                            break;
+                            default:
+
+                            break;
+                        };
+
                         prev = curr;
-                        error_parse_operand_type_mismatch(vt, expno, 0);
                     }
 
                 } else {
@@ -1076,7 +1125,7 @@ void check__expr_parse(gcs__vstr *v,
         }
 
         if (delimiter_at_end && tokno == vt_size) {
-            error_parse_expression_incomplete(vt, expno, 0);
+            error_parse_expression_incomplete(vt, expno, tokno);
         }
 
         /**
@@ -1219,12 +1268,15 @@ int check__fexpr_err(FILE *dest, const char *err_type, const char *desc, gcs__vs
 
     j += sprintf(buffer + j,
                  "%s: " KWHT_b "%s" KNRM " in " KMAG_b "expression %lu" KNRM
-                 ": %s in\n\t\"%s\"\n",
+                 ": %s in\n\t\"%s\" (see fragment %s'%s'%s)\n",
                  KRED_b "Error" KNRM,
                  err_type,
                  ct_expr,
                  desc,
-                 expr_fragmt);
+                 expr_fragmt,
+                 KWHT_b,
+                 *(gcs__vstr_at(vt, index)),
+                 KNRM);
 
     /* TODO: implementation of '^', appears under problematic character.
     if (index > -1) {
