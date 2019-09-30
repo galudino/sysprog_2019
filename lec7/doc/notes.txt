@@ -42,6 +42,23 @@ strdup
 memcpy
 memset
 
+struct typetable {
+    size_t width;
+    void *(*copy)(const void *);
+    void (*dtor)(void *);
+    void (*swap)(void *, void *);
+    int (*compare)(const void *, const void *);
+    void (*print)(const void *, FILE *);
+};
+
+typedef char *str;
+void *str_copy(const void *arg);
+void str_dtor(void *arg);
+void str_swap(void *c1, void *c2);
+
+struct typetable ttbl_str;
+struct typetable *_str_ = &ttbl_str;
+
 /* vector_str simplified (vstr) */
 vstr_init
 vstr_deinit
