@@ -144,21 +144,27 @@ of its (char *) arguments, but I've disabled deep copies to reduce
 the amount of dynamic memory allocations (I've found that deep copies
 were not necessary.)
 
-After that, I followed the instructions in the FAQ --
-Break the input line into expressions,
-store each expression into the vector.
+Shallow copy argv[1] in a char *input_string.
+Store a vector v of (char *),
+that consists of substrings of input_string,
+tokenized by ';'.
 
-For all expressions in the vector,
-create a temporary vector of tokens,
-and break up each expression into its component tokens,
-store each token in the vector.
+For all expr in v {
+    Store a temporary vector vt of (char *),
+    that consists of substrings of the current expr in v,
+    tokenized by ' '.
 
-assess the vector of tokens and determine if a valid
-expression can be built.
-Print any errors that come up.
-Show the final diagnostic - if no errors, print ok.
-Then release the memory for the temporary vector
-and start the next expression.
+    For all tok in vt {
+        assess first, second and third tokens (if third is applicable)
+        and match them up. print an error if bad token,
+        otherwise keep count and carry on.
+    }
+
+    destroy vt
+}
+
+destroy v
+
 
 The input strings I tested for were:
 

@@ -708,8 +708,10 @@ void check__expr_parse(gcs__vstr *v,
         expr_base = malloc(gcs__strlen(expr) + 1);
         massert_malloc(expr_base);
         gcs__strcpy(expr_base, expr);
-
+        
+        /*
         ulog(stdout, "[EXP]", __FILE__, "expression", __LINE__, "%lu:\t%s\n", expno, expr);
+        */
 
         /**
          *  Just as in check__expr_scan,
@@ -734,11 +736,13 @@ void check__expr_parse(gcs__vstr *v,
 
         vt_size = gcs__vstr_size(vt);
 
+        /*
         ulog(stdout, "[TOK]", __FILE__, "tokens beg", __LINE__, "------");
         gcs__vstr_puts(vt);
         ulog(stdout, "[TOK]", __FILE__, "tokens end", __LINE__, "------\n");
 
         printf("current expr: %s\n", expr_base);
+        */
 
         for (tokno = 0; tokno < vt_size; tokno++) {
             size_t index = 0;
@@ -814,6 +818,7 @@ void check__expr_parse(gcs__vstr *v,
                 }
             }
 
+            /*
             printf("curr: %s\nprev: %s\n", curr_tok, prev_tok);
 
             if (first) {
@@ -823,6 +828,7 @@ void check__expr_parse(gcs__vstr *v,
             } else if (third) {
                 printf("status: third\n");
             }
+            */
 
             if (first) {
                 curr = check__get_operator_type(curr_tok,
@@ -1090,6 +1096,7 @@ void check__expr_parse(gcs__vstr *v,
                 }
             }
 
+            /*
             switch (curr) {
             case TYPE_UNSPECIFIED:
                 printf("%s: type unspecified\n", curr_tok);
@@ -1122,6 +1129,7 @@ void check__expr_parse(gcs__vstr *v,
                 printf("%s: operand logical\n", curr_tok);
                 break;
             };
+            */
         }
 
         if (delimiter_at_end && tokno == vt_size) {
