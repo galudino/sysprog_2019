@@ -471,7 +471,6 @@ void check__expr_parse(gcs__vstr *v,
                        const char *operators_arithmetic_binary[],
                        const char *delimiter_expr,
                        const char *delimiter_token,
-                       bool delimiter_at_end,
                        const char *error_desc[]);
 
 check__oper_t check__get_operator_type(const char *token,
@@ -486,6 +485,7 @@ check__oper_t check__get_operand_type(const char *token,
                                       const char *operands_arithmetic[],
                                       const char *delimiter_expr,
                                       const char *delimiter_token);
+
 /**
  *  @brief  Program execution begins here
  *
@@ -533,7 +533,8 @@ int main(int argc, const char *argv[]) {
     const char *input_string = NULL;
     const char *delimiter_expr = ";";
     const char *delimiter_token = " ";
-    bool delimiter_at_end = false;
+
+    char *buff = NULL;
 
     /**
      *  gcs__vstr is an ADT representing a dynamically-sized array,
@@ -560,7 +561,6 @@ int main(int argc, const char *argv[]) {
      *  After the sanity check, input_string is assigned argv[1].
      */
     input_string = argv[1];
-    delimiter_at_end = input_string[gcs__strlen(input_string) - 1] == (*delimiter_expr);
 
     /**
      *  Initialize gcs__vstr's buffer/internal pointers.
@@ -602,7 +602,6 @@ int main(int argc, const char *argv[]) {
                       operators_arithmetic_binary,
                       delimiter_expr,
                       delimiter_token,
-                      delimiter_at_end,
                       error_descriptions);
 
     /**
@@ -648,7 +647,6 @@ void check__expr_scan(gcs__vstr *v, char *input_string, const char *delimiter_ex
          */
         gcs__vstr_pushb(v, &curr);
     }
-
     /**
      *  Pointers to substrings within input_string now exist
      *  in v->impl.start. They are delimited by delimiter_expr.
@@ -663,7 +661,6 @@ void check__expr_parse(gcs__vstr *v,
                        const char *operators_arithmetic_binary[],
                        const char *delimiter_expr,
                        const char *delimiter_token,
-                       bool delimiter_at_end,
                        const char *error_desc[]) {
     const size_t v_size = gcs__vstr_size(v);
 
@@ -753,7 +750,6 @@ void check__expr_parse(gcs__vstr *v,
 #endif
 
         vt_size = gcs__vstr_size(vt);
-        vt_size -= delimiter_at_end ? 1 : 0;
 
         for (tokno = 0; tokno < vt_size; tokno++) {
             size_t index = 0;
@@ -1066,6 +1062,8 @@ void check__expr_parse(gcs__vstr *v,
                             third = true;
                             error_parse_expression_unended(vt, expno, tokno);
                         }
+
+                        break;
                     } else {
                         switch (curr) {
                         case TYPE_OPERAND_EMPTY:
@@ -1096,12 +1094,17 @@ void check__expr_parse(gcs__vstr *v,
                     prev = curr;
                 }
             }
-        }
 
-        if (delimiter_at_end && tokno == vt_size) {
-            error_parse_expression_incomplete(vt, expno, tokno);
-            fprintf(stderr, "\t(delimiter '%c' found after fragment '%s')\n\n", 
-            (*delimiter_expr), *(gcs__vstr_at(vt, tokno)));
+            /**
+             *  The loop should end on its own and not reach this point
+             *  if a properly formed expression was tokenized into vt.
+             *
+             *  If there are still tokens remaining,
+             *  they will be interpreted as unexpected operands.
+             */
+            if (first == false && second == false && third == false) {
+                error_parse_operand_unexpected(vt, expno, tokno);
+            }
         }
 
         /**
