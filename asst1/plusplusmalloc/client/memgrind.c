@@ -79,8 +79,6 @@
  *  results.
  */
 
-
-
 /**
  *  @brief  Program execution begins here
  *

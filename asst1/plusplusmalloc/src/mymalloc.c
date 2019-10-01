@@ -36,7 +36,7 @@ char myblock[MYMALLOC__BLOCK_SIZE];
  *  @brief      Allocates size bytes from myblock
  *              and returns a pointer to the allocated memory.
  * 
- *  Precondition: size parameter provided is between (0, 4096]
+ *  Precondition: size parameter provided is within (0, 4096]
  *  
  *  @param[in]  size        desired memory by user (in bytes)
  *  @param[in]  filename    for use with __FILE__ directive
@@ -60,6 +60,8 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
 void myfree(void *ptr, const char *filename, size_t lineno) {
 
 }
+
+/**/
 
 bool ulog_attrs_disable[] = { false, false, false, false, false, false, false };
 

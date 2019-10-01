@@ -1,0 +1,34 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       01 Oct 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+definitions (preprocessor directives)
+
+macro 
+    definition with parameters
+    #define SQUARE(x) x * x         /* BAD */
+    #define SQUARE(x) ((x) * (x))   /* GOOD */
+
+header file
+    struct/union declarations
+    function declarations
+    variable declarations
+    preprocessor directives
+    (don't put definitions)
+
+NULL    (void *)(0)
+
+errno
+
+printf("Error at line %d in file: %s\n", __LINE__, __FILE__);
+
+char *ptr = malloc...
+....
+char *newptr = realloc(ptr, 80);
+ptr = newptr ? newptr : ptr;
+

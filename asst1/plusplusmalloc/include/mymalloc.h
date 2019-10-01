@@ -63,9 +63,6 @@ typedef unsigned int uint32_t;
 #define MYMALLOC__BLOCK_SIZE    4096
 extern char myblock[MYMALLOC__BLOCK_SIZE];
 
-void *mymalloc(size_t size, const char *filename, size_t lineno);
-void myfree(void *ptr, const char *filename, size_t lineno);
-
 #ifndef _STDLIB_H
 #define EXIT_SUCCESS    0
 #define EXIT_FAILURE    1
@@ -73,6 +70,12 @@ void myfree(void *ptr, const char *filename, size_t lineno);
 #define malloc(size)    mymalloc(size, __FILE__, __LINE__)
 #define free(ptr)       myfree(ptr, __FILE__, __LINE__)
 #endif
+
+/**< mymalloc: memory allocator functions, allocate and free */
+void *mymalloc(size_t size, const char *filename, size_t lineno);
+void myfree(void *ptr, const char *filename, size_t lineno);
+
+/**/
 
 /**
  *  Miscellaneous utilities
