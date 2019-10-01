@@ -28,7 +28,58 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <sys/time.h>
 #include "mymalloc.h"
+
+/**
+ *  memgrind unit tests
+ * 
+ *  A:  malloc() 1 byte and immediately free it - do this 150 times
+ *  B:  malloc() 1 byte, store the pointer in an array - do this 150 times
+ *  C:  Randomly choose between a 1 byte malloc() or free()ing a 1 byte pointer
+ *      Do this until you have allocated 50 times.
+ * 
+ *      Keep track of each operation 
+ *      so that you eventually malloc 50 bytes in total.
+ *      
+ *      If you have already allocated 50 times, 
+ *      disregard the random and just free() on each iteration
+ *       
+ *      Keep track of each operation 
+ *      so that you eventually free() all pointers.
+ *      Don't allow a free() if you have no pointers to free().
+ *  
+ *  D:  Randomly choose between a randomly-sized malloc() or free()ing a
+ *      pointer -- do this many times (see below)
+ * 
+ *      Keep track of each malloc so that all mallocs do not exceed your total
+ *      memory capacity.
+ *      
+ *      Keep track of each operation so that you eventually malloc 50 times.
+ *      Keep track of each operation so that eventually free() all pointers
+ *      Choose a random allocation size between 1 and 64 bytes.
+ *      
+ *  E:  A workload of your choosing.
+ *  F:  A workload of your choosing.
+ *  
+ *      Describe both workloads in testplan.txt
+ * 
+ *  Your memgrind.c should run all the workloads, one after another, 100 times.
+ *  It should record the run time for each workload and store it.
+ * 
+ *  When all 100 iterations of all the workloads have been run,
+ *  memgrind.c should calculate the mean time for each workload to execute
+ *  and output them in sequence.
+ * 
+ *  You might find the gettimeofday(struct timeval *tv, struct timezone *tz)
+ *  function in the <time.h> library useful.
+ * 
+ *  You should run memgrind yourself and include its results in your readme.pdf.
+ *  Be sure to discuss your findings, especially any interesting or unexpected
+ *  results.
+ */
+
+
 
 /**
  *  @brief  Program execution begins here
@@ -41,6 +92,6 @@
 int main(int argc, const char *argv[]) {
     /* Enter source code here... */
 
-    
+
     return EXIT_SUCCESS;
 }
