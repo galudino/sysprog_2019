@@ -55,7 +55,13 @@ typedef unsigned char bool;
 #include <fcntl.h>
 */
 
+/*
 #include "header.h"
+*/
+
+#include <stdio.h>
+
+#include "library.h"
 
 /**
  *  @brief  Program execution begins here
@@ -68,6 +74,5 @@ typedef unsigned char bool;
 int main(int argc, const char *argv[]) {
     /* Enter source code here... */
 
-    
-    return EXIT_SUCCESS;
+    return 0;
 }

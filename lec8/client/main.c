@@ -41,7 +41,7 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    printf("%s", "");
+    
 
     return EXIT_SUCCESS;
 }
