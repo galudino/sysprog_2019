@@ -1,0 +1,68 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       03 Oct 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+Exam 0
+21:40-23:00
+16 Oct Wed, LSH-AUD
+
+Header:
+    definitions
+    preprocessor directives (macros)
+    types: enum, typedef, unions, structs..
+    prototypes (function declarations)
+        implementations live in libraries
+    guard directives
+        #ifndef DIRECTIVE
+        or 
+        #if !defined(DIRECTIVE)
+
+libraries:
+    implementations of functions declared in a header
+    (compiled to .o files - object files)
+    .o file
+
+    gcc -c library.c
+    --> library.o
+
+    gcc main.c library.o
+    ---> executable a.out with library.o
+
+Makefiles
+make sure tabs are actual tabs, and not spaces!
+
+<directive>:    <dependency_0> ... <dependency_n>   
+    <command>
+
+see man diff
+see |
+see wc  (remember shell programming?)
+
+struct header {
+    size_t size;
+    bool used;
+    struct header *next;
+};
+
+typedef struct header header_t;
+
+find the first block that is free
+that is at least big enough to
+serve the allocation
+
+if it is really big, split it and save
+the larger partition
+
+whenever you free,
+check blocks to left and blocks to right
+if both free
+coalesce
+coalesce in one direction (choose)
+
+if one 
+
