@@ -30,4 +30,7 @@
 
 #include "header.h"
 
-
+void *jerkmalloc(size_t size, size_t lineno, const char *filename) {
+    fprintf(stderr, "Error on line #%d in file %s: Go allocate your own %d bytes.\n", lineno, filename, size);
+    return NULL;
+}

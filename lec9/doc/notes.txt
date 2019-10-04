@@ -7,62 +7,49 @@
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 
-Exam 0
-21:40-23:00
-16 Oct Wed, LSH-AUD
 
-Header:
-    definitions
-    preprocessor directives (macros)
-    types: enum, typedef, unions, structs..
-    prototypes (function declarations)
-        implementations live in libraries
-    guard directives
-        #ifndef DIRECTIVE
-        or 
-        #if !defined(DIRECTIVE)
+Two's complement review:
+00100   
+11011   flip the bits
+11100   + 1
 
-libraries:
-    implementations of functions declared in a header
-    (compiled to .o files - object files)
-    .o file
+11100
+11011
+00100
 
-    gcc -c library.c
-    --> library.o
+printf family of functions (man 3 printf)
 
-    gcc main.c library.o
-    ---> executable a.out with library.o
+\n  newline
+\t  tab
+\r  carriage return
+\"  quotation mark
+\\  backslash
+%%  percentage symbol
 
-Makefiles
-make sure tabs are actual tabs, and not spaces!
+scanf family of functions
 
-<directive>:    <dependency_0> ... <dependency_n>   
-    <command>
+file descriptors:
+    kind of names for IO
 
-see man diff
-see |
-see wc  (remember shell programming?)
+redirect
+>
+e.g. ls > output.txt
+yields the contents of ls in output.txt
 
-struct header {
-    size_t size;
-    bool used;
-    struct header *next;
-};
+append
+>> 
 
-typedef struct header header_t;
+|
+pipe
 
-find the first block that is free
-that is at least big enough to
-serve the allocation
+./myprogram >> output.txt
 
-if it is really big, split it and save
-the larger partition
+wc
+word count
 
-whenever you free,
-check blocks to left and blocks to right
-if both free
-coalesce
-coalesce in one direction (choose)
+--example--
+cat test.c | grep str | wc > junkfile
 
-if one 
-
+example 
+16 oct Wed
+2130 - 2300

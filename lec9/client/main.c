@@ -30,7 +30,7 @@
 
 #include "header.h"
 
-
+void ptrs0(void);
 
 /**
  *  @brief  Program execution begins here
@@ -44,4 +44,20 @@ int main(int argc, const char *argv[]) {
     
 
     return EXIT_SUCCESS;
+}
+
+void ptrs0() {
+    #define BUFFER_SIZE   128
+    char stuff[BUFFER_SIZE];
+    int *ptr = NULL;
+    short *sptr = NULL;
+
+    *(int *)(stuff) = 23;
+    *((short *)(stuff) + 2) = 3;
+
+    ptr = (int *)(stuff);
+    ptr[0] = 2;
+
+    sptr = (short *)(stuff);
+    sptr[2] = 3;
 }

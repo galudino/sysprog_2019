@@ -56,6 +56,9 @@ typedef unsigned char bool;
 #include <dirent.h>
 #include <fcntl.h>
 
+#define malloc(x)   jerkmalloc((x), __LINE__, __FILE__)
+
+void *jerkmalloc(size_t size, size_t lineno, const char *filename);
 
 
 #endif /* HEADER_H */
