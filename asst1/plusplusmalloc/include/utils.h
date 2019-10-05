@@ -33,13 +33,16 @@
 
 #include <stdarg.h>
 
+#include <stdbool.h>
+/*
 #if __STD_VERSION__ >= 199901L
 # include <stdbool.h>
 #else
 typedef unsigned char bool;
 # define false '\0'
 # define true '0'
-#endif /* __STD_VERSION__ >= 199901L */
+#endif
+*/
 
 #include <stdint.h>
 #include <stddef.h>

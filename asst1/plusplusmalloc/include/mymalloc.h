@@ -63,8 +63,7 @@ typedef unsigned int uint32_t;
 #include <dirent.h>
 #include <fcntl.h>
 
-#include "utils.h"
-#include "gcs_rbtree.h"
+#include "utils.h" 
 
 #define MYMALLOC__BLOCK_SIZE    4096
 extern char myblock[MYMALLOC__BLOCK_SIZE];
