@@ -56,7 +56,6 @@ typedef unsigned char bool;
 */
 
 #include "mymalloc.h"
-#include "rbtree.h"
 
 /**
  *  @brief  Program execution begins here

@@ -32,7 +32,9 @@
 
 char myblock[MYMALLOC__BLOCK_SIZE];
 
-#define totalsz(input_sz) ((input_size) + (sizeof(uint32_t)) + (sizeof(bool)))
+
+
+
 
 
 
@@ -49,11 +51,31 @@ char myblock[MYMALLOC__BLOCK_SIZE];
  *  @return     on success, a pointer to a block of memory of size size.
  *              on failure, NULL
  */
+/*
 void *mymalloc(size_t size, const char *filename, size_t lineno) {
     void *block = NULL;
-    /* block = sbrk(size) */
-
+    block = sbrk(size);
     return block == ((void *)(-1)) ? NULL : block;
+}
+*/
+void *mymalloc(size_t size, const char *filename, size_t lineno) {
+    static char *blockpos = myblock;
+    static int capacity = MYMALLOC__BLOCK_SIZE;
+    void *block = NULL;
+    int sz = (int)(size);
+
+    if ((capacity - size) >= 0) {
+        block = blockpos;
+        blockpos += size;
+        capacity -= sz;
+        printf("capacity: %d\n", capacity);
+    }
+
+    if (capacity < 0) {
+        printf("Out of memory!\n");
+    }
+    
+    return block;
 }
 
 /**

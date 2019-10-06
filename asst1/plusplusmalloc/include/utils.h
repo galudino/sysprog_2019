@@ -33,16 +33,13 @@
 
 #include <stdarg.h>
 
-#include <stdbool.h>
-/*
 #if __STD_VERSION__ >= 199901L
 # include <stdbool.h>
 #else
 typedef unsigned char bool;
 # define false '\0'
 # define true '0'
-#endif
-*/
+#endif /* __STD_VERSION__ >= 199901L */
 
 #include <stdint.h>
 #include <stddef.h>
@@ -1008,5 +1005,14 @@ void lnb_reverse(list_node_base *n);
 void lnb_hook(list_node_base *n, list_node_base *position);
 void lnb_unhook(list_node_base *n);
 size_t lnb_distance(list_node_base *pos, list_node_base *end);
+
+typedef struct slist_node_base slist_node_base;
+struct slist_node_base {
+    slist_node_base *next;
+};
+
+slist_node_base *slnb_transfer_after(slist_node_base *n, slist_node_base *begin);
+slist_node_base *slnb_transfer_after_rnge(slist_node_base *n, slist_node_base *begin, slist_node_base *end);
+void slnb_reverse_after(slist_node_base *n);
 
 #endif /* UTILS_H */

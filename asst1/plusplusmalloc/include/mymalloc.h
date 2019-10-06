@@ -34,7 +34,6 @@
 /* #define MYMALLOC__RELEASE_MODE */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdarg.h>
 
 /*
@@ -63,26 +62,43 @@ typedef unsigned int uint32_t;
 #include <dirent.h>
 #include <fcntl.h>
 
-#include "utils.h" 
-
 #define MYMALLOC__BLOCK_SIZE    4096
 extern char myblock[MYMALLOC__BLOCK_SIZE];
 
-#ifndef _STDLIB_H
 #define EXIT_SUCCESS    0
 #define EXIT_FAILURE    1
 #define size_t          unsigned long int
 #define malloc(size)    mymalloc(size, __FILE__, __LINE__)
 #define free(ptr)       myfree(ptr, __FILE__, __LINE__)
-#endif
+
+#include "utils.h" 
 
 /**< mymalloc: memory allocator functions, allocate and free */
 void *mymalloc(size_t size, const char *filename, size_t lineno);
 void myfree(void *ptr, const char *filename, size_t lineno);
 
+#define totalsz(input_sz) ((input_size) + (sizeof(uint32_t)) + (sizeof(bool)))
+#define MYMALLOC__PADDING   32
+typedef char alignment_t[MYMALLOC__PADDING];
 
+typedef struct metadata metadata_t;
+struct metadata {
+    uint32_t size;
+    char *addr;
+};
 
+typedef union list_node list_node_t;
+union list_node {
+    struct list_node_base node; /* 16 bytes */
+    metadata_t data; /* 11 bytes */
 
+    alignment_t padding; /* 32 bytes */
+}; /* sizeof(list_node_t) == 32 */
+
+typedef struct list list;
+struct list {
+    list_node_t impl;
+};
 
 
 
