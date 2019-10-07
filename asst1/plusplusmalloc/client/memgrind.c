@@ -90,7 +90,23 @@
  *  @return     exit status, 0 on success, else failure
  */
 int main(int argc, const char *argv[]) {
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    #define AMOUNT 150
+    char *array[AMOUNT];
 
+    for (i = 0; i < AMOUNT; i++) {
+        array[i] = malloc(1);
+    }
+
+    listlog();
+
+    for (i = 0; i < AMOUNT; i++) {
+        free(array[i]);
+    }
+
+    listlog();
 
     return EXIT_SUCCESS;
 }

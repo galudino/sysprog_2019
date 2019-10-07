@@ -1,3 +1,35 @@
 /* Notes go here. */
 
 /**/
+Basic operations for a free-list allocator:
+
+initialize:
+initialize the list
+    size = (BLOCK_SIZE_MAX) - sizeof(node)
+    active = true
+    next = NULL;
+
+split:
+create a new_node
+    size = fitting_slot->size - (split_size - sizeof(node))
+    active = true
+    next = fitting_slot->next
+change values of fitting_slot node
+    size = split_size
+    active = false
+    next = new_node
+
+merge:
+node curr, node prev
+curr = list
+while nodes remain in list
+    if curr node is inactive and curr node next is inactive
+        currnode->size += (currnode)->next->size + sizeof(node)
+        curr->next = curr->next->next
+    endif
+    prev = curr
+    curr = curr->next
+endwhile
+
+malloc:
+    

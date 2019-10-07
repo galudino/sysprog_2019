@@ -12,7 +12,7 @@
  *  Permission is hereby granted, free of charge, to any person obtaining
  *  a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation
- *  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *  the rights to use, copy, modify, block_merge, publish, distribute, sublicense,
  *  and/or sell copies of the Software, and to permit persons to whom the
  *  Software is furnished to do so, subject to the following conditions:
  *
@@ -62,44 +62,27 @@ typedef unsigned int uint32_t;
 #include <dirent.h>
 #include <fcntl.h>
 
-#define MYMALLOC__BLOCK_SIZE    4096
-extern char myblock[MYMALLOC__BLOCK_SIZE];
+#define MYMALLOC__BLOCK_SIZE 4096
 
-#define EXIT_SUCCESS    0
-#define EXIT_FAILURE    1
-#define size_t          unsigned long int
-#define malloc(size)    mymalloc(size, __FILE__, __LINE__)
-#define free(ptr)       myfree(ptr, __FILE__, __LINE__)
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
+#define size_t unsigned long int
+#define malloc(size) mymalloc(size, __FILE__, __LINE__)
+#define free(ptr) myfree(ptr, __FILE__, __LINE__)
 
-#include "utils.h" 
+#include "utils.h"
 
 /**< mymalloc: memory allocator functions, allocate and free */
 void *mymalloc(size_t size, const char *filename, size_t lineno);
 void myfree(void *ptr, const char *filename, size_t lineno);
 
-#define totalsz(input_sz) ((input_size) + (sizeof(uint32_t)) + (sizeof(bool)))
-#define MYMALLOC__PADDING   32
-typedef char alignment_t[MYMALLOC__PADDING];
 
-typedef struct metadata metadata_t;
-struct metadata {
-    uint32_t size;
-    char *addr;
-};
+#define listlog()   header_fputs(stdout, __FILE__, __func__, __LINE__)
 
-typedef union list_node list_node_t;
-union list_node {
-    struct list_node_base node; /* 16 bytes */
-    metadata_t data; /* 11 bytes */
-
-    alignment_t padding; /* 32 bytes */
-}; /* sizeof(list_node_t) == 32 */
-
-typedef struct list list;
-struct list {
-    list_node_t impl;
-};
-
-
+/**< header_t: print allocated blocks to FILE * stream */
+void header_fputs(FILE *dest, 
+                 const char *filename, 
+                 const char *funcname,
+                 size_t lineno);
 
 #endif /* MY_MALLOC_H */
