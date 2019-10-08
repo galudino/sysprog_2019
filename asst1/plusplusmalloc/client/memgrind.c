@@ -108,6 +108,25 @@ int main(int argc, const char *argv[]) {
 
     listlog();
 
+    for (i = 0; i < AMOUNT / 2; i++) {
+        int n = rand() % 50;
+        array[i] = malloc(n);
+    }
+
+    listlog();
+
+    for (i = 0; i < AMOUNT / 4; i++) {
+        free(array[i]);
+    }
+
+    listlog();
+
+    for (j = i; j < AMOUNT / 4; j++) {
+        free(array[j]);
+    }
+
+    listlog();
+
     return EXIT_SUCCESS;
 }
   

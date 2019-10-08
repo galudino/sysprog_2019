@@ -12,9 +12,10 @@
  *  Permission is hereby granted, free of charge, to any person obtaining
  *  a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation
- *  the rights to use, copy, modify, block_merge, publish, distribute, sublicense,
- *  and/or sell copies of the Software, and to permit persons to whom the
- *  Software is furnished to do so, subject to the following conditions:
+ *  the rights to use, copy, modify, block_merge, publish, distribute,
+ *  sublicense, and/or sell copies of the Software,
+ *  and to permit persons to whom the Software is furnished to do so,
+ *  subject to the following conditions:
  *
  *  The above copyright notice and this permission notice shall be included
  *  in all copies or substantial portions of the Software.
@@ -32,7 +33,7 @@
 
 typedef struct header header_t;
 struct header {
-    uint32_t size;
+    uint16_t size;
     bool free;
 
     header_t *next;
@@ -55,23 +56,20 @@ static void header_split_block(header_t *curr, size_t size);
 static void header_merge_block(header_t *curr);
 static bool header_validator(void *ptr);
 
-static uint32_t block_used = 0;
-static uint32_t block_free = 0;
-static uint32_t merge_counter = 0;
+static uint16_t merge_counter = 0;
 
 /**
  *  Experimental - may or may not be used.
  *  rbheader_t is 24 bytes (left-leaning red-black tree)
  *  header_t is 16 bytes (singly-linked list)
  */
-
 typedef unsigned char rbt_color;
-#define RBT_BLACK   false
-#define RBT_RED     true
+#define RBT_BLACK false
+#define RBT_RED true
 
 typedef struct rbheader rbheader_t;
 struct rbheader {
-    uint32_t size;
+    uint16_t size;
     bool free;
 
     rbt_color color;
@@ -118,13 +116,21 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
      *  If not, do not continue -- return NULL.
      */
     if (size == 0) {
-        ulog(stderr, "[ERROR]", filename, __func__, lineno, 
-        "Allocation input value must be a nonzero integer of positive magnitude.");
+        ulog(stderr,
+             "[ERROR]",
+             filename,
+             __func__,
+             lineno,
+             "Allocation input "
+             "value must be a "
+             "nonzero integer "
+             "of positive "
+             "magnitude.");
         return NULL;
     }
 
     /**
-     *  We traverse the free list (myblock) and search for 
+     *  We traverse the free list (myblock) and search for
      *  a header that is associated with an unused block of memory.
      *
      *  We reject headers denoting occupied blocks,
@@ -144,7 +150,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
             header_merge_block(prev);
         }
     }
-    
+
     if (curr->size == size) {
         /**
          *  If we have found a header representing a block
@@ -163,6 +169,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
          *  (char *)(curr) + (sizeof(header_t))
          *
          *  yields the desired address.
+         *
          *  Basically, we want to advance sizeof(header_t) bytes
          *  past the address curr, so we can get to the memory
          *  that curr represents.
@@ -175,17 +182,21 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
          *  (plus sizeof(header_t)), we can split curr's memory --
          *  curr's size will become that of the request quantity,
          *  and the other partition will have the remaining free storage.
-         */    
+         */
         header_split_block(curr, size);
-        
+
         curr->free = false;
         result = curr + 1;
     } else {
-        ulog(stderr, "[ERROR]", filename, __func__, lineno, 
-        "Unable to allocate %lu bytes.", size);
+        ulog(stderr,
+             "[ERROR]",
+             filename,
+             __func__,
+             lineno,
+             "Unable to allocate %lu bytes.",
+             size);
     }
 
-    block_used += result ? 1 : 0;
     return result;
 }
 
@@ -202,11 +213,13 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
     bool block_in_range = false;
 
     /**
-     *  Sanity check: is ptr a NULL pointer, an already-freed pointer,
-     *  or a pointer unrelated to mymalloc/myfree?
+     *  Sanity check: is ptr a 
+     *      - NULL pointer, 
+     *      - already-freed pointer,
+     *      - or a pointer unrelated to mymalloc/myfree?
      *
-     *  If validator comes back true, continue -- otherwise,
-     *  return from this function.
+     *  If validator comes back true, continue -- 
+     *  otherwise, return from this function.
      */
     if (header_validator(ptr) == false) {
         return;
@@ -227,8 +240,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
      *  Is the address of ptr within range of the base address of
      *  myblock, and myblock's last byte address?
      */
-    block_in_range 
-    = ptr > (void *)(myblock) && (ptr <= MYMALLOC__END_ADDR);
+    block_in_range = ptr > (void *)(myblock) && (ptr <= MYMALLOC__END_ADDR);
 
     /**
      *  By decrementing header, we now have access to the
@@ -244,8 +256,17 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
          *  is already free, there is nothing left to do but
          *  report the findings to the user -- return afterward.
          */
-        ulog(stderr, "[ERROR]", filename, __func__, lineno, 
-        "Cannot release memory for inactive storage -- did you already call free on this address?");
+        ulog(stderr,
+             "[ERROR]",
+             filename,
+             __func__,
+             lineno,
+             "Cannot release "
+             "memory for "
+             "inactive storage "
+             "-- did you "
+             "already call free "
+             "on this address?");
         return;
     } else {
         if (block_in_range) {
@@ -260,20 +281,17 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              */
             header->free = true;
 
-            --block_used;
-            ++block_free;
-
             /**
              *  We can use this opportunity to coalesce blocks --
-             *  if the adjacent block is reported to be free, 
+             *  if the adjacent block is reported to be free,
              *  merge it with the block associated with header.
              */
             if (header->next->free) {
                 header_merge_block(header);
             }
-            
+
             /**
-             *  Now will traverse the entire free list
+             *  Now we will traverse the entire free list
              *  and search for more blocks that can be coalesced.
              *
              *  (This shouldn't run all the time...
@@ -282,6 +300,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *   or do a full merge every x mallocs and/or frees)
              */
             header = freelist;
+
             while (header->next) {
                 prev = header;
                 header = header->next;
@@ -289,16 +308,24 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
                 if (prev->free && header->free) {
                     prev->size += header->size + sizeof *header;
                     prev->next = prev->next->next;
-                    --block_free;
                 }
             }
         } else {
             /**
-             *  If the pointer provided has no connection
+             *  If the pointer provided has no relationship whatsoever
              *  to mymalloc/myfree, notify the user and return.
              */
-            ulog(stderr, "[ERROR]", filename, __func__, lineno, 
-            "This pointer does not refer to a valid allocation by mymalloc.");
+            ulog(stderr,
+                 "[ERROR]",
+                 filename,
+                 __func__,
+                 lineno,
+                 "This pointer "
+                 "does not "
+                 "refer to a "
+                 "valid "
+                 "allocation by "
+                 "mymalloc.");
         }
     }
 }
@@ -311,64 +338,63 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
  *  @param[in]  funcname    for use with the __func__ macro
  *  @param[in]  lineno      for use with the __LINE__ macro
  */
-void header_fputs(FILE *dest, 
-                  const char *filename, 
-                  const char *funcname,
-                  size_t lineno) {
+void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t lineno) {
     header_t *header = freelist;
 
-    uint32_t free_space = 0;
-    uint32_t used_space = 0;
+    uint16_t block_used = 0;
+    uint16_t block_free = 0;
 
-    uint32_t total_data_in_use = 0;
-    uint32_t block_no_metadata = 0;
+    uint16_t free_space = 0;
+    uint16_t used_space = 0;
+
+    uint16_t total_data_in_use = 0;
+    uint16_t block_no_metadata = 0;
 
     if (header->size == 0) {
         fprintf(dest, "------------------------------------------\n");
         fprintf(dest, "No allocations have been made yet.\n\n");
-        fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", 
-        filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
+        fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
         fprintf(dest, "------------------------------------------\n\n");
         return;
     }
 
     fprintf(dest, "------------------------------------------\n");
-    fprintf(dest, "%sBlock Address%s\t%sStatus%s\t\t%sBlock Size%s\n", 
-    KWHT_b, KNRM, KWHT_b, KNRM, KWHT_b, KNRM);
+    fprintf(dest, "%sBlock Address%s\t%sStatus%s\t\t%sBlock Size%s\n", KWHT_b, KNRM, KWHT_b, KNRM, KWHT_b, KNRM);
     fprintf(dest, "-------------\t------\t\t----------\n");
 
     while (header) {
-        const char *free = header->free ? KGRN"free"KNRM : KRED_b"in use"KNRM;
+        const char *free =
+            header->free ? KGRN "free" KNRM : KRED_b "in use" KNRM;
+
+        block_used += header->free ? 0 : 1;
+        block_free += header->free ? 1 : 0;
+
         free_space += header->free ? header->size : 0;
         used_space += header->free ? 0 : header->size;
-        fprintf(dest, "%p\t%s\t\t%lu\n", (header + 1), free, header->size);
+
+        fprintf(dest, "%s%p%s\t%s\t\t%lu\n", KGRY, (header + 1), KNRM, free, header->size);
 
         header = header->next;
     }
 
-    total_data_in_use = used_space + (sizeof *header * block_used);
+    total_data_in_use = used_space + (sizeof *header * (1 + block_used));
 
-    block_no_metadata = 
-    MYMALLOC__BLOCK_SIZE - (sizeof *header * (block_free + block_used));
+    block_no_metadata =
+        MYMALLOC__BLOCK_SIZE - (sizeof *header * (block_free + block_used));
 
     fprintf(dest, "------------------------------------------\n");
-    fprintf(dest, "Used blocks in list:\t%lu\n", block_used);
-    fprintf(dest, "Free blocks in list:\t%lu\n\n", block_free);
+    fprintf(dest, "Used blocks in list:\t%s%lu%s\n", KWHT_b, block_used, KNRM);
+    fprintf(dest, "Free blocks in list:\t%s%lu%s\n\n", KWHT_b, block_free, KNRM);
 
-    fprintf(dest, "Free space:\t\t%lu of %lu bytes\n", 
-    free_space, MYMALLOC__BLOCK_SIZE);
+    fprintf(dest, "Free space:\t\t%s%lu%s of %s%lu%s bytes\n", KWHT_b, free_space, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
 
-    fprintf(dest, "Available for client:\t%lu of %lu bytes\n\n", 
-    free_space, block_no_metadata);
+    fprintf(dest, "Available for client:\t%s%lu%s of %s%lu%s bytes\n\n", KWHT_b, free_space, KNRM, KWHT_b, block_no_metadata, KNRM);
 
-    fprintf(dest, "Total data in use:\t%lu of %lu bytes\n", 
-    total_data_in_use, MYMALLOC__BLOCK_SIZE);
+    fprintf(dest, "Total data in use:\t%s%lu%s of %s%lu%s bytes\n", KWHT_b, total_data_in_use, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
 
-    fprintf(dest, "Client data in use:\t%lu of %lu bytes\n\n", 
-    used_space, block_no_metadata);
+    fprintf(dest, "Client data in use:\t%s%lu%s of %s%lu%s bytes\n\n", KWHT_b, used_space, KNRM, KWHT_b, block_no_metadata, KNRM);
 
-    fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", 
-    filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
+    fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
     fprintf(dest, "------------------------------------------\n\n");
 }
 
@@ -381,13 +407,11 @@ static void header_init_list() {
      *  A newly initialized freelist will have one
      *  header/node, with its allotted capacity - sizeof(header_t).
      *  Of course, this header represents a free block of memory,
-     *  and it has no other header to link with. 
+     *  and it has no other header to link with.
      */
     freelist->size = (MYMALLOC__BLOCK_SIZE - sizeof *freelist);
     freelist->free = true;
     freelist->next = NULL;
-
-    ++block_free;
 }
 
 /**
@@ -460,42 +484,26 @@ static void header_split_block(header_t *curr, size_t size) {
  *          into one block
  *
  *  @param[out] curr    pointer to header_t, refers to memory within myblock
- * 
+ *
  *  Precondition: curr->free && curr->next->free, else undefined behavior
  *
  *  This function is called by mymalloc or myfree, when the precondition
  *  above is fulfilled. It is not to be called unless conditions for
  *  coalescence are clearly defined.
  */
-static void header_merge_block(header_t *curr) {    
-    --block_free;
+static void header_merge_block(header_t *curr) {
     curr->size += curr->next->size + sizeof *curr->next;
 
     if (curr->next != NULL) {
         curr->next = curr->next->next;
     }
-
-    /**
-     *  If there are only two blocks left,
-     *  and they are both free --
-     *  coalesce them both.
-     *
-     *  ** may not work ? **
-     */
-    /*
-    if (freelist->free && freelist->next->free) {
-        --block_free;
-        freelist->size += freelist->next->size + sizeof *freelist->next;
-        freelist->next = NULL;
-    }
-    */
 }
 
 /**
- *  @brief  Determines if ptr is NULL, 
+ *  @brief  Determines if ptr is NULL,
  *          or if nonnull, determines if it is a pointer allocated by mymalloc
  *
- *  @param[in]  ptr     The pointer to verify
+ *  @param[in]  ptr     the pointer to verify
  *
  *  @return     true if a valid pointer (header can be recovered),
  *              false otherwise
@@ -505,14 +513,19 @@ static bool header_validator(void *ptr) {
     bool result = false;
 
     if (ptr == NULL) {
-        ulog(stderr, "[ERROR]", __FILE__,  __func__, __LINE__, 
-        "Called myfree on a NULL pointer.");
+        ulog(stderr,
+             "[ERROR]",
+             __FILE__,
+             __func__,
+             __LINE__,
+             "Called myfree "
+             "on a NULL "
+             "pointer.");
     } else {
-        header = (header_t *)(ptr);
-        --header;
+        header = (header_t *)(ptr) - 1;
 
-        result = header->size > 0 
-        && header->size <= (MYMALLOC__BLOCK_SIZE - sizeof *header);
+        result = header->size > 0 &&
+                 header->size <= (MYMALLOC__BLOCK_SIZE - sizeof *header);
     }
 
     return result;
