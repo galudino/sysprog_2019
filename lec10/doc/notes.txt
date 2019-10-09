@@ -1,0 +1,110 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       08 Oct 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+identification
+    do you know what the thing is?
+function
+    can you use it?
+        code sample
+operation
+    can you use it well?
+        comparative code
+
+
+Last time:
+FILE streams - stdin, stdout, stderr
+
+printf family of functions
+printf(<format string>, <variable list>);
+    pushes to stream stdout
+sprintf
+    pushes to a character array/string/buffer/address
+snprintf
+    pushes to a character array/string/buffer/address
+    for n bytes 
+    (n must include '\0' for strings)
+fprintf
+    pushes to an output stream specified by the user
+
+Why are FILE *streams annoying?
+They are an abstraction for file descriptors (integers)
+
+scanf family of functions
+
+scanf
+sscanf
+fscanf
+
+Shell operators/commands
+>>          append
+>           redirect
+|           pipe - STDOUT of lhs becomes STDIN to rhs
+
+ls          list files/directories
+    ls -la or ls -alF   detailed view
+pwd         print working directory
+wc          word count  - newline, word count, byte count per input
+grep        pattern match regex's
+head        output the first part of files
+tail        output the last part of files
+diff        differences between two files
+od          dump files in octal and other formats
+
+drwx---r-x
+0123456789
+
+0           directory or file
+1, 2, 3     user
+4, 5, 6     group
+7, 8, 9     all
+
+rwx     read, write, execute
+0   off
+1   on
+
+examples:
+chmod   0     0      0      =   0       no access
+chmod   1     1      1      =   7       open access
+chmod   1     0      1      =   5       read/execute only
+chmod   0     0      1      =   1       execute only
+...etc etc etc
+
+file permissions:
+    most restrictive (smallest) set is applied
+    owner   group   users
+    rwx     rwx     rwx
+
+chmod <target> +/- <permissions> <file>
+
+add write to file's group
+    chmod g + w ...
+
+remove read from users
+    chmod u-r ...
+
+targets:    permissions:
+a           r
+u           w 
+g           x
+o
+
+-rwxrwxrwx
+chmod 777 for open access to an executable
+
+111 110 100
+7   6   4
+chmod 764
+
+ex. chmod 600
+user (owner) has read/write access only
+
+chmod 000 can be used to protect against accidental
+or intentional  deletion
+
+chmod 777 is for open access.
