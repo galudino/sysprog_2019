@@ -31,18 +31,21 @@
 
 #include "mymalloc.h"
 
+#ifdef MYMALLOC__LOW_PROFILE
+/**
+ *  TODO DOC
+ */
 typedef struct header header_t;
+
+/**
+ *  TODO DOC
+ */
 struct header {
-    uint16_t size;
-    bool free;
+    uint16_t size;  /**< TODO doc */
+    bool free;      /**< TODO doc */
 
-    header_t *next;
+    header_t *next; /**< TODO doc */
 };
-
-#define MYMALLOC__END_ADDR ((void *)(myblock + (MYMALLOC__BLOCK_SIZE)))
-
-/**< myblock: block of memory in ./data/BSS segment */
-static char myblock[MYMALLOC__BLOCK_SIZE];
 
 /**< header_t: freelist - base pointer to myblock, initial header */
 static header_t *freelist = (header_t *)(myblock);
@@ -56,13 +59,14 @@ static void header_split_block(header_t *curr, size_t size);
 static void header_merge_block(header_t *curr);
 static bool header_validator(void *ptr);
 
-static uint16_t merge_counter = 0;
+#endif /* MYMALLOC__LOW_PROFILE */
 
 /**
  *  Experimental - may or may not be used.
  *  rbheader_t is 24 bytes (left-leaning red-black tree)
  *  header_t is 16 bytes (singly-linked list)
  */
+#ifdef MYMALLOC__RBTREE
 typedef unsigned char rbt_color;
 #define RBT_BLACK false
 #define RBT_RED true
@@ -76,6 +80,14 @@ struct rbheader {
     rbheader_t *left;
     rbheader_t *right;
 };
+#endif
+
+/**< myblock: block of memory in ./data/BSS segment */
+static char myblock[MYMALLOC__BLOCK_SIZE];
+
+#define MYMALLOC__END_ADDR ((void *)(myblock + (MYMALLOC__BLOCK_SIZE)))
+
+static uint16_t merge_counter = 0;
 
 /**
  *  @brief      Allocates size bytes from myblock
