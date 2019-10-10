@@ -119,7 +119,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
         ulog(stderr,
              "[ERROR]",
              filename,
-             __func__,
+             "my_malloc",
              lineno,
              "Allocation input "
              "value must be a "
@@ -191,7 +191,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
         ulog(stderr,
              "[ERROR]",
              filename,
-             __func__,
+             "my_malloc",
              lineno,
              "Unable to allocate %lu bytes.",
              size);
@@ -259,7 +259,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
         ulog(stderr,
              "[ERROR]",
              filename,
-             __func__,
+             "my_free",
              lineno,
              "Cannot release "
              "memory for "
@@ -318,7 +318,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
             ulog(stderr,
                  "[ERROR]",
                  filename,
-                 __func__,
+                 "my_free",
                  lineno,
                  "This pointer "
                  "does not "
@@ -372,7 +372,7 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
         free_space += header->free ? header->size : 0;
         used_space += header->free ? 0 : header->size;
 
-        fprintf(dest, "%s%p%s\t%s\t\t%lu\n", KGRY, (header + 1), KNRM, free, header->size);
+        fprintf(dest, "%s%p%s\t%s\t\t%u\n", KGRY, (void *)(header + 1), KNRM, free, header->size);
 
         header = header->next;
     }
@@ -383,16 +383,16 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
         MYMALLOC__BLOCK_SIZE - (sizeof *header * (block_free + block_used));
 
     fprintf(dest, "------------------------------------------\n");
-    fprintf(dest, "Used blocks in list:\t%s%lu%s\n", KWHT_b, block_used, KNRM);
-    fprintf(dest, "Free blocks in list:\t%s%lu%s\n\n", KWHT_b, block_free, KNRM);
+    fprintf(dest, "Used blocks in list:\t%s%u%s\n", KWHT_b, block_used, KNRM);
+    fprintf(dest, "Free blocks in list:\t%s%u%s\n\n", KWHT_b, block_free, KNRM);
 
-    fprintf(dest, "Free space:\t\t%s%lu%s of %s%lu%s bytes\n", KWHT_b, free_space, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
+    fprintf(dest, "Free space:\t\t%s%u%s of %s%u%s bytes\n", KWHT_b, free_space, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
 
-    fprintf(dest, "Available for client:\t%s%lu%s of %s%lu%s bytes\n\n", KWHT_b, free_space, KNRM, KWHT_b, block_no_metadata, KNRM);
+    fprintf(dest, "Available for client:\t%s%u%s of %s%u%s bytes\n\n", KWHT_b, free_space, KNRM, KWHT_b, block_no_metadata, KNRM);
 
-    fprintf(dest, "Total data in use:\t%s%lu%s of %s%lu%s bytes\n", KWHT_b, total_data_in_use, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
+    fprintf(dest, "Total data in use:\t%s%u%s of %s%u%s bytes\n", KWHT_b, total_data_in_use, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
 
-    fprintf(dest, "Client data in use:\t%s%lu%s of %s%lu%s bytes\n\n", KWHT_b, used_space, KNRM, KWHT_b, block_no_metadata, KNRM);
+    fprintf(dest, "Client data in use:\t%s%u%s of %s%u%s bytes\n\n", KWHT_b, used_space, KNRM, KWHT_b, block_no_metadata, KNRM);
 
     fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
     fprintf(dest, "------------------------------------------\n\n");
@@ -516,7 +516,7 @@ static bool header_validator(void *ptr) {
         ulog(stderr,
              "[ERROR]",
              __FILE__,
-             __func__,
+             "header_validator",
              __LINE__,
              "Called myfree "
              "on a NULL "
