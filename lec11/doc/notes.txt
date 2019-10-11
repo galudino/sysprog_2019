@@ -1,0 +1,78 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       10 Oct 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+get the middle 
+head -n 60 outputstuff | tail -n 30
+
+user (u)
+group (g)
+all (o)
+
+chmod <target> +/- <permission> <filename...>
+targets:    permission:
+o           w
+g           r
+u           x
+a
+  u   g   o
+-|rwx|rwx|rwx
+  101 110 011       0 means off, 1 means on (bin)
+  5   6   3         translate from (bin) to (dec)
+
+chmod 563
+
+chmod 563 means:
+user has read, no write, execute
+group has read, write, no execute
+all has no read, write, execute
+
+chmod o+rwx stuff
+
+pointers to functions
+---------------------
+instructions are just a special kind of data.
+instructions live in primary memory (RAM)
+
+process
+OS's abstraction for RUNNING code
+processes only exist during runtime,
+and they are torn down when completed.
+
+child process has same state as parent process.
+(stack vars, heap vars, etc.)
+
+fork
+----
+    duplicates parent process (creates a child process)
+    address space is "different" because it's a "copy"
+    PID (process identifier) is also different (type pid_t, typedef uint32_t)
+    use getpid() or getppid() to get pid_t 
+        of current process, or parent, respectively
+
+immediately after fork,
+    there is very little different between parent and child process.
+
+exec
+----
+    takes current process
+    flushes out everything (stack, heap, etc)
+    load new executable
+
+wait
+----
+    wait for process to change state
+
+fork is called in the parent, but returns to both child and parent.
+how to tell if child process? see return of fork...
+if return val positive, you are the parent
+else if return val 0, you are the child
+
+You cannot fork a process with PID 0, 
+the process to be forked must have a positive value.
+

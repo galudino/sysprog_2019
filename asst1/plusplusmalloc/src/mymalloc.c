@@ -247,7 +247,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
      *  header that represents the memory addressed by ptr.
      *
      *  (we are working in reverse order of mymalloc, in a sense)
-     */
+     */ 
     --header;
 
     if (header->free) {
