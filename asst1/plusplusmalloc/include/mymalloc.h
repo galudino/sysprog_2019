@@ -34,6 +34,7 @@
 /* #define MYMALLOC__RELEASE_MODE */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 
 /*
