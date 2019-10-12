@@ -33,19 +33,29 @@
 
 #ifdef MYMALLOC__LOW_PROFILE
 /**
- *  TODO DOC
+ *  @typedef    header_t
+ *  @brief      Alias for (struct header)
+ *
+ *  All instances (struct header) will be addressed as header_t.
  */
 typedef struct header header_t;
 
 /**
- *  TODO DOC
+ *  @struct     header
+ *  @brief      Represents metadata preceding a block of memory that is
+ *              dynamically allocated by mymalloc
  */
 struct header {
-    uint16_t size;  /**< TODO doc */
-    bool free;      /**< TODO doc */
+    uint16_t size;  /**< size of block that proceeds header_t */
+    bool free;      /**< denotes if proceeding block is in use, or not */
 
-    header_t *next; /**< TODO doc */
+    header_t *next; /**< address of next header_t instance */
 };
+
+/**< myblock: block of memory in ./data/BSS segment */
+static char myblock[MYMALLOC__BLOCK_SIZE];
+#define MYMALLOC__END_ADDR ((void *)(myblock + (MYMALLOC__BLOCK_SIZE)))
+static uint16_t merge_counter = 0;
 
 /**< header_t: freelist - base pointer to myblock, initial header */
 static header_t *freelist = (header_t *)(myblock);
@@ -82,12 +92,6 @@ struct rbheader {
 };
 #endif
 
-/**< myblock: block of memory in ./data/BSS segment */
-static char myblock[MYMALLOC__BLOCK_SIZE];
-
-#define MYMALLOC__END_ADDR ((void *)(myblock + (MYMALLOC__BLOCK_SIZE)))
-
-static uint16_t merge_counter = 0;
 
 /**
  *  @brief      Allocates size bytes from myblock
@@ -225,12 +229,12 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
     bool block_in_range = false;
 
     /**
-     *  Sanity check: is ptr a 
-     *      - NULL pointer, 
+     *  Sanity check: is ptr a
+     *      - NULL pointer,
      *      - already-freed pointer,
      *      - or a pointer unrelated to mymalloc/myfree?
      *
-     *  If validator comes back true, continue -- 
+     *  If validator comes back true, continue --
      *  otherwise, return from this function.
      */
     if (header_validator(ptr) == false) {
@@ -259,7 +263,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
      *  header that represents the memory addressed by ptr.
      *
      *  (we are working in reverse order of mymalloc, in a sense)
-     */ 
+     */
     --header;
 
     if (header->free) {
@@ -350,63 +354,74 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
  *  @param[in]  funcname    for use with the __func__ macro
  *  @param[in]  lineno      for use with the __LINE__ macro
  */
-void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t lineno) {
+void header_fputs(FILE *dest,
+                  const char *filename, const char *funcname, size_t lineno) {
     header_t *header = freelist;
 
-    uint16_t block_used = 0;
-    uint16_t block_free = 0;
-
-    uint16_t free_space = 0;
-    uint16_t used_space = 0;
-
-    uint16_t total_data_in_use = 0;
-    uint16_t block_no_metadata = 0;
+    struct {
+        uint16_t block_used;
+        uint16_t block_free;
+        uint16_t space_used;
+        uint16_t space_free;
+        uint16_t bytes_in_use;
+        uint16_t block_count_available;
+    } info = { 0, 0, 0, 0, 0, 0 };
 
     if (header->size == 0) {
         fprintf(dest, "------------------------------------------\n");
         fprintf(dest, "No allocations have been made yet.\n\n");
-        fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
+        fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n",
+        filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
         fprintf(dest, "------------------------------------------\n\n");
         return;
     }
 
     fprintf(dest, "------------------------------------------\n");
-    fprintf(dest, "%sBlock Address%s\t%sStatus%s\t\t%sBlock Size%s\n", KWHT_b, KNRM, KWHT_b, KNRM, KWHT_b, KNRM);
+    fprintf(dest, "%sBlock Address%s\t%sStatus%s\t\t%sBlock Size%s\n",
+    KWHT_b, KNRM, KWHT_b, KNRM, KWHT_b, KNRM);
     fprintf(dest, "-------------\t------\t\t----------\n");
 
     while (header) {
         const char *free =
             header->free ? KGRN "free" KNRM : KRED_b "in use" KNRM;
 
-        block_used += header->free ? 0 : 1;
-        block_free += header->free ? 1 : 0;
+        info.block_used += header->free ? 0 : 1;
+        info.block_free += header->free ? 1 : 0;
 
-        free_space += header->free ? header->size : 0;
-        used_space += header->free ? 0 : header->size;
+        info.space_used += header->free ? 0 : header->size;
+        info.space_free += header->free ? header->size : 0;
 
-        fprintf(dest, "%s%p%s\t%s\t\t%u\n", KGRY, (void *)(header + 1), KNRM, free, header->size);
+        fprintf(dest, "%s%p%s\t%s\t\t%u\n",
+        KGRY, (void *)(header + 1), KNRM, free, header->size);
 
         header = header->next;
     }
 
-    total_data_in_use = used_space + (sizeof *header * (1 + block_used));
+    info.bytes_in_use
+    = info.space_used + (sizeof *header * (1 + info.block_used));
 
-    block_no_metadata =
-        MYMALLOC__BLOCK_SIZE - (sizeof *header * (block_free + block_used));
+    info.block_count_available
+    = MYMALLOC__BLOCK_SIZE - (sizeof *header * (info.block_free + info.block_used));
 
     fprintf(dest, "------------------------------------------\n");
-    fprintf(dest, "Used blocks in list:\t%s%u%s\n", KWHT_b, block_used, KNRM);
-    fprintf(dest, "Free blocks in list:\t%s%u%s\n\n", KWHT_b, block_free, KNRM);
 
-    fprintf(dest, "Free space:\t\t%s%u%s of %s%u%s bytes\n", KWHT_b, free_space, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
+    fprintf(dest, "Used blocks in list:\t%s%u%s\n", KWHT_b, info.block_used, KNRM);
+    fprintf(dest, "Free blocks in list:\t%s%u%s\n\n", KWHT_b, info.block_free, KNRM);
 
-    fprintf(dest, "Available for client:\t%s%u%s of %s%u%s bytes\n\n", KWHT_b, free_space, KNRM, KWHT_b, block_no_metadata, KNRM);
+    fprintf(dest, "Free space:\t\t%s%u%s of %s%u%s bytes\n",
+    KWHT_b, info.space_free, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
 
-    fprintf(dest, "Total data in use:\t%s%u%s of %s%u%s bytes\n", KWHT_b, total_data_in_use, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
+    fprintf(dest, "Available for client:\t%s%u%s of %s%u%s bytes\n\n",
+    KWHT_b, info.space_free, KNRM, KWHT_b, info.block_count_available, KNRM);
 
-    fprintf(dest, "Client data in use:\t%s%u%s of %s%u%s bytes\n\n", KWHT_b, used_space, KNRM, KWHT_b, block_no_metadata, KNRM);
+    fprintf(dest, "Total data in use:\t%s%u%s of %s%u%s bytes\n",
+    KWHT_b, info.bytes_in_use, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
 
-    fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
+    fprintf(dest, "Client data in use:\t%s%u%s of %s%u%s bytes\n\n",
+    KWHT_b, info.space_used, KNRM, KWHT_b, info.block_count_available, KNRM);
+
+    fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n",
+    filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
     fprintf(dest, "------------------------------------------\n\n");
 }
 
@@ -541,4 +556,254 @@ static bool header_validator(void *ptr) {
     }
 
     return result;
+}
+
+bool ulog_attrs_disable[] = {false, false, false, false, false, false, false};
+
+/**
+ *  Utility function for debugging/error messages
+ *
+ *  @param[in]      dest        stream destination
+ *  @param[in]      level       literals "BUG", "ERROR", "WARNING", or "LOG"
+ *  @param[in]      file        macro __FILE__ is to be used here (by client)
+ *  @param[in]      func        macro __func__ is to be used here
+ *  @param[in]      line        macro __LINE__ is to be used here
+ *  @param[in]      fmt         formatting to be used
+ *
+ *  @return         character count of buffer (from fprintf)
+ */
+int ulog(FILE *dest, const char *level, const char *file, const char *func,
+         long double line, const char *fmt, ...) {
+
+    char buffer[MAXIMUM_STACK_BUFFER_SIZE];
+    char temp[BUFFER_SIZE];
+
+    const char *color = KNRM;
+    const char *blink = "";
+
+    bool found = false;
+    bool is_integer = false;
+    bool is_currency = *file == '$';
+
+    int j = 0;
+
+    if (streql(level, "[BUG]")) {
+        color = KYEL_b;
+        found = true;
+    }
+
+    if (found == false) {
+        if (streql(level, "[LOG]")) {
+            color = KCYN_b;
+            found = true;
+        }
+    }
+
+    if (found == false) {
+        if (streql(level, "[ERROR]")) {
+            color = KRED_b;
+            blink = KBNK;
+            found = true;
+        }
+    }
+
+    if (found == false) {
+        if (streql(level, "[WARNING]")) {
+            color = KMAG_b;
+            blink = KBNK;
+        }
+    }
+
+    sprintf(temp, "%Lf", line);
+
+    /* char digit = strchr(temp, '.'); */
+
+#if __STD_VERSION__ >= 199901L
+    is_integer = line / (long long int)(line) == 1.000000 || line == 0.00000;
+#else
+    is_integer = line / (long int)(line) == 1.000000 || line == 0.00000;
+#endif /* __STDC_VERSION__ >= 199901L */
+
+    is_integer = is_currency ? false : is_integer;
+
+    if (ulog_attrs_disable[DATE] == false) {
+        char date[1024];
+        sprintf(date, "%s%s%s ", KGRY, __DATE__, KNRM);
+
+        j += sprintf(buffer + j, "%s", date);
+    }
+
+    if (ulog_attrs_disable[TIME] == false) {
+        char time[1024];
+        sprintf(time, "%s%s%s ", KGRY, __TIME__, KNRM);
+
+        j += sprintf(buffer + j, "%s", time);
+    }
+
+    if (ulog_attrs_disable[LEVEL] == false) {
+        char leveltype[1024];
+        sprintf(leveltype, "%s%s%s%s ", blink, color, level, KNRM);
+
+        j += sprintf(buffer + j, "%s", leveltype);
+    }
+
+    if (ulog_attrs_disable[FILENAME] == false && ulog_attrs_disable[LINE]) {
+        char filename[1024];
+        sprintf(filename, "[%s] ", file);
+
+        j += sprintf(buffer + j, "%s", filename);
+    } else if (ulog_attrs_disable[FILENAME] &&
+               ulog_attrs_disable[LINE] == false) {
+        char linenumber[1024];
+/**
+ *  Redefine a macro of interest by using a preprocessor directive
+ *  before the inclusion of "utils.h"
+ *      For example, to redefine CSTR_ARR_DEFAULT_SIZE (for cstr_arr)
+ *
+ *      #ifdef CSTR_ARR_DEFAULT_SIZE
+ *      #undef CSTR_ARR_DEFAULT_SIZE
+ *      #endif
+ *      #define CSTR_ARR_DEFAULT_SIZE   <nonzero integer of positive magnitude>
+ *
+ *      #include "utils.h"
+ */
+#ifndef CSTR_ARR_DEFAULT_SIZE
+#define CSTR_ARR_DEFAULT_SIZE 256
+#endif /* CSTR_ARR_DEFAULT_SIZE */
+
+#ifndef CHAR_ARR_DEFAULT_SIZE
+#define CHAR_ARR_DEFAULT_SIZE 256
+#endif /* CHAR_ARR_DEFAULT_STR */
+
+#ifndef CHAR_PTR_ARR_DEFAULT_SIZE
+#define CHAR_PTR_ARR_DEFAULT_SIZE 256
+#endif /* CHAR_PTR_ARR_DEFAULT_SIZE */
+
+#ifndef CCHAR_ARR_DEFAULT_SIZE
+#define CCHAR_ARR_DEFAULT_SIZE 256
+#endif /* CCHAR_ARR_DEFAULT_SIZE */
+
+#ifndef CCHAR_PTR_ARR_DEFAULT_SIZE
+#define CCHAR_PTR_ARR_DEFAULT_SIZE 256
+#endif /* CCHAR_PTR_ARR_DEFAULT_SIZE */
+        if (is_integer) {
+            #if __STD_VERSION__ >= 199901L
+            sprintf(linenumber, "[%lli] ", (long long int)(line));
+            #else
+            sprintf(linenumber, "[%li] ", (long int)(line));
+            #endif
+        } else {
+            if (is_currency) {
+                sprintf(linenumber, "[%0.2Lf] ", line);
+            } else {
+                sprintf(linenumber, "[%Lf] ", line);
+            }
+        }
+
+        j += sprintf(buffer + j, "%s", linenumber);
+    } else if (ulog_attrs_disable[FILENAME] == false &&
+               ulog_attrs_disable[LINE] == false) {
+        char fileline[1024];
+
+        if (is_integer) {
+            #if __STD_VERSION__ >= 199901L
+            sprintf(fileline, "[%s:%lli] ", file, (long long int)(line));
+            #else
+            sprintf(fileline, "[%s:%li] ", file, (long int)(line));
+            #endif
+        } else {
+            if (is_currency) {
+                sprintf(fileline, "[%s%0.2Lf] ", file, line);/**
+ *  Redefine a macro of interest by using a preprocessor directive
+ *  before the inclusion of "utils.h"
+ *      For example, to redefine CSTR_ARR_DEFAULT_SIZE (for cstr_arr)
+ *
+ *      #ifdef CSTR_ARR_DEFAULT_SIZE
+ *      #undef CSTR_ARR_DEFAULT_SIZE
+ *      #endif
+ *      #define CSTR_ARR_DEFAULT_SIZE   <nonzero integer of positive magnitude>
+ *
+ *      #include "utils.h"
+ */
+#ifndef CSTR_ARR_DEFAULT_SIZE
+#define CSTR_ARR_DEFAULT_SIZE 256
+#endif /* CSTR_ARR_DEFAULT_SIZE */
+
+#ifndef CHAR_ARR_DEFAULT_SIZE
+#define CHAR_ARR_DEFAULT_SIZE 256
+#endif /* CHAR_ARR_DEFAULT_STR */
+
+#ifndef CHAR_PTR_ARR_DEFAULT_SIZE
+#define CHAR_PTR_ARR_DEFAULT_SIZE 256
+#endif /* CHAR_PTR_ARR_DEFAULT_SIZE */
+
+#ifndef CCHAR_ARR_DEFAULT_SIZE
+#define CCHAR_ARR_DEFAULT_SIZE 256
+#endif /* CCHAR_ARR_DEFAULT_SIZE */
+
+#ifndef CCHAR_PTR_ARR_DEFAULT_SIZE
+#define CCHAR_PTR_ARR_DEFAULT_SIZE 256
+#endif /* CCHAR_PTR_ARR_DEFAULT_SIZE */
+            } else {
+                sprintf(fileline, "[%s:%Lf] ", file, line);
+            }
+        }/**
+ *  Redefine a macro of interest by using a preprocessor directive
+ *  before the inclusion of "utils.h"
+ *      For example, to redefine CSTR_ARR_DEFAULT_SIZE (for cstr_arr)
+ *
+ *      #ifdef CSTR_ARR_DEFAULT_SIZE
+ *      #undef CSTR_ARR_DEFAULT_SIZE
+ *      #endif
+ *      #define CSTR_ARR_DEFAULT_SIZE   <nonzero integer of positive magnitude>
+ *
+ *      #include "utils.h"
+ */
+#ifndef CSTR_ARR_DEFAULT_SIZE
+#define CSTR_ARR_DEFAULT_SIZE 256
+#endif /* CSTR_ARR_DEFAULT_SIZE */
+
+#ifndef CHAR_ARR_DEFAULT_SIZE
+#define CHAR_ARR_DEFAULT_SIZE 256
+#endif /* CHAR_ARR_DEFAULT_STR */
+
+#ifndef CHAR_PTR_ARR_DEFAULT_SIZE
+#define CHAR_PTR_ARR_DEFAULT_SIZE 256
+#endif /* CHAR_PTR_ARR_DEFAULT_SIZE */
+
+#ifndef CCHAR_ARR_DEFAULT_SIZE
+#define CCHAR_ARR_DEFAULT_SIZE 256
+#endif /* CCHAR_ARR_DEFAULT_SIZE */
+
+#ifndef CCHAR_PTR_ARR_DEFAULT_SIZE
+#define CCHAR_PTR_ARR_DEFAULT_SIZE 256
+#endif /* CCHAR_PTR_ARR_DEFAULT_SIZE */
+
+        j += sprintf(buffer + j, "%s", fileline);
+    }
+
+    if (ulog_attrs_disable[FUNCTION] == false) {
+        char function[1024];
+        sprintf(function, "%s%s", KCYN, func);
+
+        j += sprintf(buffer + j, "%s", function);
+    }
+
+    if (ulog_attrs_disable[FUNCTION] == false &&
+        ulog_attrs_disable[MESSAGE] == false) {
+        j += sprintf(buffer + j, "%s", " ");
+    }
+
+    if (ulog_attrs_disable[MESSAGE] == false) {
+        char message[4096];
+        va_list args;
+
+        va_start(args, fmt);
+        vsprintf(message, fmt, args);
+        va_end(args);
+
+        j += sprintf(buffer + j, "%s%s%s", KNRM_b, message, KNRM);
+    }
+
+    return fprintf(dest, "%s\n", buffer);
 }
