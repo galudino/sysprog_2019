@@ -55,7 +55,6 @@ struct header {
 /**< myblock: block of memory in ./data/BSS segment */
 static char myblock[MYMALLOC__BLOCK_SIZE];
 #define MYMALLOC__END_ADDR ((void *)(myblock + (MYMALLOC__BLOCK_SIZE)))
-#define MYMALLOC__END_BLOCK (header_t *)((myblock + (MYMALLOC__BLOCK_SIZE)) - sizeof(header_t))
 static uint16_t merge_counter = 0;
 
 /**< header_t: freelist - base pointer to myblock, initial header */
@@ -69,9 +68,6 @@ static void header_init_list();
 static void header_split_block(header_t *curr, size_t size);
 static void header_merge_block(header_t *curr);
 static bool header_validator(void *ptr);
-
-#define header_next(HEADER) ((header_t *)((char *)(HEADER) + (sizeof(header_t)) + HEADER->size))
-#define is_header_last(HEADER) ((header_t *)((char *)(header_next(HEADER)) - (sizeof(header_t))) == MYMALLOC__END_BLOCK)
 
 #endif /* MYMALLOC__LOW_PROFILE */
 
@@ -95,6 +91,7 @@ struct rbheader {
     rbheader_t *right;
 };
 #endif
+
 
 /**
  *  @brief      Allocates size bytes from myblock
