@@ -79,8 +79,6 @@
  *  results.
  */
 
-
-
 /**
  *  @brief  Program execution begins here
  *
@@ -93,7 +91,7 @@ int main(int argc, const char *argv[]) {
     int i = 0;
     int j = 0;
     int k = 0;
-    #define AMOUNT 10
+    #define AMOUNT 150
     char *array[AMOUNT];
 
     for (i = 0; i < AMOUNT; i++) {

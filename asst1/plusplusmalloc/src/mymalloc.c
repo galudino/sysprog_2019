@@ -32,6 +32,7 @@
 #include "mymalloc.h"
 
 #ifdef MYMALLOC__LOW_PROFILE
+
 /**
  *  @typedef    header_t
  *  @brief      Alias for (struct header)
@@ -48,8 +49,6 @@ typedef struct header header_t;
 struct header {
     uint16_t size;  /**< size of block that proceeds header_t */
     bool free;      /**< denotes if proceeding block is in use, or not */
-
-    header_t *next; /**< address of next header_t instance */
 };
 
 /**< myblock: block of memory in ./data/BSS segment */
@@ -81,6 +80,7 @@ static bool header_validator(void *ptr);
  *  header_t is 16 bytes (singly-linked list)
  */
 #ifdef MYMALLOC__RBTREE
+
 typedef unsigned char rbt_color;
 #define RBT_BLACK false
 #define RBT_RED true
@@ -94,6 +94,7 @@ struct rbheader {
     rbheader_t *left;
     rbheader_t *right;
 };
+
 #endif
 
 /**
@@ -156,17 +157,21 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
      *  and headers representing blocks of sizes less than what we are
      *  looking for.
      */
-    while (curr->size < size || curr->free == false || curr->next) {
+    while (curr->size < size || curr->free == false) {
         prev = curr;
-        curr = curr->next;
+        curr = is_header_last(prev) ? NULL : header_next(prev);
 
         /**
          *  If the header that was just visited is representing a free block,
          *  and the current header is also representing a free block,
          *  perform a coalescence between them.
          */
-        if (prev->free && curr->free) {
-            header_merge_block(prev);
+        if (curr) {
+            if (prev->free && curr->free) {
+                header_merge_block(prev);
+            }
+        } else {
+            break;
         }
     }
 
@@ -290,6 +295,8 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
     } else {
         if (block_in_range) {
             header_t *prev = NULL;
+            header_t *next = NULL;
+
             /**
              *  If the memory block represented by header
              *  indeed belongs to myblock
@@ -299,14 +306,17 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *   the memory will be overwritten over time.)
              */
             header->free = true;
+            next = is_header_last(header) ? NULL : header_next(header);
 
             /**
              *  We can use this opportunity to coalesce blocks --
              *  if the adjacent block is reported to be free,
              *  merge it with the block associated with header.
              */
-            if (header->next->free) {
-                header_merge_block(header);
+            if (next) {
+                if (next->free) {
+                    header_merge_block(header);
+                }
             }
 
             /**
@@ -320,13 +330,14 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              */
             header = freelist;
 
-            while (header->next) {
+            while (header) {
                 prev = header;
-                header = header->next;
+                header = is_header_last(prev) ? NULL : header_next(prev);
 
-                if (prev->free && header->free) {
-                    prev->size += header->size + sizeof *header;
-                    prev->next = prev->next->next;
+                if (header) {
+                    if (prev->free && header->free) {
+                        prev->size += header->size + sizeof *header;
+                    }
                 }
             }
         } else {
@@ -385,6 +396,8 @@ void header_fputs(FILE *dest,
     fprintf(dest, "-------------\t------\t\t----------\n");
 
     while (header) {
+        header_t *next = NULL;
+
         const char *free =
             header->free ? KGRN "free" KNRM : KRED_b "in use" KNRM;
 
@@ -397,7 +410,8 @@ void header_fputs(FILE *dest,
         fprintf(dest, "%s%p%s\t%s\t\t%u\n",
         KGRY, (void *)(header + 1), KNRM, free, header->size);
 
-        header = header->next;
+        next = is_header_last(header) ? NULL : header_next(header);
+        header = next ? next : NULL;   
     }
 
     info.bytes_in_use
@@ -441,7 +455,6 @@ static void header_init_list() {
      */
     freelist->size = (MYMALLOC__BLOCK_SIZE - sizeof *freelist);
     freelist->free = true;
-    freelist->next = NULL;
 }
 
 /**
@@ -499,14 +512,12 @@ static void header_split_block(header_t *curr, size_t size) {
      */
     new_header->size = curr->size - size - sizeof *new_header;
     new_header->free = true;
-    new_header->next = curr->next ? curr->next : NULL;
 
     /**
      *  curr will now take on its new size value,
      *  and its next pointer will be addressed to new_header.
      */
     curr->size = size;
-    curr->next = new_header;
 }
 
 /**
@@ -522,11 +533,8 @@ static void header_split_block(header_t *curr, size_t size) {
  *  coalescence are clearly defined.
  */
 static void header_merge_block(header_t *curr) {
-    curr->size += curr->next->size + sizeof *curr->next;
-
-    if (curr->next != NULL) {
-        curr->next = curr->next->next;
-    }
+    header_t *next = is_header_last(curr) ? NULL : header_next(curr);
+    curr->size += next ? next->size + sizeof *next : 0;
 }
 
 /**
