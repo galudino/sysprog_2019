@@ -157,6 +157,8 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
      *  and headers representing blocks of sizes less than what we are
      *  looking for.
      */
+
+    /* while (curr->size < size || curr->size <= -1) */
     while (curr->size < size || curr->free == false) {
         prev = curr;
         curr = is_header_last(prev) ? NULL : header_next(prev);
@@ -167,6 +169,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
          *  perform a coalescence between them.
          */
         if (curr) {
+            /* if (prev->size > 0 && curr->size > 0) */
             if (prev->free && curr->free) {
                 header_merge_block(prev);
             }
@@ -199,6 +202,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
          *  that curr represents.
          */
         curr->free = false;
+        /* here, multiple size by (-1) to make it negative - means it's used */
         result = curr + 1;
     } else if ((curr->size) > (size + sizeof *curr)) {
         /**
@@ -210,6 +214,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
         header_split_block(curr, size);
 
         curr->free = false;
+        /* here, multiple size by (-1) to make it negative - means it's used */
         result = curr + 1;
     } else {
         ulog(stderr,
@@ -274,6 +279,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
      */
     --header;
 
+    /* instead, if header->size > 0, means it's free */
     if (header->free) {
         /**
          *  If the header reports that this block of memory
@@ -306,6 +312,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *   the memory will be overwritten over time.)
              */
             header->free = true;
+            /* header->size = abs(header->size) */
             next = is_header_last(header) ? NULL : header_next(header);
 
             /**
@@ -314,6 +321,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *  merge it with the block associated with header.
              */
             if (next) {
+                /* if (next->size > 0) */
                 if (next->free) {
                     header_merge_block(header);
                 }
@@ -335,6 +343,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
                 header = is_header_last(prev) ? NULL : header_next(prev);
 
                 if (header) {
+                    /* if (prev->size > 0 && header->size > 0) */
                     if (prev->free && header->free) {
                         prev->size += header->size + sizeof *header;
                     }
@@ -397,9 +406,14 @@ void header_fputs(FILE *dest,
 
     while (header) {
         header_t *next = NULL;
+        bool header_free = header->size > 0;
 
         const char *free =
             header->free ? KGRN "free" KNRM : KRED_b "in use" KNRM;
+        /*
+        const char *free = 
+        header_free ? KGRN "free" KNRM : KRED_b "in use" KNRM;
+        */
 
         info.block_used += header->free ? 0 : 1;
         info.block_free += header->free ? 1 : 0;
@@ -455,6 +469,7 @@ static void header_init_list() {
      */
     freelist->size = (MYMALLOC__BLOCK_SIZE - sizeof *freelist);
     freelist->free = true;
+    /* won't need free field anymore */
 }
 
 /**
@@ -512,6 +527,7 @@ static void header_split_block(header_t *curr, size_t size) {
      */
     new_header->size = curr->size - size - sizeof *new_header;
     new_header->free = true;
+    /* won't need free field anymore */
 
     /**
      *  curr will now take on its new size value,
