@@ -92,6 +92,8 @@ int main(int argc, const char *argv[]) {
     int j = 0;
     int k = 0;
     #define AMOUNT 150
+    void *ptr = NULL;
+    
     char *array[AMOUNT];
 
     for (i = 0; i < AMOUNT; i++) {
@@ -124,6 +126,6 @@ int main(int argc, const char *argv[]) {
     }
 
     listlog();
-    
+
     return EXIT_SUCCESS;
 }

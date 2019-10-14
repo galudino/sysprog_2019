@@ -71,6 +71,9 @@ static bool header_validator(void *ptr);
 
 #define header_next(HEADER) ((header_t *)((char *)(HEADER) + (sizeof(header_t)) + HEADER->size))
 #define is_header_last(HEADER) ((header_t *)((char *)(header_next(HEADER)) - (sizeof(header_t))) == MYMALLOC__END_BLOCK)
+#define is_header_free(HEADER) ((HEADER->size) > (0))
+#define is_header_used(HEADER) ((HEADER->size) < (0))
+#define header_toggle(HEADER)  ((HEADER->size) *= (-1))
 
 #endif /* MYMALLOC__LOW_PROFILE */
 
