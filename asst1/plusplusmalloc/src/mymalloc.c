@@ -67,12 +67,13 @@ static header_t *pos = NULL;
 static void header_init_list();
 static void header_split_block(header_t *curr, size_t size);
 static void header_merge_block(header_t *curr);
+static void header_merge_global(header_t *curr);
 static bool header_validator(void *ptr);
 
 #define header_next(HEADER) ((header_t *)((char *)(HEADER) + (sizeof(header_t)) + HEADER->size))
-#define is_header_last(HEADER) ((header_t *)((char *)(header_next(HEADER)) - (sizeof(header_t))) == MYMALLOC__END_BLOCK)
-#define is_header_free(HEADER) ((HEADER->size) > (0))
-#define is_header_used(HEADER) ((HEADER->size) < (0))
+#define header_is_last(HEADER) ((header_t *)((char *)(header_next(HEADER)) - (sizeof(header_t))) == MYMALLOC__END_BLOCK)
+#define header_is_free(HEADER) ((HEADER->size) > (0))
+#define header_is_used(HEADER) ((HEADER->size) < (0))
 #define header_toggle(HEADER)  ((HEADER->size) *= (-1))
 
 #endif /* MYMALLOC__LOW_PROFILE */
@@ -118,6 +119,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
     header_t *prev = NULL;
 
     void *result = NULL;
+    bool found = false;
 
     /**
      *  If mymalloc has not been called yet,
@@ -138,17 +140,17 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
      *  First sanity check: is the size request greater than 0?
      *  If not, do not continue -- return NULL.
      */
-    if (size == 0) {
+    if (size == 0 || size >= MYMALLOC__BLOCK_SIZE - sizeof(header_t)) {
         ulog(stderr,
              "[ERROR]",
              filename,
-             "my_malloc",
+             "mymalloc",
              lineno,
              "Allocation input "
              "value must be a "
              "nonzero integer "
              "of positive "
-             "magnitude.");
+             "magnitude.\nAccepted parameter range: (0, %lu]\n", MYMALLOC__BLOCK_SIZE - sizeof(header_t));
         return NULL;
     }
 
@@ -160,11 +162,13 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
      *  and headers representing blocks of sizes less than what we are
      *  looking for.
      */
-
-    /* while (curr->size < size || curr->size <= -1) */
     while (curr->size < size || curr->free == false) {
         prev = curr;
-        curr = is_header_last(prev) ? NULL : header_next(prev);
+        curr = header_is_last(prev) ? NULL : header_next(prev);
+
+        if (prev->size >= size) {
+            found = true;
+        }
 
         /**
          *  If the header that was just visited is representing a free block,
@@ -172,7 +176,6 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
          *  perform a coalescence between them.
          */
         if (curr) {
-            /* if (prev->size > 0 && curr->size > 0) */
             if (prev->free && curr->free) {
                 header_merge_block(prev);
             }
@@ -205,7 +208,6 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
          *  that curr represents.
          */
         curr->free = false;
-        /* here, multiple size by (-1) to make it negative - means it's used */
         result = curr + 1;
     } else if ((curr->size) > (size + sizeof *curr)) {
         /**
@@ -217,7 +219,6 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
         header_split_block(curr, size);
 
         curr->free = false;
-        /* here, multiple size by (-1) to make it negative - means it's used */
         result = curr + 1;
     } else {
         ulog(stderr,
@@ -282,7 +283,6 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
      */
     --header;
 
-    /* instead, if header->size > 0, means it's free */
     if (header->free) {
         /**
          *  If the header reports that this block of memory
@@ -315,8 +315,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *   the memory will be overwritten over time.)
              */
             header->free = true;
-            /* header->size = abs(header->size) */
-            next = is_header_last(header) ? NULL : header_next(header);
+            next = header_is_last(header) ? NULL : header_next(header);
 
             /**
              *  We can use this opportunity to coalesce blocks --
@@ -324,7 +323,6 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *  merge it with the block associated with header.
              */
             if (next) {
-                /* if (next->size > 0) */
                 if (next->free) {
                     header_merge_block(header);
                 }
@@ -343,10 +341,9 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
 
             while (header) {
                 prev = header;
-                header = is_header_last(prev) ? NULL : header_next(prev);
+                header = header_is_last(prev) ? NULL : header_next(prev);
 
                 if (header) {
-                    /* if (prev->size > 0 && header->size > 0) */
                     if (prev->free && header->free) {
                         prev->size += header->size + sizeof *header;
                     }
@@ -387,11 +384,16 @@ void header_fputs(FILE *dest,
     struct {
         uint16_t block_used;
         uint16_t block_free;
+
         uint16_t space_used;
         uint16_t space_free;
+
         uint16_t bytes_in_use;
         uint16_t block_count_available;
-    } info = { 0, 0, 0, 0, 0, 0 };
+
+        uint16_t largest_block_used;
+        uint16_t largest_block_free;
+    } info = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
     if (header->size == 0) {
         fprintf(dest, "------------------------------------------\n");
@@ -424,10 +426,18 @@ void header_fputs(FILE *dest,
         info.space_used += header->free ? 0 : header->size;
         info.space_free += header->free ? header->size : 0;
 
+        info.largest_block_used = 
+        (info.largest_block_used < header->size) 
+        && !header->free ? header->size : info.largest_block_used;
+
+        info.largest_block_free = 
+        (info.largest_block_free < header->size) 
+        && header->free ? header->size : info.largest_block_free;
+
         fprintf(dest, "%s%p%s\t%s\t\t%hi\n",
         KGRY, (void *)(header + 1), KNRM, free, header->size);
 
-        next = is_header_last(header) ? NULL : header_next(header);
+        next = header_is_last(header) ? NULL : header_next(header);
         header = next ? next : NULL;   
     }
 
@@ -454,6 +464,12 @@ void header_fputs(FILE *dest,
     fprintf(dest, "Client data in use:\t%s%u%s of %s%u%s bytes\n\n",
     KWHT_b, info.space_used, KNRM, KWHT_b, info.block_count_available, KNRM);
 
+    fprintf(dest, "Largest used block:\t%s%u%s of %s%u%s bytes\n",
+    KWHT_b, info.largest_block_used, KNRM, KWHT_b, info.block_count_available, KNRM);
+
+    fprintf(dest, "Largest free block:\t%s%u%s of %s%u%s bytes\n\n",
+    KWHT_b, info.largest_block_free, KNRM, KWHT_b, info.block_count_available, KNRM);
+
     fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n",
     filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
     fprintf(dest, "------------------------------------------\n\n");
@@ -472,7 +488,6 @@ static void header_init_list() {
      */
     freelist->size = (MYMALLOC__BLOCK_SIZE - sizeof *freelist);
     freelist->free = true;
-    /* won't need free field anymore */
 }
 
 /**
@@ -530,7 +545,6 @@ static void header_split_block(header_t *curr, size_t size) {
      */
     new_header->size = curr->size - size - sizeof *new_header;
     new_header->free = true;
-    /* won't need free field anymore */
 
     /**
      *  curr will now take on its new size value,
@@ -552,10 +566,16 @@ static void header_split_block(header_t *curr, size_t size) {
  *  coalescence are clearly defined.
  */
 static void header_merge_block(header_t *curr) {
-    header_t *next = is_header_last(curr) ? NULL : header_next(curr);
+    header_t *next = header_is_last(curr) ? NULL : header_next(curr);
     curr->size += next ? next->size + sizeof *next : 0;
 }
 
+static void header_merge_global(header_t *curr) {
+    char block_temp[MYMALLOC__BLOCK_SIZE];
+
+    header_t *temp = NULL;
+}
+ 
 /**
  *  @brief  Determines if ptr is NULL,
  *          or if nonnull, determines if it is a pointer allocated by mymalloc
@@ -685,37 +705,7 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
     } else if (ulog_attrs_disable[FILENAME] &&
                ulog_attrs_disable[LINE] == false) {
         char linenumber[1024];
-/**
- *  Redefine a macro of interest by using a preprocessor directive
- *  before the inclusion of "utils.h"
- *      For example, to redefine CSTR_ARR_DEFAULT_SIZE (for cstr_arr)
- *
- *      #ifdef CSTR_ARR_DEFAULT_SIZE
- *      #undef CSTR_ARR_DEFAULT_SIZE
- *      #endif
- *      #define CSTR_ARR_DEFAULT_SIZE   <nonzero integer of positive magnitude>
- *
- *      #include "utils.h"
- */
-#ifndef CSTR_ARR_DEFAULT_SIZE
-#define CSTR_ARR_DEFAULT_SIZE 256
-#endif /* CSTR_ARR_DEFAULT_SIZE */
 
-#ifndef CHAR_ARR_DEFAULT_SIZE
-#define CHAR_ARR_DEFAULT_SIZE 256
-#endif /* CHAR_ARR_DEFAULT_STR */
-
-#ifndef CHAR_PTR_ARR_DEFAULT_SIZE
-#define CHAR_PTR_ARR_DEFAULT_SIZE 256
-#endif /* CHAR_PTR_ARR_DEFAULT_SIZE */
-
-#ifndef CCHAR_ARR_DEFAULT_SIZE
-#define CCHAR_ARR_DEFAULT_SIZE 256
-#endif /* CCHAR_ARR_DEFAULT_SIZE */
-
-#ifndef CCHAR_PTR_ARR_DEFAULT_SIZE
-#define CCHAR_PTR_ARR_DEFAULT_SIZE 256
-#endif /* CCHAR_PTR_ARR_DEFAULT_SIZE */
         if (is_integer) {
             #if __STD_VERSION__ >= 199901L
             sprintf(linenumber, "[%lli] ", (long long int)(line));
@@ -743,71 +733,11 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
             #endif
         } else {
             if (is_currency) {
-                sprintf(fileline, "[%s%0.2Lf] ", file, line);/**
- *  Redefine a macro of interest by using a preprocessor directive
- *  before the inclusion of "utils.h"
- *      For example, to redefine CSTR_ARR_DEFAULT_SIZE (for cstr_arr)
- *
- *      #ifdef CSTR_ARR_DEFAULT_SIZE
- *      #undef CSTR_ARR_DEFAULT_SIZE
- *      #endif
- *      #define CSTR_ARR_DEFAULT_SIZE   <nonzero integer of positive magnitude>
- *
- *      #include "utils.h"
- */
-#ifndef CSTR_ARR_DEFAULT_SIZE
-#define CSTR_ARR_DEFAULT_SIZE 256
-#endif /* CSTR_ARR_DEFAULT_SIZE */
-
-#ifndef CHAR_ARR_DEFAULT_SIZE
-#define CHAR_ARR_DEFAULT_SIZE 256
-#endif /* CHAR_ARR_DEFAULT_STR */
-
-#ifndef CHAR_PTR_ARR_DEFAULT_SIZE
-#define CHAR_PTR_ARR_DEFAULT_SIZE 256
-#endif /* CHAR_PTR_ARR_DEFAULT_SIZE */
-
-#ifndef CCHAR_ARR_DEFAULT_SIZE
-#define CCHAR_ARR_DEFAULT_SIZE 256
-#endif /* CCHAR_ARR_DEFAULT_SIZE */
-
-#ifndef CCHAR_PTR_ARR_DEFAULT_SIZE
-#define CCHAR_PTR_ARR_DEFAULT_SIZE 256
-#endif /* CCHAR_PTR_ARR_DEFAULT_SIZE */
+                sprintf(fileline, "[%s%0.2Lf] ", file, line);
             } else {
                 sprintf(fileline, "[%s:%Lf] ", file, line);
             }
-        }/**
- *  Redefine a macro of interest by using a preprocessor directive
- *  before the inclusion of "utils.h"
- *      For example, to redefine CSTR_ARR_DEFAULT_SIZE (for cstr_arr)
- *
- *      #ifdef CSTR_ARR_DEFAULT_SIZE
- *      #undef CSTR_ARR_DEFAULT_SIZE
- *      #endif
- *      #define CSTR_ARR_DEFAULT_SIZE   <nonzero integer of positive magnitude>
- *
- *      #include "utils.h"
- */
-#ifndef CSTR_ARR_DEFAULT_SIZE
-#define CSTR_ARR_DEFAULT_SIZE 256
-#endif /* CSTR_ARR_DEFAULT_SIZE */
-
-#ifndef CHAR_ARR_DEFAULT_SIZE
-#define CHAR_ARR_DEFAULT_SIZE 256
-#endif /* CHAR_ARR_DEFAULT_STR */
-
-#ifndef CHAR_PTR_ARR_DEFAULT_SIZE
-#define CHAR_PTR_ARR_DEFAULT_SIZE 256
-#endif /* CHAR_PTR_ARR_DEFAULT_SIZE */
-
-#ifndef CCHAR_ARR_DEFAULT_SIZE
-#define CCHAR_ARR_DEFAULT_SIZE 256
-#endif /* CCHAR_ARR_DEFAULT_SIZE */
-
-#ifndef CCHAR_PTR_ARR_DEFAULT_SIZE
-#define CCHAR_PTR_ARR_DEFAULT_SIZE 256
-#endif /* CCHAR_PTR_ARR_DEFAULT_SIZE */
+        }
 
         j += sprintf(buffer + j, "%s", fileline);
     }

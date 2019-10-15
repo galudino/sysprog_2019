@@ -29,7 +29,31 @@
  */
 
 #include <sys/time.h>
+
 #include "mymalloc.h"
+#include "rbtree.h"
+
+void test_all(void);
+void test_a(void);
+void test_b(void);
+void test_c(void);
+void test_d(void);
+void test_e(void);
+void test_f(void);
+
+char *randstr(size_t length);
+
+#define randrnge(min, max) \
+        ((rand() % (int)(((max) + 1) - (min))) + (min))
+
+#define RANDSTR__CHARS \
+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!;"
+
+#define RBT_AMOUNT_MIN  1
+#define RBT_AMOUNT_MAX  4
+
+#define RBN_AMOUNT_MIN  8
+#define RBN_AMOUNT_MAX  32
 
 /**
  *  memgrind unit tests
@@ -88,46 +112,108 @@
  *  @return     exit status, 0 on success, else failure
  */
 int main(int argc, const char *argv[]) {
+
+    srand(time(NULL));
+    test_e();
+
+    return EXIT_SUCCESS;
+}
+
+char *randstr(size_t length) {
+    const char *charset = RANDSTR__CHARS;
+    char *random_string = NULL;
+
+    uint32_t key = 0;
+    int n = 0;
+    size_t string_length = 0;
+
+    string_length = 26 * 2 + 10 + 7;
+    random_string = malloc(length + 1);
+
+    if (random_string == NULL) {
+        return NULL;
+    }
+
+    for (n = 0; n < length; n++) {            
+        key = rand() % string_length;   
+        random_string[n] = charset[key];
+    }
+
+    random_string[length] = '\0';
+    return random_string;
+}
+
+void test_all(void) {
+
+}
+
+void test_a(void) {
+
+}
+
+void test_b(void) {
+
+}
+
+void test_c(void) {
+
+}
+
+void test_d(void) {
+
+}
+
+void test_e(void) {
     int i = 0;
     int j = 0;
-    int k = 0;
-    #define AMOUNT 1
+
+    const int rbt_max = randrnge(RBT_AMOUNT_MIN, RBT_AMOUNT_MAX);
+    const int rbn_max = randrnge(RBN_AMOUNT_MIN, RBN_AMOUNT_MAX);
+
+    rbtree **t_arr = NULL;
     void *ptr = NULL;
-    
-    char *array[AMOUNT];
 
-    for (i = 0; i < AMOUNT; i++) {
-        array[i] = malloc(1);
+    t_arr = malloc(sizeof *t_arr * rbt_max);
+
+    listlog();
+
+    for (i = 0; i < rbt_max; i++) {
+        rbtree *t = rbtree_new();
+        t_arr[i] = t ? t : NULL;
     }
 
     listlog();
 
-    /*
-    for (i = 0; i < AMOUNT; i++) {
-        free(array[i]);
-    }*/
+    for (i = 0; i < rbt_max; i++) {
+        for (j = 0; j < rbn_max; j++) {
+            rbtree *t = t_arr[i];
 
-    listlog();
-
-    /*
-    for (i = 0; i < AMOUNT / 2; i++) {
-        int n = rand() % 50;
-        array[i] = malloc(n);
+            if (t) {
+                rbtree_insert(t, rand());
+            }
+        }
     }
 
-    listlog();
+    for (i = 0; i < rbt_max; i++) {
+        for (j = 0; j < rbn_max; j++) {
+            bool to_erase = randrnge(0, 1);
 
-    for (i = 0; i < AMOUNT / 4; i++) {
-        free(array[i]);
+            if (to_erase > 0) {
+                rbtree *t = t_arr[i];
+                
+                if (t) {
+                    rbtree_erase_min(t);
+                }
+            }
+        }
     }
 
-    listlog();
-
-    for (j = i; j < AMOUNT / 4; j++) {
-        free(array[j]);
-    }
+    ptr = malloc(2000);
+    ptr = malloc(4097);
 
     listlog();
-    */
-    return EXIT_SUCCESS;
+}
+
+void test_f(void) {
+
 }
