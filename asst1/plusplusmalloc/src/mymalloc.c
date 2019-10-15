@@ -47,7 +47,7 @@ typedef struct header header_t;
  *              dynamically allocated by mymalloc
  */
 struct header {
-    uint16_t size;  /**< size of block that proceeds header_t */
+    int16_t size;  /**< size of block that proceeds header_t */
     bool free;      /**< denotes if proceeding block is in use, or not */
 };
 
@@ -424,7 +424,7 @@ void header_fputs(FILE *dest,
         info.space_used += header->free ? 0 : header->size;
         info.space_free += header->free ? header->size : 0;
 
-        fprintf(dest, "%s%p%s\t%s\t\t%u\n",
+        fprintf(dest, "%s%p%s\t%s\t\t%hi\n",
         KGRY, (void *)(header + 1), KNRM, free, header->size);
 
         next = is_header_last(header) ? NULL : header_next(header);

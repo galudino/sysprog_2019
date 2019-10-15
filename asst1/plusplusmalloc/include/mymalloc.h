@@ -31,7 +31,8 @@
 #ifndef MY_MALLOC_H
 #define MY_MALLOC_H
 
-/* #define MYMALLOC__RELEASE_MODE */
+/*#define MYMALLOC__RELEASE_MODE*/
+
 #define MYMALLOC__LOW_PROFILE
 #define MYMALLOC__BLOCK_SIZE    4096
 
@@ -79,7 +80,11 @@ void header_fputs(FILE *dest,
                  const char *funcname,
                  size_t lineno);
 
-#define listlog()   header_fputs(stdout, __FILE__, __func__, __LINE__)
+#ifndef MYMALLOC__RELEASE_MODE
+# define listlog()   header_fputs(stdout, __FILE__, __func__, __LINE__)
+#else
+# define listlog()
+#endif 
 
 /**
  *  Logging utilities

@@ -91,7 +91,7 @@ int main(int argc, const char *argv[]) {
     int i = 0;
     int j = 0;
     int k = 0;
-    #define AMOUNT 150
+    #define AMOUNT 1
     void *ptr = NULL;
     
     char *array[AMOUNT];
@@ -102,12 +102,14 @@ int main(int argc, const char *argv[]) {
 
     listlog();
 
+    /*
     for (i = 0; i < AMOUNT; i++) {
         free(array[i]);
-    }
+    }*/
 
     listlog();
 
+    /*
     for (i = 0; i < AMOUNT / 2; i++) {
         int n = rand() % 50;
         array[i] = malloc(n);
@@ -126,6 +128,6 @@ int main(int argc, const char *argv[]) {
     }
 
     listlog();
-
+    */
     return EXIT_SUCCESS;
 }
