@@ -1,0 +1,13 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       15 Oct 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+more vs less
+
+more
+  stop
