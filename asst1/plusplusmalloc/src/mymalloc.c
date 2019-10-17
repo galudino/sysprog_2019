@@ -47,14 +47,15 @@ typedef struct header header_t;
  *              dynamically allocated by mymalloc
  */
 struct header {
-    int16_t size;  /**< size of block that proceeds header_t */
-    bool free;      /**< denotes if proceeding block is in use, or not */
+    int16_t size; /**< size of block that proceeds header_t */
+    bool free;    /**< denotes if proceeding block is in use, or not */
 };
 
 /**< myblock: block of memory in ./data/BSS segment */
 static char myblock[MYMALLOC__BLOCK_SIZE];
-#define MYMALLOC__END_ADDR ((void *)(myblock + (MYMALLOC__BLOCK_SIZE)))
-#define MYMALLOC__END_BLOCK (header_t *)((myblock + (MYMALLOC__BLOCK_SIZE)) - sizeof(header_t))
+#define MYMALLOC__END_ADDR ((void *)(myblock + (MYMALLOC__BLOCK_SIZE) - 1))
+#define MYMALLOC__END_BLOCK                                                    \
+    (header_t *)((myblock + (MYMALLOC__BLOCK_SIZE)) - sizeof(header_t))
 static uint16_t merge_counter = 0;
 
 /**< header_t: freelist - base pointer to myblock, initial header */
@@ -70,11 +71,13 @@ static void header_merge_block(header_t *curr);
 static void header_merge_global(header_t *curr);
 static bool header_validator(void *ptr);
 
-#define header_next(HEADER) ((header_t *)((char *)(HEADER) + (sizeof(header_t)) + HEADER->size))
-#define header_is_last(HEADER) ((header_t *)((char *)(header_next(HEADER)) - (sizeof(header_t))) == MYMALLOC__END_BLOCK)
+#define header_next(HEADER)                                                    \
+    ((header_t *)((char *)(HEADER) + (sizeof(header_t)) + HEADER->size))
+#define header_is_last(HEADER)                                                 \
+    ((header_t *)((char *)(header_next(HEADER)) - (sizeof(header_t))) == MYMALLOC__END_BLOCK)
 #define header_is_free(HEADER) ((HEADER->size) > (0))
 #define header_is_used(HEADER) ((HEADER->size) < (0))
-#define header_toggle(HEADER)  ((HEADER->size) *= (-1))
+#define header_toggle(HEADER) ((HEADER->size) *= (-1))
 
 #endif /* MYMALLOC__LOW_PROFILE */
 
@@ -137,20 +140,20 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
     curr = freelist;
 
     /**
-     *  First sanity check: is the size request greater than 0?
+     *  First sanity check: is the size request within [1, 4093)
      *  If not, do not continue -- return NULL.
      */
-    if (size == 0 || size >= MYMALLOC__BLOCK_SIZE - sizeof(header_t)) {
+    if (size == 0 || size > MYMALLOC__BLOCK_SIZE - sizeof(header_t)) {
         ulog(stderr,
              "[ERROR]",
              filename,
              "mymalloc",
              lineno,
              "Allocation input "
-             "value must be a "
-             "nonzero integer "
-             "of positive "
-             "magnitude.\nAccepted parameter range: (0, %lu]\n", MYMALLOC__BLOCK_SIZE - sizeof(header_t));
+             "value must be within [1, %lu) bytes.\tAttempted "
+             "allocation: %lu bytes",
+             (MYMALLOC__BLOCK_SIZE - sizeof(header_t)) + 1,
+             size);
         return NULL;
     }
 
@@ -273,7 +276,8 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
      *  Is the address of ptr within range of the base address of
      *  myblock, and myblock's last byte address?
      */
-    block_in_range = ptr > (void *)(myblock) && (ptr <= MYMALLOC__END_ADDR);
+    block_in_range = ptr >= (void *)((char *)(myblock) + sizeof(header_t)) &&
+                     (ptr <= MYMALLOC__END_ADDR);
 
     /**
      *  By decrementing header, we now have access to the
@@ -303,9 +307,6 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
         return;
     } else {
         if (block_in_range) {
-            header_t *prev = NULL;
-            header_t *next = NULL;
-
             /**
              *  If the memory block represented by header
              *  indeed belongs to myblock
@@ -315,15 +316,17 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *   the memory will be overwritten over time.)
              */
             header->free = true;
-            next = header_is_last(header) ? NULL : header_next(header);
 
             /**
              *  We can use this opportunity to coalesce blocks --
              *  if the adjacent block is reported to be free,
              *  merge it with the block associated with header.
              */
-            if (next) {
+            if (header_is_last(header) == false) {
+                header_t *next = header_next(header);
+
                 if (next->free) {
+                    printf("next->size: %d\n", next->size);
                     header_merge_block(header);
                 }
             }
@@ -340,7 +343,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
             header = freelist;
 
             while (header) {
-                prev = header;
+                header_t *prev = header;
                 header = header_is_last(prev) ? NULL : header_next(prev);
 
                 if (header) {
@@ -377,8 +380,7 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
  *  @param[in]  funcname    for use with the __func__ macro
  *  @param[in]  lineno      for use with the __LINE__ macro
  */
-void header_fputs(FILE *dest,
-                  const char *filename, const char *funcname, size_t lineno) {
+void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t lineno) {
     header_t *header = freelist;
 
     struct {
@@ -398,80 +400,100 @@ void header_fputs(FILE *dest,
     if (header->size == 0) {
         fprintf(dest, "------------------------------------------\n");
         fprintf(dest, "No allocations have been made yet.\n\n");
-        fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n",
-        filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
+        fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
         fprintf(dest, "------------------------------------------\n\n");
         return;
     }
 
     fprintf(dest, "------------------------------------------\n");
-    fprintf(dest, "%sBlock Address%s\t%sStatus%s\t\t%sBlock Size%s\n",
-    KWHT_b, KNRM, KWHT_b, KNRM, KWHT_b, KNRM);
+    fprintf(dest, "%sBlock Address%s\t%sStatus%s\t\t%sBlock Size%s\n", KWHT_b, KNRM, KWHT_b, KNRM, KWHT_b, KNRM);
     fprintf(dest, "-------------\t------\t\t----------\n");
 
     while (header) {
         header_t *next = NULL;
-        bool header_free = header->size > 0;
+        bool header_free = header->free;
 
         const char *free =
-            header->free ? KGRN "free" KNRM : KRED_b "in use" KNRM;
-        /*
-        const char *free = 
-        header_free ? KGRN "free" KNRM : KRED_b "in use" KNRM;
-        */
+            header_free ? KGRN "free" KNRM : KRED_b "in use" KNRM;
 
-        info.block_used += header->free ? 0 : 1;
-        info.block_free += header->free ? 1 : 0;
+        info.block_used += header_free ? 0 : 1;
+        info.block_free += header_free ? 1 : 0;
 
-        info.space_used += header->free ? 0 : header->size;
-        info.space_free += header->free ? header->size : 0;
+        info.space_used += header_free ? 0 : header->size;
+        info.space_free += header_free ? header->size : 0;
 
-        info.largest_block_used = 
-        (info.largest_block_used < header->size) 
-        && !header->free ? header->size : info.largest_block_used;
+        info.largest_block_used = (info.largest_block_used < header->size) && !header_free ?
+                                      header->size :
+                                      info.largest_block_used;
 
-        info.largest_block_free = 
-        (info.largest_block_free < header->size) 
-        && header->free ? header->size : info.largest_block_free;
+        info.largest_block_free = (info.largest_block_free < header->size) && header_free ?
+                                      header->size :
+                                      info.largest_block_free;
 
-        fprintf(dest, "%s%p%s\t%s\t\t%hi\n",
-        KGRY, (void *)(header + 1), KNRM, free, header->size);
+        fprintf(dest, "%s%p%s\t%s\t\t%hi\n", KGRY, (void *)(header + 1), KNRM, free, header->size);
 
         next = header_is_last(header) ? NULL : header_next(header);
-        header = next ? next : NULL;   
+        header = next ? next : NULL;
     }
 
-    info.bytes_in_use
-    = info.space_used + (sizeof *header * (1 + info.block_used));
+    info.bytes_in_use = info.space_used + (sizeof *header * (1 + info.block_used));
 
-    info.block_count_available
-    = MYMALLOC__BLOCK_SIZE - (sizeof *header * (info.block_free + info.block_used));
+    info.block_count_available =
+        MYMALLOC__BLOCK_SIZE - (sizeof *header * (info.block_free + info.block_used));
 
     fprintf(dest, "------------------------------------------\n");
 
     fprintf(dest, "Used blocks in list:\t%s%u%s\n", KWHT_b, info.block_used, KNRM);
     fprintf(dest, "Free blocks in list:\t%s%u%s\n\n", KWHT_b, info.block_free, KNRM);
 
-    fprintf(dest, "Free space:\t\t%s%u%s of %s%u%s bytes\n",
-    KWHT_b, info.space_free, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
+    fprintf(dest, "Free space:\t\t%s%u%s of %s%u%s bytes\n", KWHT_b, info.space_free, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
 
-    fprintf(dest, "Available for client:\t%s%u%s of %s%u%s bytes\n\n",
-    KWHT_b, info.space_free, KNRM, KWHT_b, info.block_count_available, KNRM);
+    fprintf(dest,
+            "Available for client:\t%s%u%s of %s%u%s bytes\n\n",
+            KWHT_b,
+            info.space_free,
+            KNRM,
+            KWHT_b,
+            info.block_count_available,
+            KNRM);
 
-    fprintf(dest, "Total data in use:\t%s%u%s of %s%u%s bytes\n",
-    KWHT_b, info.bytes_in_use, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
+    fprintf(dest,
+            "Total data in use:\t%s%u%s of %s%u%s bytes\n",
+            KWHT_b,
+            info.bytes_in_use,
+            KNRM,
+            KWHT_b,
+            MYMALLOC__BLOCK_SIZE,
+            KNRM);
 
-    fprintf(dest, "Client data in use:\t%s%u%s of %s%u%s bytes\n\n",
-    KWHT_b, info.space_used, KNRM, KWHT_b, info.block_count_available, KNRM);
+    fprintf(dest,
+            "Client data in use:\t%s%u%s of %s%u%s bytes\n\n",
+            KWHT_b,
+            info.space_used,
+            KNRM,
+            KWHT_b,
+            info.block_count_available,
+            KNRM);
 
-    fprintf(dest, "Largest used block:\t%s%u%s of %s%u%s bytes\n",
-    KWHT_b, info.largest_block_used, KNRM, KWHT_b, info.block_count_available, KNRM);
+    fprintf(dest,
+            "Largest used block:\t%s%u%s of %s%u%s bytes\n",
+            KWHT_b,
+            info.largest_block_used,
+            KNRM,
+            KWHT_b,
+            info.block_count_available,
+            KNRM);
 
-    fprintf(dest, "Largest free block:\t%s%u%s of %s%u%s bytes\n\n",
-    KWHT_b, info.largest_block_free, KNRM, KWHT_b, info.block_count_available, KNRM);
+    fprintf(dest,
+            "Largest free block:\t%s%u%s of %s%u%s bytes\n\n",
+            KWHT_b,
+            info.largest_block_free,
+            KNRM,
+            KWHT_b,
+            info.block_count_available,
+            KNRM);
 
-    fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n",
-    filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
+    fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
     fprintf(dest, "------------------------------------------\n\n");
 }
 
@@ -566,8 +588,8 @@ static void header_split_block(header_t *curr, size_t size) {
  *  coalescence are clearly defined.
  */
 static void header_merge_block(header_t *curr) {
-    header_t *next = header_is_last(curr) ? NULL : header_next(curr);
-    curr->size += next ? next->size + sizeof *next : 0;
+    header_t *next = header_next(curr);
+    curr->size += next->size + sizeof *next;
 }
 
 static void header_merge_global(header_t *curr) {
@@ -575,7 +597,7 @@ static void header_merge_global(header_t *curr) {
 
     header_t *temp = NULL;
 }
- 
+
 /**
  *  @brief  Determines if ptr is NULL,
  *          or if nonnull, determines if it is a pointer allocated by mymalloc
@@ -608,7 +630,7 @@ static bool header_validator(void *ptr) {
     return result;
 }
 
-bool ulog_attrs_disable[] = {false, false, false, false, false, false, false};
+bool ulog_attrs_disable[] = { false, false, false, false, false, false, false };
 
 /**
  *  Utility function for debugging/error messages
@@ -622,8 +644,13 @@ bool ulog_attrs_disable[] = {false, false, false, false, false, false, false};
  *
  *  @return         character count of buffer (from fprintf)
  */
-int ulog(FILE *dest, const char *level, const char *file, const char *func,
-         long double line, const char *fmt, ...) {
+int ulog(FILE *dest,
+         const char *level,
+         const char *file,
+         const char *func,
+         long double line,
+         const char *fmt,
+         ...) {
 
     char buffer[MAXIMUM_STACK_BUFFER_SIZE];
     char temp[BUFFER_SIZE];
@@ -666,7 +693,7 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
 
     sprintf(temp, "%Lf", line);
 
-    /* char digit = strchr(temp, '.'); */
+/* char digit = strchr(temp, '.'); */
 
 #if __STD_VERSION__ >= 199901L
     is_integer = line / (long long int)(line) == 1.000000 || line == 0.00000;
@@ -702,16 +729,15 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
         sprintf(filename, "[%s] ", file);
 
         j += sprintf(buffer + j, "%s", filename);
-    } else if (ulog_attrs_disable[FILENAME] &&
-               ulog_attrs_disable[LINE] == false) {
+    } else if (ulog_attrs_disable[FILENAME] && ulog_attrs_disable[LINE] == false) {
         char linenumber[1024];
 
         if (is_integer) {
-            #if __STD_VERSION__ >= 199901L
+#if __STD_VERSION__ >= 199901L
             sprintf(linenumber, "[%lli] ", (long long int)(line));
-            #else
+#else
             sprintf(linenumber, "[%li] ", (long int)(line));
-            #endif
+#endif
         } else {
             if (is_currency) {
                 sprintf(linenumber, "[%0.2Lf] ", line);
@@ -721,16 +747,15 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
         }
 
         j += sprintf(buffer + j, "%s", linenumber);
-    } else if (ulog_attrs_disable[FILENAME] == false &&
-               ulog_attrs_disable[LINE] == false) {
+    } else if (ulog_attrs_disable[FILENAME] == false && ulog_attrs_disable[LINE] == false) {
         char fileline[1024];
 
         if (is_integer) {
-            #if __STD_VERSION__ >= 199901L
+#if __STD_VERSION__ >= 199901L
             sprintf(fileline, "[%s:%lli] ", file, (long long int)(line));
-            #else
+#else
             sprintf(fileline, "[%s:%li] ", file, (long int)(line));
-            #endif
+#endif
         } else {
             if (is_currency) {
                 sprintf(fileline, "[%s%0.2Lf] ", file, line);
@@ -749,8 +774,7 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
         j += sprintf(buffer + j, "%s", function);
     }
 
-    if (ulog_attrs_disable[FUNCTION] == false &&
-        ulog_attrs_disable[MESSAGE] == false) {
+    if (ulog_attrs_disable[FUNCTION] == false && ulog_attrs_disable[MESSAGE] == false) {
         j += sprintf(buffer + j, "%s", " ");
     }
 

@@ -30,6 +30,13 @@
 
 #include "header.h"
 
+typedef struct thing thing_t;
+struct thing {
+    int a;
+    char b;
+    int c;
+    char d;
+};
 
 /**
  *  @brief  Program execution begins here
@@ -40,10 +47,43 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
+/*
+        int array[16];
+        int *ptr = array;
+        int i = 5;
 
-    typedef int (*ptrtomain)(int, const char *[]);
-    int (*pmain)(int, const char *[]) = main;
-    ptrtomain mymain = main;
+        ptr[i] = 23;
+         *(ptr + i) = 256;
+        *(int *)((char *)(ptr) + (sizeof *ptr * i)) = 99;
+
+        printf("array[%d]: %d\n", i, array[i]);
+*/
+        thing_t t;
+        /*
+        t.a = 28;
+        t.b = 'G';
+        t.c = 29;
+        t.d = 'g';
+        */
+        *(int *)(&t) = 28;
+        *((char *)(&t) + sizeof(int)) = 'G';
+        *((char *)(&t) + sizeof(int) + (sizeof(char) + 3)) = 29;
+        *((char *)(&t) + sizeof(int) + (sizeof(char) + 3) + sizeof(int)) = 'g';
+
+        printf("%d\n%c\n%d\n%c\n", t.a, t.b, t.c, t.d);
+    
+    /*
+    int *ptr;
+    const int *ptr;     // mutable ptr, immutable val
+    int const *ptr;     // mutable ptr, immutable val
+    int *const ptr;     // immutable ptr, mutable val
+    const int *const ptr;   // immutable ptr, immutable val
+    */
+
+    {
+        const int *const ptr = NULL;
+    }
 
     return EXIT_SUCCESS;
 }
+

@@ -103,6 +103,7 @@ char *randstr(size_t length);
  *  results.
  */
 
+
 /**
  *  @brief  Program execution begins here
  *
@@ -113,8 +114,11 @@ char *randstr(size_t length);
  */
 int main(int argc, const char *argv[]) {
 
+
     srand(time(NULL));
-    test_e();
+
+    test_a();
+
 
     return EXIT_SUCCESS;
 }
@@ -148,7 +152,18 @@ void test_all(void) {
 }
 
 void test_a(void) {
+    const uint32_t amount = 150;
+    uint32_t i = 0;
+    
+    listlog();
 
+    for (i = 0; i < amount; i++) {
+        char *ch = malloc(1);
+        listlog();
+        free(ch);
+        listlog();
+        ch = NULL;
+    }
 }
 
 void test_b(void) {
