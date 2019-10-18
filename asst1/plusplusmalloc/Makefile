@@ -3,7 +3,7 @@
 ##	@brief		Makefile for Asst1: ++malloc
 ##
 ##	@author		Gemuele Aludino
-##	@date       	18 Jul 2019
+##	@date       	20 Oct 2019
 ##	@copyright 	Copyright © 2019 Gemuele Aludino. All rights reserved.
 ##
 
@@ -37,7 +37,7 @@ DEBUG 				= #-g
 OPTIMIZED			= -O2
 PTHREAD				= -pthread
 MATH 				= -lm
-PEDANTIC			= -pedantic-errors
+PEDANTIC			= #-pedantic-errors
 
 SANTIIZED 			= #-fsanitize=address
 W_ALL 				= #-Wall
@@ -74,13 +74,13 @@ ALL_EXE	= $(EXE_CLI) $(EXE_TST)
 ##	post preprocessing, input source code is compiled (translated)
 ##	to the target system architecture's assembly language
 ##
-## Assembly			-c
+## Assembly		-c
 ## 	post compilation, assembly language code is translated to object code,
 ## 	which consists of instructions to be executed by the target system architecture
 ##	(although the resulting object files are of binary format, these files are not
 ##	 executable programs)
 ##
-## Linkage			-o
+## Linkage		-o
 ##	post assembly, object code contained within the object files are linked with
 ##	other object code in other object files to form the final binary executable;
 ##	the result is a program that will run on the target system architecture

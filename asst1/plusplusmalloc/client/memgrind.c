@@ -33,11 +33,11 @@
 #include "mymalloc.h"
 #include "rbtree.h"
 
-void test_all(void);
-void test_a(void);
-void test_b(void);
-void test_c(void);
-void test_d(void);
+void memgrind__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz);
+void memgrind__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t interval);
+void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t alloc_sz_max);
+void memgrind__red_black_tree(uint32_t tree_ct_min, uint32_t tree_ct_max, uint32_t node_ct_min, uint32_t node_ct_max);
+
 void test_e(void);
 void test_f(void);
 
@@ -47,11 +47,10 @@ void test_f(void);
 #define MEMGRIND__B_INTERVAL 50
 
 #define MEMGRIND__C_ITER_MAX 50
-#define MEMGRIND__C_INTERVAL 50
 
 #define MEMGRIND__D_ALLOC_MIN 1
 #define MEMGRIND__D_ALLOC_MAX 64
-#define MEMGRIND__D_INTERVAL 50
+#define MEMGRIND__D_ITER_MAX 50
 
 #define MEMGRIND__E_RBT_MIN  1
 #define MEMGRIND__E_RBT_MAX  4
@@ -59,6 +58,10 @@ void test_f(void);
 #define MEMGRIND__E_RBN_MIN  8
 #define MEMGRIND__E_RBN_MAX  32
 
+#define mgr__test_a()   memgrind__simple_alloc_free(MEMGRIND__A_ITER_MAX, 1)
+#define mgr__test_b()   memgrind__alloc_array_interval(MEMGRIND__B_ITER_MAX, 1, MEMGRIND__B_INTERVAL)
+#define mgr__test_c()   memgrind__alloc_random_range(MEMGRIND__C_ITER_MAX, 1, 1)
+#define mgr__test_d()   memgrind__alloc_random_range(MEMGRIND__D_ITER_MAX, MEMGRIND__D_ALLOC_MIN, MEMGRIND__D_ALLOC_MAX)
 
 char *randstr(size_t length);
 
@@ -67,7 +70,6 @@ char *randstr(size_t length);
 
 #define RANDSTR__CHARS \
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!;"
-
 
 /**
  *  memgrind unit tests
@@ -79,12 +81,12 @@ char *randstr(size_t length);
         pointers one-by-one.
 
  *  C:  Randomly choose between a 1 byte malloc() or free()ing a 1 byte pointer
- *      Do this until you have allocated 50 times.
+ *      Do this until you have ch_ptrarr_allocated 50 times.
  *
  *      Keep track of each operation
  *      so that you eventually malloc 50 bytes in total.
  *
- *      If you have already allocated 50 times,
+ *      If you have already ch_ptrarr_allocated 50 times,
  *      disregard the random and just free() on each iteration
  *
  *      Keep track of each operation
@@ -135,10 +137,223 @@ int main(int argc, const char *argv[]) {
 
     srand(time(NULL));
 
-    test_b();
+    /*mgr__test_a();*/
+    /*mgr__test_b();*/
+    
+    /*mgr__test_c();*/
+    /*mgr__test_d();*/
 
-
+    memgrind__red_black_tree(MEMGRIND__E_RBT_MIN, MEMGRIND__E_RBT_MAX, MEMGRIND__E_RBN_MIN, MEMGRIND__E_RBN_MAX);
+    
     return EXIT_SUCCESS;
+}
+
+void memgrind__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz) {
+    uint32_t i = 0;
+
+    listlog();
+
+    for (i = 0; i < max_iter; i++) {
+        char *ch = NULL;
+        ch = malloc(alloc_sz);
+
+        if (ch) {
+            free(ch);
+            ch = NULL;
+        }
+    }
+
+    listlog();
+}
+
+void memgrind__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t interval) {
+    uint32_t i = 0;
+
+    char *ch_ptrarr[max_iter];
+    char **sentinel = ch_ptrarr + interval;
+
+    listlog();
+
+    while (i < max_iter) {
+        char *ch = NULL;
+        ch = malloc(alloc_sz);
+
+        if (ch) {
+            ch_ptrarr[i++] = ch;
+        }
+
+        if ((ch_ptrarr + i) == sentinel) {
+            uint32_t j = interval;
+
+            listlog();
+
+            while (j > 0) {
+                char **curr = ch_ptrarr + (i - j);
+
+                if ((*curr)) {
+                    free((*curr));
+                    (*curr) = NULL;
+                }
+
+                --j;
+            }
+
+            sentinel = (ch_ptrarr + i) + interval;
+            listlog();
+        }
+    }
+
+    listlog();
+}
+
+void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t alloc_sz_max) {
+    struct {
+        uint32_t allocs;
+        int to_free;
+    } count = { 0, max_allocs };
+
+    uint32_t i = 0;
+    uint32_t k = 0;
+
+    char *ch_ptrarr[max_allocs];
+
+    bool ch_ptrarr_allocated[max_allocs];
+    bool hit_max_allocs = false;
+
+    memset(ch_ptrarr_allocated, false, max_allocs);
+    memset(ch_ptrarr, 0, max_allocs);
+
+    while (count.to_free > 0) {
+        char **curr = NULL;
+
+        bool *allocated = NULL;
+        bool nonnull = false;
+
+        bool max_allocs_met = (count.allocs == max_allocs);
+
+        uint32_t offset = 0;
+
+        if (max_allocs_met) {
+            if (hit_max_allocs == false) {
+                LOG(__FILE__, KMAG_b "--- max allocs met ---");
+                hit_max_allocs = true;
+                listlog();
+            }
+
+            offset = count.to_free - 1;
+
+            curr = ch_ptrarr + offset;
+            allocated = ch_ptrarr_allocated + offset;
+            nonnull = (*curr);
+
+            if ((*allocated) && nonnull) {
+                free((*curr));
+                (*curr) = NULL;
+
+                (*allocated) = false;
+                LOG(__FILE__, KYEL_b "freed");
+            } else {
+                LOG(__FILE__, KYEL_b "skipped");
+            }
+
+            --count.to_free;
+        } else {
+            if (randrnge(false, true)) {
+                LOG(__FILE__, "will free");
+
+                if (count.allocs > 0) {
+                    offset = count.allocs - 1;
+
+                    curr = ch_ptrarr + offset;
+                    allocated = ch_ptrarr_allocated + offset;
+                    nonnull = (*curr);
+
+                    if ((*allocated) && nonnull) {
+                        free((*curr));
+                        (*curr) = NULL;
+
+                        (*allocated) = false;
+                        LOG(__FILE__, KYEL_b "freed");
+                    }
+                }
+            } else {
+                char *ch = NULL;
+                uint32_t size = 0;
+
+                size = alloc_sz_min == alloc_sz_max 
+                ? alloc_sz_min : randrnge(alloc_sz_min, alloc_sz_max);
+
+                ch = malloc(size);
+
+                if (ch) {
+                    ch_ptrarr[count.allocs] = ch;
+                    ch_ptrarr_allocated[count.allocs] = true;
+
+                    ++count.allocs;
+
+                    LOG(__FILE__, "malloced");
+                }
+            }
+        }
+
+        ++k;
+    }
+
+    printf("\ntotal iterations: %s%d%s\n\n", KYEL_b, k, KNRM);
+    listlog();
+}
+
+void memgrind__red_black_tree(uint32_t tree_ct_min, uint32_t tree_ct_max, uint32_t node_ct_min, uint32_t node_ct_max) {
+    uint32_t i = 0;
+    uint32_t j = 0;
+
+    const int rbt_max = randrnge(tree_ct_min, tree_ct_max);
+
+    rbtree **t_arr = NULL;
+    void *ptr = NULL;
+
+    t_arr = malloc(sizeof *t_arr * rbt_max);
+
+    listlog();
+
+    for (i = 0; i < rbt_max; i++) {
+        rbtree *t = rbtree_new();
+        t_arr[i] = t ? t : NULL;
+    }
+
+    listlog();
+
+    for (i = 0; i < rbt_max; i++) {
+        int rbn_max = randrnge(node_ct_min, node_ct_max);
+
+        for (j = 0; j < rbn_max; j++) {
+            rbtree *t = t_arr[i];
+
+            if (t) {
+                rbtree_insert(t, rand());
+            }
+        }
+    }
+
+    listlog();
+
+    for (i = 0; i < rbt_max; i++) {
+        rbtree *t = t_arr[i];
+
+        while (rbtree_empty(t) == false) {
+            rbtree_erase_min(t);
+        }
+
+        free(t);
+        t = NULL;
+    }
+
+    listlog();
+
+    free(t_arr);
+    t_arr = NULL;
+
+    listlog();
 }
 
 char *randstr(size_t length) {
@@ -165,165 +380,12 @@ char *randstr(size_t length) {
     return random_string;
 }
 
-void test_all(void) {
-
-}
-
-void test_a(void) {
-    uint32_t i = 0;
-    
-    listlog();
-
-    /* MEMGRIND__A_ITER_MAX == 150 */
-    for (i = 0; i < MEMGRIND__A_ITER_MAX; i++) {
-        char *ch = NULL;
-
-        ch = malloc(1);
-
-        listlog();
-        
-        if (ch) {
-            free(ch);
-            ch = NULL;
-        }
-
-        listlog();
-    }
-}
-
-void test_b(void) {
-    uint32_t i = 0;
-
-    /* MEMGRIND__B_ITER_MAX == 150 */
-    char *ch_ptrarr[MEMGRIND__B_ITER_MAX];
-    char **sentinel = ch_ptrarr + MEMGRIND__B_INTERVAL;
-
-    listlog();
-
-    while (i < MEMGRIND__B_ITER_MAX) {
-        char *ch = NULL;
-
-        ch = malloc(1);
-
-        if (ch) {
-            ch_ptrarr[i++] = ch;
-        }
-
-        if ((ch_ptrarr + i) == sentinel) {
-            /* MEMGRIND__B_INTERVAL == 50 */
-            uint32_t j = MEMGRIND__B_INTERVAL;
-
-            listlog();
-
-            while (j > 0) {
-                if (ch_ptrarr[i - j]) {
-                    free(ch_ptrarr[i - j]);
-                    ch_ptrarr[i - j] = NULL;
-                }
-
-                --j;
-            }
-
-            sentinel = (ch_ptrarr + i) + MEMGRIND__B_INTERVAL;
-            listlog();
-        }
-    }
-
-    listlog();
-}
-
-void test_c(void) {
-    struct {
-        uint16_t allocs;
-        int16_t to_free;
-    } count = { 0, MEMGRIND__C_ITER_MAX};
-
-    uint16_t i = 0;
-    uint16_t k = 0;
-
-    char *ch = NULL;
-    char *ch_ptrarr[MEMGRIND__C_ITER_MAX];
-
-    bool allocated[MEMGRIND__C_ITER_MAX];
-
-    memset(allocated, false, MEMGRIND__C_ITER_MAX);
-    memset(ch_ptrarr, 0, sizeof(ch_ptrarr));
-
-    while (count.to_free > 0) {
-        char **curr = NULL;
-        
-        bool *alloced = NULL;
-        bool nonnull = false;
-
-        bool max_allocs_met = count.allocs == MEMGRIND__C_ITER_MAX;
-
-        uint16_t offset = 0;
-
-        if (max_allocs_met) {
-            offset = count.to_free - 1;
-
-            curr = ch_ptrarr + offset;
-            alloced = allocated + offset;
-            nonnull = (*curr);
-
-            if ((*alloced) && nonnull) {                
-                free((*curr));
-                (*curr) = NULL;
-                
-                (*alloced) = false;
-            }
-
-            --count.to_free;
-        } else {
-            if (randrnge(false, true)) {
-                LOG(__FILE__, "will free");
-                
-                if (count.allocs > 0) {
-                    offset = count.allocs - 1;
-
-                    curr = ch_ptrarr + offset;
-                    alloced = allocated + offset;
-                    nonnull = (*curr);
-
-                    if ((*alloced) && nonnull) {
-                        LOG(__FILE__, KYEL_b "freed");
-
-                        free((*curr));
-                        (*curr) = NULL;
-                        
-                        (*alloced) = false;
-                    }
-                }
-            
-            } else {
-                LOG(__FILE__, "will malloc");
-
-                ch = malloc(1);
-                ch_ptrarr[count.allocs] = ch;
-                allocated[count.allocs] = true;
-
-                ++count.allocs;
-            }
-        }
-
-        ++k;
-    }
-
-    printf("\ntotal iterations: %s%d%s\n\n", KYEL_b, k, KNRM);
-
-    listlog();
-}
-
-void test_d(void) {
-
-}
-
 void test_e(void) {
+    /*
     int i = 0;
     int j = 0;
 
     const int rbt_max = randrnge(MEMGRIND__E_RBT_MIN, MEMGRIND__E_RBT_MAX);
-    const int rbn_max = randrnge(MEMGRIND__E_RBN_MIN, MEMGRIND__E_RBN_MAX);
 
     rbtree **t_arr = NULL;
     void *ptr = NULL;
@@ -340,6 +402,7 @@ void test_e(void) {
     listlog();
 
     for (i = 0; i < rbt_max; i++) {
+        int rbn_max = randrnge(MEMGRIND__E_RBN_MIN, MEMGRIND__E_RBN_MAX);
         for (j = 0; j < rbn_max; j++) {
             rbtree *t = t_arr[i];
 
@@ -350,6 +413,8 @@ void test_e(void) {
     }
 
     for (i = 0; i < rbt_max; i++) {
+        int rbn_max = randrnge(MEMGRIND__E_RBN_MIN, MEMGRIND__E_RBN_MAX);
+
         for (j = 0; j < rbn_max; j++) {
             bool to_erase = randrnge(0, 1);
 
@@ -363,10 +428,8 @@ void test_e(void) {
         }
     }
 
-    ptr = malloc(2000);
-    ptr = malloc(4097);
-
     listlog();
+    */
 }
 
 void test_f(void) {
