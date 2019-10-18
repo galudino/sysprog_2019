@@ -326,7 +326,6 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
                 header_t *next = header_next(header);
 
                 if (next->free) {
-                    printf("next->size: %d\n", next->size);
                     header_merge_block(header);
                 }
             }
