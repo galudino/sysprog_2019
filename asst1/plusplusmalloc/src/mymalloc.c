@@ -340,14 +340,14 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *   or do a full merge every x mallocs and/or frees)
              */
             header = freelist;
-
+            
             while (header) {
                 header_t *prev = header;
                 header = header_is_last(prev) ? NULL : header_next(prev);
 
                 if (header) {
                     if (prev->free && header->free) {
-                        prev->size += header->size + sizeof *header;
+                        header_merge_block(prev);
                     }
                 }
             }
