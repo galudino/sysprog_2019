@@ -943,7 +943,7 @@ extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
  *  If no message is preferred, you may provide an empty string.
  */
 #define massert(CONDITION, MESSAGE)\
-if (!CONDITION) {\
+if (!(CONDITION)) {\
     fprintf(stderr, "Assertion failed: (%s)\n", #CONDITION);\
     ERROR(__FILE__, (MESSAGE));\
     abort();\
