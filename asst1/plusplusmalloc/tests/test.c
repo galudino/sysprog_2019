@@ -67,7 +67,26 @@ typedef unsigned char bool;
  */
 int main(int argc, const char *argv[]) {
     /* Enter source code here... */
+    char **temp = malloc(sizeof *temp * 16);
+    int size = 0;
+    int cap = 16;
+    int i = 0;
+    for (i = 0; i < 128; i++) {
+        if (size == cap) {
+            char **newtemp = malloc(sizeof *temp * (size * 2));
+            memcpy(newtemp, temp, sizeof *temp * size);
+            free(temp);
+            temp = NULL;
+            temp = newtemp;
 
+            cap = size * 2;
+        }
+
+        temp = malloc(1);
+        ++size;
+    }
+
+    listlog();
 
     
     return EXIT_SUCCESS;

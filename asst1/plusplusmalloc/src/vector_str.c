@@ -47,8 +47,12 @@ void gcs__vstr_init(gcs__vstr *v, size_t capacity) {
         capacity = 1;
     }
 
+    /*
     start = calloc(capacity, sizeof *v->impl.start);
     massert_calloc(start);
+    */
+    start = malloc(sizeof *v->impl.start * capacity);
+    memset(start, 0, sizeof *v->impl.start * capacity);
 
     v->impl.start = start;
     v->impl.finish = v->impl.start;
@@ -172,9 +176,16 @@ void gcs__vstr_resize(gcs__vstr *v, size_t n) {
     }
 
 #endif
+    new_start = malloc(sizeof *new_start * n);
+    massert_malloc(new_start);
+    memcpy(new_start, v->impl.start, sizeof *new_start * old_capacity);
+    free(v->impl.start);
+    v->impl.start = NULL;
 
+    /*
     new_start = realloc(v->impl.start, sizeof *new_start * n);
     massert_realloc(new_start);
+    */
 
     size = n < old_capacity ? n : size;
 

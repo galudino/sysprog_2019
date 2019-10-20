@@ -16,6 +16,27 @@
  *  (preliminary version, to understand the left-leaning
  *   red-black tree algorithm. does not support utils API,
  *   iterator, or void *. uses int as element type T)
+ *
+ *  Copyright © 2019 Gemuele Aludino
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining
+ *  a copy of this software and associated documentation files (the "Software"),
+ *  to deal in the Software without restriction, including without limitation
+ *  the rights to use, copy, modify, block_merge, publish, distribute,
+ *  sublicense, and/or sell copies of the Software,
+ *  and to permit persons to whom the Software is furnished to do so,
+ *  subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included
+ *  in all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ *  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ *  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+ *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include "mymalloc.h"
@@ -223,13 +244,6 @@ void rbtree_erase(rbtree *t, int val) {
     rbnode *temp = NULL;
 
     if (t->root != NULL) {
-        if (t->root->left == NULL && t->root->right == NULL) {
-            rbnode_delete(&t->root);
-            return;
-        } else if ((get = rbnode_find(t->root, val)) == NULL) {
-            return;
-        }
-
         temp = rbnode_erase(t->root, val);
 
         t->root = temp ? temp : t->root;
@@ -676,8 +690,19 @@ static rbnode *rbnode_erase_max(rbnode *n) {
     return rbnode_fixup(n);
 }
 
+
 static rbnode *rbnode_erase(rbnode *n, int val) {
-    int compare = n->data - val;
+    int compare = 0;
+
+    if (n == NULL) {
+        return NULL;
+    } else {
+        if (rbnode_find(n, val) == NULL) {
+            return NULL;
+        }
+    }
+
+    compare = n->data - val;
 
     if (compare > 0) {
         /* val is less than n->data */
@@ -714,7 +739,7 @@ static rbnode *rbnode_erase(rbnode *n, int val) {
             /* BASE CASE: if n is the node to delete, */
             /* but has a right child -- will replace n's data with that of its
              */
-            /* inorder successor,  then delete the inorder successor node */
+            /* inorder successor, then delete the inorder successor node */
             n->data = rbnode_successor(n)->data;
             n->right = rbnode_erase_min(n->right);
         } else {

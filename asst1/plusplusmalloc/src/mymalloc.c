@@ -30,6 +30,7 @@
  */
 
 #include "mymalloc.h"
+#include "utils.h"
 
 /**
  *  @typedef    header_t
@@ -61,13 +62,20 @@ static uint16_t merge_counter = 0;
 /**< header_t: pos - position/cursor pointer */
 static header_t *pos = NULL;
 
-/**< header_t: private functions - init/split/merge/validate */
+/**< header_t: initializer */
 static void header_init_list();
-static void header_split_block(header_t *next, size_t size);
-static void header_merge_block(header_t *next);
+
+/**< header_t: split/merge/global coalesce */
+static void header_split_block(header_t *curr, size_t size);
+static void header_merge_block(header_t *curr);
+static void header_coalesce(header_t *curr);
+
+/**< header_t: utilities */
 static bool header_validator(void *ptr);
 
 #define header_size(HEADER) (abs(HEADER->size))
+#define header_size_split(HEADER, SIZE)                                        \
+    ((int16_t)((HEADER->size) - (SIZE) - (sizeof(header_t))))
 
 #define header_is_free(HEADER) ((HEADER->size) >= (0))
 #define header_is_used(HEADER) ((HEADER->size) < (0))
@@ -93,9 +101,7 @@ static bool header_validator(void *ptr);
  */
 void *mymalloc(size_t size, const char *filename, size_t lineno) {
     header_t *curr = NULL;
-    header_t *prev = NULL;
-
-    void *result = NULL;
+    header_t *next = NULL;
 
     /**
      *  If mymalloc has not been called yet,
@@ -105,11 +111,6 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
     if (((header_t *)(myblock))->size == 0) {
         header_init_list();
     }
-
-    /**
-     *  Cursor variable next is set to the base address of myblock.
-     */
-    curr = (header_t *)(myblock);
 
     /**
      *  First sanity check: is the size request within [1, 4095)
@@ -130,108 +131,119 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
     }
 
     /**
+     *  Cursor variable next is set to the base address of myblock.
+     */
+    curr = (header_t *)(myblock);
+
+    /**
      *  We traverse the free list (myblock) and search for
      *  a header that is associated with an unused block of memory.
      *
      *  We reject headers denoting occupied blocks,
      *  and headers representing blocks of sizes less than what we are
      *  looking for.
+     *
+     *  curr becomes NULL when there are no more blocks to traverse.
      */
-    while (curr->size < size || header_is_used(curr)) {
-        prev = curr;
-        curr = header_is_last(prev) ? NULL : header_next(prev);
+    do {
+        /**
+         *  Retrieve the "lookahead" header from position curr.
+         */
+        next = header_is_last(curr) ? NULL : header_next(curr);
 
         /**
-         *  If the header that was just visited is representing a free block,
-         *  and the current header is also representing a free block,
-         *  perform a coalescence between them.
+         *  If curr represents a free block...
          */
-        if (curr) {
-            if (header_is_free(prev) && header_is_free(curr)) {
-                header_merge_block(prev);
+        if (header_is_free(curr)) {
+            /**
+             *  If curr's right adjacent header (if applicable)
+             *  represents a free block, we can merge them together.
+             *  This should help to reduce fragmentation in the long run.
+             */
+            if (next && header_is_free(next)) {
+                header_merge_block(curr);
             }
-        } else {
-            break;
-        }
-    }
 
+            /**
+             *  If the block represented by curr is greater than or equal
+             *  to the requested size, we can leave the loop.
+             */
+            if (header_size(curr) >= (size)) {
+                break;
+            }
+        }
+
+        curr = next;
+    } while (next != NULL);
+
+    /**
+     *  If curr is nonnull, we have found what we are looking for.
+     */
     if (curr) {
-        if (curr->size == size) {
-            /**
-             *  If we have found a header representing a block
-             *  that is an exact fit for the allocation request,
-             *  mark it as 'in use', and prepare to return its address
-             *  to the user.
-             *
-             *  curr is the address of the header, but we do not
-             *  want to return the header, but rather, we want
-             *  to return the memory that the header represents --
-             *  the base address of the desired block begins
-             *  after the entirety of curr's block.
-             *
-             *  curr + 1
-             *  - or -
-             *  (char *)(curr) + (sizeof(header_t))
-             *
-             *  yields the desired address.
-             *
-             *  Basically, we want to advance sizeof(header_t) bytes
-             *  past the address curr, so we can get to the memory
-             *  that curr represents.
-             */
-            header_toggle(curr);
-            result = curr + 1;
-        } else if ((curr->size) >= (size + sizeof *curr)) {
-            /**
-             *  If curr is greater or equal to than the size requested
-             *  (plus sizeof(header_t)), we can split curr's memory --
-             *  curr's size will become that of the request quantity,
-             *  and the other partition will have the remaining free storage.
-             */
-            header_split_block(curr, size);
-
-            header_toggle(curr);
-            result = curr + 1;
-        } else if (curr->size >= size) {
-            /**
-             *  Special case: the request will consume the last free block,
-             *  but since the request is smaller than the size of the free
-             *  block, it would typically be split --
-             *  but splitting it would not allow enough memory
-             *  for an additional header. (splitting it would
-             *  yield one free byte, and header_t is two bytes large.)
-             *
-             *  In this case, we give the extra byte to the requested block.
-             */
-            header_toggle(curr);
-            result = curr + 1;
-        } else {
-            ulog(stderr,
-                 "[ERROR]",
-                 filename,
-                 "my_malloc",
-                 lineno,
-                 "Unable to allocate %lu bytes.",
-                 size);
-        }
-    } else {
         /**
-         *  Since curr is the lookahead block, and no eligible blocks
-         *  were found using curr, prev won't be of any help either.
+         *  If the block represented by curr is bigger than
+         *  the requested value, size, it will be split,
+         *  so that curr ends up representing a block with a count of
+         *  size bytes.
          *
-         *  This case is a failsafe against curr being NULL
-         *  (we've traversed the entirety of myblock and found no free blocks)
+         *  However, the split must also result in a second block
+         *  with enough space to hold a new header representing a block
+         *  of at least size 1.
+         *
+         *  If the split were to occur such that there was not enough
+         *  room for a header with a block of at least size 1,
+         *  the block will not be split.
+         *
+         *  header_size_split(curr, size) expands to:
+         *  curr->size - size - sizeof(header_t)
+         *
+         *  So,
+         *      the size of the block represented by curr
+         *          minus
+         *      the size requested for allocation by the client
+         *          minus
+         *      the size of (header_t) -- block metadata.
+         *
+         *  must be greater than or equal to 1
+         *  to be worth a split.
+         *
+         *  Basically, curr->size (the size of a candidate block)
+         *  must be at least (requested size + (sizeof(header_t) + 1))
+         *  in order to qualify for a split.
          */
+        bool eligible_for_split = header_size_split(curr, size) >= 1;
+
+        if (eligible_for_split) {
+            header_split_block(curr, size);
+        }
+
+        /**
+         *  curr will now represent an occupied block.
+         */
+        header_toggle(curr);
+    } else {
         ulog(stderr,
              "[ERROR]",
              filename,
              "my_malloc",
              lineno,
-             "Unable to allocate %lu bytes.",
-             size);
+             "Unable to allocate %lu bytes. (header requires at least "
+             "%lu bytes)",
+             size,
+             sizeof *curr);
     }
 
-    return result;
+    /**
+     *  If curr is nonnull,
+     *  we will return the base address
+     *  of the client's requested memory. (skipping over the header/metadata)
+     *
+     *  (curr + 1) is equivalent to ((char *)(curr) + (sizeof(header_t) * 1)).
+     *
+     *  We simply move sizeof(header_t) bytes
+     *  past the address described by curr and return it.
+     */
+    return curr ? (curr + 1) : NULL;
 }
 
 /**
@@ -243,7 +255,7 @@ void *mymalloc(size_t size, const char *filename, size_t lineno) {
  *  @param[in]   lineno      for use with the __LINE__ directive
  */
 void myfree(void *ptr, const char *filename, size_t lineno) {
-    header_t *header = NULL;
+    header_t *curr = NULL;
     bool block_in_range = false;
 
     /**
@@ -263,12 +275,12 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
      *  Since we have made it this far,
      *  we can safely treat ptr as a (header_t *).
      *
-     *  Note at this point, header is still
+     *  Note at this point, curr is still
      *  the allocated memory that the user wants to release,
      *  it is NOT the header the precedes this memory --
      *  not yet, anyway.
      */
-    header = (header_t *)(ptr);
+    curr = (header_t *)(ptr);
 
     /**
      *  Is the address of ptr within range of the base address of
@@ -278,16 +290,16 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
                      (ptr <= MYMALLOC__END_ADDR);
 
     /**
-     *  By decrementing header, we now have access to the
+     *  By decrementing curr, we now have access to the
      *  header that represents the memory addressed by ptr.
      *
      *  (we are working in reverse order of mymalloc, in a sense)
      */
-    --header;
+    --curr;
 
-    if (header_is_free(header)) {
+    if (header_is_free(curr)) {
         /**
-         *  If the header reports that this block of memory
+         *  If curr reports that this block of memory
          *  is already free, there is nothing left to do but
          *  report the findings to the user -- return afterward.
          */
@@ -305,50 +317,29 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
         return;
     } else {
         if (block_in_range) {
+            header_t *next = NULL;
+
             /**
-             *  If the memory block represented by header
-             *  indeed belongs to myblock
-             *  (it is in range of possible addresses),
-             *  set the free flag to true.
-             *  (we don't have to zero-out anything --
-             *   the memory will be overwritten over time.)
+             *  curr will now represent an unoccupied block.
              */
-            header_toggle(header);
+            header_toggle(curr);
 
             /**
              *  We can use this opportunity to coalesce blocks --
              *  if the adjacent block is reported to be free,
-             *  merge it with the block associated with header.
+             *  it will be merged with curr's block.
              */
-            if (header_is_last(header) == false) {
-                header_t *next = header_next(header);
+            next = header_is_last(curr) ? NULL : header_next(curr);
 
-                if (header_is_free(next)) {
-                    header_merge_block(header);
-                }
+            if (next && header_is_free(next)) {
+                header_merge_block(curr);
             }
 
             /**
-             *  Now we will traverse the entire free list
-             *  and search for more blocks that can be coalesced.
-             *
-             *  (This shouldn't run all the time...
-             *   figure out a way to have this run some of time,
-             *   maybe a threshold of free blocks needs to be met
-             *   or do a full merge every x mallocs and/or frees)
+             *  The entirety of myblock will also be searched for
+             *  adjacent free blocks to coalesce.
              */
-            header = (header_t *)(myblock);
-
-            while (header) {
-                header_t *prev = header;
-                header = header_is_last(prev) ? NULL : header_next(prev);
-
-                if (header) {
-                    if (header_is_free(prev) && header_is_free(header)) {
-                        header_merge_block(prev);
-                    }
-                }
-            }
+            header_coalesce((header_t *)(myblock));
         } else {
             /**
              *  If the pointer provided has no relationship whatsoever
@@ -407,7 +398,6 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
     fprintf(dest, "-------------\t------\t\t----------\n");
 
     while (header) {
-        header_t *next = NULL;
         bool header_free = header_is_free(header);
 
         const char *free =
@@ -421,7 +411,7 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
 
         info.largest_block_used =
             (info.largest_block_used < header_size(header)) && !header_free ?
-                header->size :
+                header_size(header) :
                 info.largest_block_used;
 
         info.largest_block_free = (info.largest_block_free < header_size(header) && header_free ?
@@ -430,11 +420,11 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
 
         fprintf(dest, "%s%p%s\t%s\t\t%d\n", KGRY, (void *)(header + 1), KNRM, free, header_size(header));
 
-        next = header_is_last(header) ? NULL : header_next(header);
-        header = next ? next : NULL;
+        header = header_is_last(header) ? NULL : header_next(header);
     }
 
-    info.bytes_in_use = info.space_used + (sizeof *header * (1 + info.block_used));
+    info.bytes_in_use =
+        info.space_used + (sizeof *header * (info.block_used + info.block_free));
 
     info.block_count_available =
         MYMALLOC__BLOCK_SIZE - (sizeof *header * (info.block_free + info.block_used));
@@ -499,14 +489,13 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
 
 /**
  *  @brief  Initializes myblock by assigning it its first header node
- *          with its starting values
+ *          with its starting value(s)
  */
 static void header_init_list() {
     /**
      *  A newly initialized myblock will have one
-     *  header/node, with its allotted capacity - sizeof(header_t).
-     *  Of course, this header represents a free block of memory,
-     *  and it has no other header to link with.
+     *  header/node, with its allotted capacity:
+     *  (MYMALLOC__BLOCK_SIZE - sizeof(header_t)).
      */
     ((header_t *)(myblock))->size = (MYMALLOC__BLOCK_SIZE - sizeof(header_t));
 }
@@ -516,15 +505,15 @@ static void header_init_list() {
  *          by next into size bytes -- the remaining memory
  *          becomes part of the new block created in this function
  *
- *  Precondition: header_is_free(next) && header_is_free(header_next(next)),
+ *  Precondition: header_is_free(curr) && header_is_free(header_next(curr)),
  *                else undefined behavior
  *
- *  @param[out] next    header to the memory that will be split
- *  @param[in]  size            desired size for next
+ *  @param[out] curr    header to the block that will be split
+ *  @param[in]  size    desired size for curr
  */
-static void header_split_block(header_t *next, size_t size) {
+static void header_split_block(header_t *curr, size_t size) {
     /**
-     *  We want to treat next as a (char *) --
+     *  We want to treat curr as a (char *) --
      *  the address of a one-byte figure.
      *
      *  That way, when we add any integral values to it,
@@ -538,25 +527,33 @@ static void header_split_block(header_t *next, size_t size) {
      *  We will advance sizeof(header_t), or (sizeof *next) bytes
      *  from next, plus the intended size for the block to be split.
      *
-     *  (char *)(next) + (sizeof(header_t) + size)
+     *  (char *)(curr) + (sizeof(header_t) + size)
      *
      *  But, we cannot simply assign this to new_header, because
      *  it has been type-coerced to be a (char *).
      *  So, we cast the entirety of the expression to (header_t *),
      *  the intended type.
      *
-     *  (header_t *)((char *)(next) + (sizeof(header_t) + size))
+     *  (header_t *)((char *)(curr) + (sizeof(header_t) + size))
      */
-    header_t *new_header = (header_t *)((char *)(next) + (sizeof *next + size));
+    header_t *new_header = (header_t *)((char *)(curr) + (sizeof *curr + size));
+
+    /**
+     *  Address range/input check
+     */
+    if (new_header >= MYMALLOC__END_BLOCK || size == 0 ||
+        size >= (MYMALLOC__BLOCK_SIZE - sizeof(header_t))) {
+        return;
+    }
 
     /**
      *  Now that new_header has been given its new home,
      *  its values can be assigned.
      *
      *  The size of new_header will be
-     *      next->size (next's size, soon to be former size)
+     *      curr->size (curr's size, soon to be former size)
      *          minus
-     *      the requested size (what next's size will become, shortly)
+     *      the requested size (what curr's size will become, shortly)
      *          minus
      *      sizeof(header_t), or sizeof *new_header
      *
@@ -564,16 +561,14 @@ static void header_split_block(header_t *next, size_t size) {
      *  subtract sizeof(header_t) (or sizeof *new_header) from the overall
      *  quantity.
      *
-     *  new_header is a free block, and it will have its next pointer
-     *  assigned to whatever next's next pointer was.
+     *  The result, new_header, is a free (unoccupied) block.
      */
-    new_header->size = (next->size - size) - sizeof *new_header;
+    new_header->size = (curr->size - size) - sizeof *new_header;
 
     /**
-     *  next will now take on its new size value,
-     *  and its next pointer will be addressed to new_header.
+     *  curr will now take on its new size value.
      */
-    next->size = size;
+    curr->size = size;
 }
 
 /**
@@ -591,6 +586,39 @@ static void header_split_block(header_t *next, size_t size) {
 static void header_merge_block(header_t *curr) {
     header_t *next = header_next(curr);
     curr->size += next->size + sizeof *next;
+}
+
+/**
+ *  @brief  Traverses the myblock buffer by byte increments of
+ *          (sizeof *curr + curr->size) and merges adjacent free blocks
+ *          into contigious memory for future allocations
+ *
+ *  @param[out] curr    pointer to header_t, refers to memory within myblock
+ *
+ *  Precondition: curr != NULL and header_init_list has been called
+ */
+static void header_coalesce(header_t *curr) {
+    header_t *prev = NULL;
+
+    while (curr != NULL) {
+        /**
+         *  If the header that was just visited is representing a free block,
+         *  and the current header is also representing a free block,
+         *  perform a coalescence between them.
+         */
+        if (prev) {
+            if (header_is_free(prev) && header_is_free(curr)) {
+                header_merge_block(prev);
+            }
+        }
+
+        /**
+         *  If we haven't found what we are looking for yet,
+         *  and curr is not the last header, we move on to the next header.
+         */
+        prev = curr;
+        curr = header_is_last(curr) ? NULL : header_next(curr);
+    }
 }
 
 /**
@@ -624,6 +652,9 @@ static bool header_validator(void *ptr) {
 
     return result;
 }
+
+
+#ifndef UTILS_H
 
 bool ulog_attrs_disable[] = { false, false, false, false, false, false, false };
 
@@ -786,3 +817,4 @@ int ulog(FILE *dest,
 
     return fprintf(dest, "%s\n", buffer);
 }
+#endif

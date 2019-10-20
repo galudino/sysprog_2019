@@ -50,7 +50,7 @@ typedef struct gcs__vstr gcs__vstr;
  *  @define GCS__VSTR_DEEP_COPY
  *  @brief  Define this directive to enable deep copies of elements into vstr
  */
-#define GCS__VSTR_DEEP_COPY
+/*#define GCS__VSTR_DEEP_COPY*/
 
 /**< gcs__vstr: constructor/destructor functions */
 void gcs__vstr_init(gcs__vstr *v, size_t capacity);

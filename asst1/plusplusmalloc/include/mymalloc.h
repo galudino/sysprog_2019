@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+/*
 #if __STD_VERSION__ >= 19990L
 #include <stdbool.h>
 #include <stdint.h>
@@ -52,7 +53,9 @@ typedef unsigned char uint8_t;
 typedef short int16_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
+
 #endif
+*/
 
 #if WIN32 || _WIN32
 #include <windows.h>
@@ -66,6 +69,8 @@ typedef unsigned int uint32_t;
 #include <strings.h>
 #include <dirent.h>
 #include <fcntl.h>
+
+#include "utils.h"
 
 #define malloc(size) mymalloc(size, __FILE__, __LINE__)
 #define free(ptr) myfree(ptr, __FILE__, __LINE__)
@@ -83,6 +88,7 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
 #define listlog()
 #endif
 
+#ifndef UTILS_H
 /**
  *  Logging utilities
  *  (excerpt from utils.h, gcslib)
@@ -361,5 +367,6 @@ extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
             "['" #PTR "' was found to be NULL - '" #PTR                        \
             "' must be assigned to the return value of a container "           \
             "initializer function prior to use.]");
+#endif
 
 #endif /* MY_MALLOC_H */

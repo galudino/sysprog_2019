@@ -31,7 +31,8 @@
 #include <sys/time.h>
 
 #include "mymalloc.h"
-#include "rbtree.h"
+#include "vector.h"
+#include "vector_str.h"
 
 void memgrind__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz);
 
@@ -64,11 +65,11 @@ void test_f(void);
 #define MEMGRIND__D_ALLOC_MAX 64
 #define MEMGRIND__D_ITER_MAX 50
 
-#define MEMGRIND__E_RBT_MIN 2
-#define MEMGRIND__E_RBT_MAX 4
+#define MEMGRIND__E_RBT_MIN 1
+#define MEMGRIND__E_RBT_MAX 1
 
-#define MEMGRIND__E_RBN_MIN 16
-#define MEMGRIND__E_RBN_MAX 32
+#define MEMGRIND__E_RBN_MIN 156
+#define MEMGRIND__E_RBN_MAX 156
 
 #define MEMGRIND__F_RNDSTR_ARR_MIN 4
 #define MEMGRIND__F_RNDSTR_ARR_MAX 8
@@ -94,7 +95,7 @@ void test_f(void);
                                       MEMGRIND__F_RNDSTR_LEN_MIN,              \
                                       MEMGRIND__F_RNDSTR_LEN_MAX)
 
-char *randstr(size_t length);
+char *randstr(char *buffer, size_t length);
 
 #define randrnge(min, max) ((rand() % (int)(((max) + 1) - (min))) + (min))
 
@@ -153,10 +154,6 @@ char *randstr(size_t length);
  *  Be sure to discuss your findings, especially any interesting or unexpected
  *  results.
  */
-typedef struct metadata metadata_t;
-struct metadata {
-    bool free;
-};
 
 /**
  *  @brief  Program execution begins here
@@ -167,16 +164,109 @@ struct metadata {
  *  @return     exit status, 0 on success, else failure
  */
 int main(int argc, const char *argv[]) {
-
     srand(time(NULL));
 
     /*mgr__test_a();*/
     /*mgr__test_b();*/
 
     /*mgr__test_c();*/
-    mgr__test_d();
+    /*mgr__test_d();*/
     /*mgr__test_e();*/
     /*mgr__test_f();*/
+
+    
+
+    
+    /*
+    {
+        int num = 59;
+
+        char **ch_ptrarr = malloc(sizeof *ch_ptrarr * num);
+
+        int i = 0;
+
+        for (i = 0; i < num; i++) {
+            ch_ptrarr[i] = malloc(randrnge(1, 59));
+        }
+
+        for (i = 0; i < num; i++) {
+            bool to_erase = randrnge(false, true);
+
+            if (to_erase) {
+                if (ch_ptrarr[i]) {
+                    free(ch_ptrarr[i]);
+                    ch_ptrarr[i] = NULL;
+                }
+            }
+        }
+
+        listlog();
+
+        for (i = 0; i < num; i++) {
+            if (ch_ptrarr[i] == NULL) {
+                int num = randrnge(29, 59);
+                ch_ptrarr[i] = malloc(num);
+            }
+        }
+
+        listlog();
+
+        for (i = 0; i < num; i++) {
+            if (ch_ptrarr[i]) {
+                free(ch_ptrarr[i]);
+                ch_ptrarr[i] = NULL;
+            }
+        }
+
+        free(ch_ptrarr);
+        ch_ptrarr = NULL;
+        
+        listlog();
+    }
+    */
+    
+    /*
+    gcs__vstr vec, *v = &vec;
+    gcs__vstr_init(v, 64);
+    int i = 0;
+    for (i = 0; i < 128; i++) {
+        char *str = malloc(randrnge(1, 32));
+        gcs__vstr_pushb(v, &str);
+    }
+    */
+    /*
+    vector *v = v_newr(_int_, 32);
+    int i = 0;
+    for (i = 0; i < 128; i++) {
+        v_pushb(v, &i);
+    }
+    */
+
+    vector *v = v_newr(_char_ptr_, 5);
+    int i = 0;
+    char buffer[64];
+
+    listlog();
+
+    for (i = 0; i < 55; i++) {
+        char *str = randstr(buffer, randrnge(11, 55));
+        char *ptr = malloc(strlen(str) + 1);
+        strcpy(ptr, str);
+
+        v_pushb(v, &ptr);
+    }
+
+    listlog();
+
+    for (i = 0; i < 55; i++) {
+        char **ptr = v_back(v);
+        free((*ptr));
+        (*ptr) = NULL;
+        v_popb(v);
+    }
+    
+    v_delete(&v);
+    listlog();
 
     return EXIT_SUCCESS;
 }
@@ -285,7 +375,7 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
             offset = count.to_free - 1;
 
             curr = ch_ptrarr + offset;
-            nonnull = (*curr);
+            nonnull = (*curr) != NULL;
 
             if (nonnull) {
                 free((*curr));
@@ -305,6 +395,25 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
                     offset = count.allocs - 1;
 
                     curr = ch_ptrarr + offset;
+                    nonnull = (*curr) != NULL;
+
+                    if (nonnull) {
+                        free((*curr));
+                        (*curr) = NULL;
+
+                        LOG(__FILE__, KYEL_b "freed");
+                    } else {
+                        LOG(__FILE__, KRED_b "nothing to free");
+                    }
+                } else {
+                    LOG(__FILE__, KRED_b "nothing to free");
+                }
+
+                /*
+                if (count.allocs > 0) {
+                    offset = randrnge(0, count.allocs - 1);
+
+                    curr = ch_ptrarr + offset;
                     nonnull = (*curr);
 
                     if (nonnull) {
@@ -318,6 +427,7 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
                 } else {
                     LOG(__FILE__, KRED_b "nothing to free");
                 }
+                */
             } else {
                 char *ch = NULL;
                 uint32_t size = 0;
@@ -347,302 +457,8 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
     listlog();
 }
 
-void memgrind__red_black_tree(uint32_t tree_ct_min,
-                              uint32_t tree_ct_max,
-                              uint32_t node_ct_min,
-                              uint32_t node_ct_max) {
-    /**/
-    uint32_t i = 0;
-    int j = 0;
 
-    const uint32_t rbt_max = randrnge(tree_ct_min, tree_ct_max);
-
-    rbtree **rbt_ptrarr = NULL;
-    rbt_ptrarr = malloc(sizeof *rbt_ptrarr * rbt_max);
-    memset(rbt_ptrarr, 0, sizeof *rbt_ptrarr * rbt_max);
-
-    listlog();
-
-    for (i = 0; i < rbt_max; i++) {
-        bool erase_node = false;
-        bool erase_tree = false;
-
-        uint32_t node_ct = 0;
-
-        rbtree *t = NULL;
-
-        t = rbtree_new();
-        node_ct = randrnge(node_ct_min, node_ct_max);
-
-        for (j = 0; j < node_ct;) {
-
-            erase_node = randrnge(false, true);
-
-            if (erase_node) {
-                if (rbtree_empty(t) == false) {
-                    bool erase_min = randrnge(false, true);
-
-                    if (erase_min) {
-                        rbtree_erase_min(t);
-                    } else {
-                        rbtree_erase_max(t);
-                    }
-                }
-            } else {
-                rbtree_insert(t, rand());
-                ++j;
-            }
-        }
-
-        erase_tree = randrnge(false, true);
-
-        if (erase_tree) {
-            uint32_t index = randrnge(0, i);
-
-            if (rbt_ptrarr[index]) {
-                rbtree_delete(rbt_ptrarr + index);
-            }
-        }
-
-        if (t) {
-            rbt_ptrarr[i] = t;
-        }
-    }
-
-    listlog();
-}
-
-/*
-void memgrind__red_black_tree(uint32_t tree_ct_min,
-                              uint32_t tree_ct_max,
-                              uint32_t node_ct_min,
-                              uint32_t node_ct_max) {
-    uint32_t i = 0;
-    int j = 0;
-
-    const int rbt_max = randrnge(tree_ct_min, tree_ct_max);
-
-    rbtree **rbt_ptrarr = NULL;
-    rbt_ptrarr = malloc(sizeof *rbt_ptrarr * rbt_max);
-
-    listlog();
-
-    memset(rbt_ptrarr, 0, sizeof *rbt_ptrarr * rbt_max);
-
-    for (i = 0; i < rbt_max; i++) {
-        rbtree *t = rbtree_new();
-        rbt_ptrarr[i] = t ? t : NULL;
-    }
-
-    listlog();
-
-    for (i = 0; i < rbt_max; i++) {
-        uint32_t rbn_max = randrnge(node_ct_min, node_ct_max);
-        rbtree **t = rbt_ptrarr + i;
-
-        bool erase_tree = randrnge(false, true);
-
-        if ((*t)) {
-            while (j < rbn_max) {
-                int num = rand();
-
-                if (rbtree_find((*t), num) == false) {
-                    rbtree_insert((*t), num);
-                    ++j;
-                }
-            }
-
-            while (j >= 0) {
-                bool erase_node = randrnge(false, true);
-
-                if (erase_node) {
-                    bool erase_min = randrnge(false, true);
-
-                    if (erase_min) {
-                        rbtree_erase_min((*t));
-                    } else {
-                        rbtree_erase_max((*t));
-                    }
-                } else {
-                    int num = rand();
-
-                    if (rbtree_find((*t), num) == false) {
-                        rbtree_insert((*t), num);
-                    }
-                }
-
-                --j;
-            }
-        }
-
-        if (erase_tree) {
-            uint32_t rnd = randrnge(0, i);
-            rbtree **t = rbt_ptrarr + rnd;
-
-            if ((*t)) {
-                rbtree_delete(t);
-                (*t) = NULL;
-                printf("erased tree %d\n", i);
-            }
-        }
-    }
-
-    listlog();
-
-    for (i = 0; i < rbt_max; i++) {
-        rbtree **t = rbt_ptrarr + i;
-
-        if ((*t)) {
-            rbtree_delete(t);
-            (*t) = NULL;
-        }
-    }
-
-    free(rbt_ptrarr);
-    rbt_ptrarr = NULL;
-
-    listlog();
-}
-*/
-
-void memgrind__random_string_generator(uint32_t strarr_min,
-                                       uint32_t strarr_max,
-                                       uint32_t arrlen_min,
-                                       uint32_t arrlen_max,
-                                       uint32_t strlen_min,
-                                       uint32_t strlen_max) {
-    /*
-    struct counter {
-        uint32_t min;
-        uint32_t max;
-    } strarr, arrlen, strlen;
-
-    uint32_t i = 0;
-    uint32_t j = 0;
-
-    uint32_t arrstrarr_len = 0;
-    uint32_t *arrstrarr_lengths = NULL;
-
-    uint32_t arrstrarr_allocated[arrstrarr_len][arrlen_max];
-    uint32_t **arrstrarr_allocated = NULL;
-
-    char ***arrstrarr = NULL;
-    char **strarr_curr = NULL;
-    char *str_curr = NULL;
-
-    strarr.min = strarr_min;
-    strarr.max = strarr_max;
-    arrlen.min = arrlen_min;
-    arrlen.max = arrlen_max;
-    strlen.min = strlen_min;
-    strlen.max = strlen_max;
-
-    arrstrarr_len = randrnge(strarr.min, strarr.max);
-    arrstrarr_lengths = malloc(sizeof *arrstrarr_lengths * arrstrarr_len);
-
-    arrstrarr = malloc(sizeof *arrstrarr * arrstrarr_len);
-
-    arrstrarr_allocated = malloc(sizeof *arrstrarr_allocated * arrstrarr_len);
-    for (i = 0; i < arrstrarr_allocated; i++) {
-        arrstrarr_allocated[i] = malloc(sizeof **arrstrarr_allocated * )
-    }
-
-    memset(arrstrarr_allocated, false, sizeof(arrstrarr_allocated));
-
-
-
-    for (i = 0; i < arrstrarr_len; i++) {
-        uint32_t strarr_len = randrnge(arrlen.min, arrlen.max);
-
-        strarr_curr = malloc(sizeof *strarr_curr * strarr_len);
-        arrstrarr_lengths[i] = strarr_len;
-
-        for (j = 0; j < strarr_len; j++) {
-            str_curr = randstr(randrnge(strlen.min, strlen.max));
-
-            if (str_curr) {
-                strarr_curr[j] = str_curr;
-                arrstrarr_allocated[i][j] = true;
-            }
-        }
-
-        arrstrarr[i] = strarr_curr;
-    }
-
-
-    for (i = 0; i < arrstrarr_len; i++) {
-        strarr_curr = arrstrarr[i];
-
-        j = 0;
-        for (j = 0; j < arrstrarr_lengths[i]; j++) {
-            printf("string: %s\n", strarr_curr[j]);
-        }
-
-        printf("\n");
-    }
-    printf("---\n\n");
-
-
-    for (i = 0; i < arrstrarr_len; i++) {
-        strarr_curr = arrstrarr[i];
-
-        j = 0;
-        for (j = 0; j < arrstrarr_lengths[i]; j++) {
-            bool to_free = randrnge(false, true);
-
-            if (to_free) {
-                if (strarr_curr[j]) {
-                    free(strarr_curr[j]);
-                    strarr_curr[j] = NULL;
-                    arrstrarr_allocated[i][j] = false;
-                } else {
-                }
-            }
-        }
-    }
-
-
-    for (i = 0; i < arrstrarr_len; i++) {
-        strarr_curr = arrstrarr[i];
-
-        j = 0;
-        for (j = 0; j < arrstrarr_lengths[i]; j++) {
-            printf("string: %s\n", strarr_curr[j]);
-        }
-
-        printf("\n");
-    }
-    printf("---\n\n");
-
-
-    for (i = 0; i < arrstrarr_len; i++) {
-        strarr_curr = arrstrarr[i];
-
-        j = 0;
-        for (j = 0; j < arrstrarr_lengths[i]; j++) {
-            if (arrstrarr_allocated[i][j]) {
-                free(strarr_curr[j]);
-                strarr_curr[j] = NULL;
-                arrstrarr_allocated[i][j] = false;
-            } else {
-            }
-        }
-
-        free(strarr_curr);
-        strarr_curr = NULL;
-    }
-
-    free(arrstrarr_lengths);
-    arrstrarr_lengths = NULL;
-
-    free(arrstrarr);
-    arrstrarr = NULL;
-
-    listlog();
-    */
-}
-
-char *randstr(size_t length) {
+char *randstr(char *buffer, size_t length) {
     const char *charset = RANDSTR__CHARS;
     char *random_string = NULL;
 
@@ -651,7 +467,7 @@ char *randstr(size_t length) {
     size_t string_length = 0;
 
     string_length = 26 * 2 + 10 + 7;
-    random_string = malloc(length + 1);
+    random_string = buffer;
 
     if (random_string == NULL) {
         return NULL;
@@ -665,57 +481,3 @@ char *randstr(size_t length) {
     random_string[length] = '\0';
     return random_string;
 }
-
-void test_e(void) {
-    /*
-    int i = 0;
-    int j = 0;
-
-    const int rbt_max = randrnge(MEMGRIND__E_RBT_MIN, MEMGRIND__E_RBT_MAX);
-
-    rbtree **rbt_ptrarr = NULL;
-    void *ptr = NULL;
-
-    rbt_ptrarr = malloc(sizeof *rbt_ptrarr * rbt_max);
-
-    listlog();
-
-    for (i = 0; i < rbt_max; i++) {
-        rbtree *t = rbtree_new();
-        rbt_ptrarr[i] = t ? t : NULL;
-    }
-
-    listlog();
-
-    for (i = 0; i < rbt_max; i++) {
-        int rbn_max = randrnge(MEMGRIND__E_RBN_MIN, MEMGRIND__E_RBN_MAX);
-        for (j = 0; j < rbn_max; j++) {
-            rbtree *t = rbt_ptrarr[i];
-
-            if (t) {
-                rbtree_insert(t, rand());
-            }
-        }
-    }
-
-    for (i = 0; i < rbt_max; i++) {
-        int rbn_max = randrnge(MEMGRIND__E_RBN_MIN, MEMGRIND__E_RBN_MAX);
-
-        for (j = 0; j < rbn_max; j++) {
-            bool to_erase = randrnge(0, 1);
-
-            if (to_erase > 0) {
-                rbtree *t = rbt_ptrarr[i];
-
-                if (t) {
-                    rbtree_erase_min(t);
-                }
-            }
-        }
-    }
-
-    listlog();
-    */
-}
-
-void test_f(void) {}
