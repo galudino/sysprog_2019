@@ -51,8 +51,7 @@ static void rbnode_inorder_recursive(rbnode **n, consumer_fn consumer);
 static void rbnode_preorder_recursive(rbnode **n, consumer_fn consumer);
 static void rbnode_postorder_recursive(rbnode **n, consumer_fn consumer);
 static void rbnode_levelorder_recursive(rbnode **n, consumer_fn consumer);
-static void rbnode_levelorder_helper(rbnode **n, consumer_fn consumer,
-                                     int level);
+static void rbnode_levelorder_helper(rbnode **n, consumer_fn consumer, int level);
 
 static rbnode *rbnode_rotate_left(rbnode *n);
 static rbnode *rbnode_rotate_right(rbnode *n);
@@ -212,8 +211,8 @@ void rbtree_erase_max(rbtree *t) {
         if (t->root->left == NULL && t->root->right == NULL) {
             rbnode_delete(&t->root);
             return;
-        }    
-        
+        }
+
         t->root = rbnode_erase_max(t->root);
         t->root->color = RBNODE_BLACK;
     }
@@ -244,8 +243,7 @@ void rbtree_clear(rbtree *t) {
     }
 }
 
-void rbtree_foreach(rbtree *t, consumer_fn consumer,
-                    enum rbtree_traversal_type ttype) {
+void rbtree_foreach(rbtree *t, consumer_fn consumer, enum rbtree_traversal_type ttype) {
     assert(t);
 
     switch (ttype) {
@@ -282,17 +280,26 @@ void rbtree_fputs(rbtree *t, FILE *dest) {
         char buffer1[128];
         char buffer2[RBTREE_BUFSZ];
 
-        sprintf(buffer1, "\n%s\n%s\n%s\n", link, "RED-BLACK Tree Elements",
-                link);
+        sprintf(buffer1, "\n%s\n%s\n%s\n", link, "RED-BLACK Tree Elements", link);
 
-        sprintf(
-            buffer2,
-            "%s\n%s\t\t%d\n%s\t\t%d\n%s\t\t%d\n\n%s\t\t%d\n%s\t\t%d\n%s\t\t%"
-            "d\n%s\n",
-            link, "Minimum value", *rbtree_min(t), "Maximum value",
-            *rbtree_max(t), "Root value   ", *rbtree_front(t), "Size         ",
-            rbnode_size(t->root), "Height       ", rbnode_height(t->root),
-            "Leaf ct.     ", rbnode_leafct(t->root), link);
+        sprintf(buffer2,
+                "%s\n%s\t\t%d\n%s\t\t%d\n%s\t\t%d\n\n%s\t\t%d\n%s\t\t%d\n%"
+                "s\t\t%"
+                "d\n%s\n",
+                link,
+                "Minimum value",
+                *rbtree_min(t),
+                "Maximum value",
+                *rbtree_max(t),
+                "Root value   ",
+                *rbtree_front(t),
+                "Size         ",
+                rbnode_size(t->root),
+                "Height       ",
+                rbnode_height(t->root),
+                "Leaf ct.     ",
+                rbnode_leafct(t->root),
+                link);
 
         fprintf(dest, "%s", buffer1);
         fprintf(dest, "\n");
@@ -425,8 +432,7 @@ static int rbnode_height(rbnode *n) {
     if (n == NULL) {
         return -1;
     } else {
-        return 1 + rbnode_level_compare(rbnode_height(n->left),
-                                        rbnode_height(n->right));
+        return 1 + rbnode_level_compare(rbnode_height(n->left), rbnode_height(n->right));
     }
 }
 
@@ -498,8 +504,7 @@ static void rbnode_levelorder_recursive(rbnode **n, consumer_fn consumer) {
     }
 }
 
-static void rbnode_levelorder_helper(rbnode **n, consumer_fn consumer,
-                                     int level) {
+static void rbnode_levelorder_helper(rbnode **n, consumer_fn consumer, int level) {
     if ((*n) == NULL) {
         return;
     } else if (level == 1) {
@@ -707,7 +712,8 @@ static rbnode *rbnode_erase(rbnode *n, int val) {
 
         if (compare == 0) {
             /* BASE CASE: if n is the node to delete, */
-            /* but has a right child -- will replace n's data with that of its */
+            /* but has a right child -- will replace n's data with that of its
+             */
             /* inorder successor,  then delete the inorder successor node */
             n->data = rbnode_successor(n)->data;
             n->right = rbnode_erase_min(n->right);

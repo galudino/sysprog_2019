@@ -44,11 +44,11 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
                               uint32_t node_ct_min,
                               uint32_t node_ct_max);
 void memgrind__random_string_generator(uint32_t strarr_min,
-                                         uint32_t strarr_max,
-                                         uint32_t arrlen_min,
-                                         uint32_t arrlen_max,
-                                         uint32_t strlen_min,
-                                         uint32_t strlen_max);
+                                       uint32_t strarr_max,
+                                       uint32_t arrlen_min,
+                                       uint32_t arrlen_max,
+                                       uint32_t strlen_min,
+                                       uint32_t strlen_max);
 
 void test_e(void);
 void test_f(void);
@@ -153,11 +153,10 @@ char *randstr(size_t length);
  *  Be sure to discuss your findings, especially any interesting or unexpected
  *  results.
  */
-        typedef struct metadata metadata_t;
-        struct metadata {
-            bool free;
-        };
-
+typedef struct metadata metadata_t;
+struct metadata {
+    bool free;
+};
 
 /**
  *  @brief  Program execution begins here
@@ -357,10 +356,10 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
     int j = 0;
 
     const uint32_t rbt_max = randrnge(tree_ct_min, tree_ct_max);
-    
+
     rbtree **rbt_ptrarr = NULL;
     rbt_ptrarr = malloc(sizeof *rbt_ptrarr * rbt_max);
-    memset(rbt_ptrarr, 0, sizeof *rbt_ptrarr *rbt_max);
+    memset(rbt_ptrarr, 0, sizeof *rbt_ptrarr * rbt_max);
 
     listlog();
 
@@ -376,7 +375,7 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
         node_ct = randrnge(node_ct_min, node_ct_max);
 
         for (j = 0; j < node_ct;) {
-        
+
             erase_node = randrnge(false, true);
 
             if (erase_node) {
@@ -393,10 +392,8 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
                 rbtree_insert(t, rand());
                 ++j;
             }
-            
         }
 
-        
         erase_tree = randrnge(false, true);
 
         if (erase_tree) {
@@ -410,7 +407,6 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
         if (t) {
             rbt_ptrarr[i] = t;
         }
-        
     }
 
     listlog();
@@ -443,7 +439,7 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
     for (i = 0; i < rbt_max; i++) {
         uint32_t rbn_max = randrnge(node_ct_min, node_ct_max);
         rbtree **t = rbt_ptrarr + i;
-        
+
         bool erase_tree = randrnge(false, true);
 
         if ((*t)) {
@@ -458,7 +454,7 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
 
             while (j >= 0) {
                 bool erase_node = randrnge(false, true);
-                
+
                 if (erase_node) {
                     bool erase_min = randrnge(false, true);
 
@@ -545,16 +541,16 @@ void memgrind__random_string_generator(uint32_t strarr_min,
     arrstrarr_lengths = malloc(sizeof *arrstrarr_lengths * arrstrarr_len);
 
     arrstrarr = malloc(sizeof *arrstrarr * arrstrarr_len);
-    
+
     arrstrarr_allocated = malloc(sizeof *arrstrarr_allocated * arrstrarr_len);
     for (i = 0; i < arrstrarr_allocated; i++) {
         arrstrarr_allocated[i] = malloc(sizeof **arrstrarr_allocated * )
     }
-    
+
     memset(arrstrarr_allocated, false, sizeof(arrstrarr_allocated));
 
-    
-    
+
+
     for (i = 0; i < arrstrarr_len; i++) {
         uint32_t strarr_len = randrnge(arrlen.min, arrlen.max);
 
@@ -573,7 +569,7 @@ void memgrind__random_string_generator(uint32_t strarr_min,
         arrstrarr[i] = strarr_curr;
     }
 
-    
+
     for (i = 0; i < arrstrarr_len; i++) {
         strarr_curr = arrstrarr[i];
 
@@ -585,7 +581,7 @@ void memgrind__random_string_generator(uint32_t strarr_min,
         printf("\n");
     }
     printf("---\n\n");
-    
+
 
     for (i = 0; i < arrstrarr_len; i++) {
         strarr_curr = arrstrarr[i];
@@ -605,7 +601,7 @@ void memgrind__random_string_generator(uint32_t strarr_min,
         }
     }
 
-    
+
     for (i = 0; i < arrstrarr_len; i++) {
         strarr_curr = arrstrarr[i];
 
@@ -617,7 +613,7 @@ void memgrind__random_string_generator(uint32_t strarr_min,
         printf("\n");
     }
     printf("---\n\n");
-    
+
 
     for (i = 0; i < arrstrarr_len; i++) {
         strarr_curr = arrstrarr[i];

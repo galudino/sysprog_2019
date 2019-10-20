@@ -30,7 +30,10 @@
 typedef int (*compare_fn)(const void *, const void *);
 typedef void (*consumer_fn)(void *);
 
-enum rbnode_color { RBNODE_BLACK, RBNODE_RED };
+enum rbnode_color {
+    RBNODE_BLACK,
+    RBNODE_RED
+};
 
 typedef struct rbnode rbnode;
 
@@ -46,7 +49,12 @@ void rbnode_int_puts_nobrk(void *arg);
 
 typedef struct rbtree rbtree;
 
-enum rbtree_traversal_type { INORDER, PREORDER, POSTORDER, LEVELORDER };
+enum rbtree_traversal_type {
+    INORDER,
+    PREORDER,
+    POSTORDER,
+    LEVELORDER
+};
 
 struct rbtree {
     rbnode *root;
