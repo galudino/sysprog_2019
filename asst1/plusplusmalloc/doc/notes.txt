@@ -33,3 +33,61 @@ endwhile
 
 malloc:
     
+
+Test E:
+
+malloc a array of (char *), a char **ch_ptrarr, of size 59.
+    malloc(sizeof *ch_ptrarr * 59)
+
+for all (char *) in ch_ptrarr,
+    malloc a random allocation between [1, 60)
+
+In a new loop,
+for all (char *) in ch_ptrarr,
+    randomly decide to free a pointer, or keep it.
+    if you decide the pointer at ch_ptrarr + i,
+    free it and set it NULL.
+
+We are artificially creating fragmentation.
+
+In another new loop,
+for all (char *) in ch_ptrarr,
+    if ch_ptrarr[i] == NULL
+        malloc a random allocation between [29, 60)
+    The chunks can potentially be larger.
+
+In the last loop,
+for all (char *) in ch_ptrarr,
+    free all pointers.
+    set them NULL
+
+free ch_ptrarr. set it NULL
+
+
+Test F:
+Using my own implementation of a C++ std::vector, in C,
+we allocate a pointer to vector that will hold (char *),
+initialized to have a buffer of size 5.
+
+for i = 0....55
+    randomly generate a string and malloc memory for it
+    add it to the vector
+
+    Since the vector is initially at size 5,
+    it will have to grow in order to accomodate
+    the extra elements.
+
+    Each call to v_pushb will determine whether
+    vector's buffer needs to grow.
+
+    My original vector used realloc --
+    what I do instead is to request an allocation 
+    twice as large as the current capacity,
+    and copy everything from the current buffer to the new one,
+    then free the old buffer -- and finally assign
+    the internal base pointer to the new buffer base address.
+
+for i = 0....55
+    free all (char *) in the vector's buffer
+
+free the (vector *) variable.

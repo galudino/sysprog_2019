@@ -32,7 +32,7 @@
 #ifndef MY_MALLOC_H
 #define MY_MALLOC_H
 
-/*#define MYMALLOC__RELEASE_MODE*/
+#define MYMALLOC__RELEASE_MODE
 
 #define MYMALLOC__BLOCK_SIZE 4096
 
@@ -53,8 +53,6 @@ typedef unsigned char uint8_t;
 typedef short int16_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
-
-#endif
 */
 
 #if WIN32 || _WIN32

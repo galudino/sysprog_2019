@@ -28,72 +28,58 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <sys/time.h>
+#define _POSIX_C_SOURCE 199390L
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <time.h>
+#include <math.h>
 
 #include "mymalloc.h"
 #include "vector.h"
 #include "vector_str.h"
 
-void memgrind__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz);
+#define MGR__A_ITER_MAX 150
 
-void memgrind__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t interval);
+#define MGR__B_ITER_MAX 150
+#define MGR__B_INTERVAL 50
 
-void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t alloc_sz_max);
+#define MGR__C_ITER_MAX 50
 
-void memgrind__red_black_tree(uint32_t tree_ct_min,
-                              uint32_t tree_ct_max,
-                              uint32_t node_ct_min,
-                              uint32_t node_ct_max);
-void memgrind__random_string_generator(uint32_t strarr_min,
-                                       uint32_t strarr_max,
-                                       uint32_t arrlen_min,
-                                       uint32_t arrlen_max,
-                                       uint32_t strlen_min,
-                                       uint32_t strlen_max);
+#define MGR__D_ALLOC_MIN 1
+#define MGR__D_ALLOC_MAX 64
+#define MGR__D_ITER_MAX 50
 
-void test_e(void);
-void test_f(void);
+#define MGR__E_MIN 29
+#define MGR__E_MAX 59
 
-#define MEMGRIND__A_ITER_MAX 150
+#define MGR__F_MIN 11
+#define MGR__F_MAX 55
 
-#define MEMGRIND__B_ITER_MAX 150
-#define MEMGRIND__B_INTERVAL 50
+#define MGR__F_RNDSTR_ARR_MIN 4
+#define MGR__F_RNDSTR_ARR_MAX 8
+#define MGR__F_RNDSTR_COL_MIN 4
+#define MGR__F_RNDSTR_COL_MAX 8
+#define MGR__F_RNDSTR_LEN_MIN 16
+#define MGR__F_RNDSTR_LEN_MAX 48
 
-#define MEMGRIND__C_ITER_MAX 50
+#define MGR__MAX_ITER 100
+#define MGR__TEST_COUNT 6
 
-#define MEMGRIND__D_ALLOC_MIN 1
-#define MEMGRIND__D_ALLOC_MAX 64
-#define MEMGRIND__D_ITER_MAX 50
+#define elapsed_time_ns(BEF, AFT)                                              \
+    (((double)((pow(10.0, 9.0) * AFT.tv_sec) + (AFT.tv_nsec))) -               \
+     ((double)((pow(10.0, 9.0) * BEF.tv_sec) + (BEF.tv_nsec))))
 
-#define MEMGRIND__E_RBT_MIN 1
-#define MEMGRIND__E_RBT_MAX 1
+#define elapsed_time_ms(BEF, AFT)                                              \
+    ((elapsed_time_ns(BEF, AFT) * pow(10.0, -6.0)))
+#define elapsed_time_s(BEF, AFT) (elapsed_time_ns(BEF, AFT) * pow(10.0, -9.0))
 
-#define MEMGRIND__E_RBN_MIN 156
-#define MEMGRIND__E_RBN_MAX 156
+#define convert_ns_to_s(NS) ((NS) * pow(10.0, -9.0))
+#define convert_ns_to_ms(NS) ((NS) * pow(10.0, -6.0))
+#define convert_ns_to_mcs(NS) ((NS) * (pow(10.0, -3.0)))
 
-#define MEMGRIND__F_RNDSTR_ARR_MIN 4
-#define MEMGRIND__F_RNDSTR_ARR_MAX 8
-#define MEMGRIND__F_RNDSTR_COL_MIN 4
-#define MEMGRIND__F_RNDSTR_COL_MAX 8
-#define MEMGRIND__F_RNDSTR_LEN_MIN 16
-#define MEMGRIND__F_RNDSTR_LEN_MAX 48
-
-#define mgr__test_a() memgrind__simple_alloc_free(MEMGRIND__A_ITER_MAX, 1)
-#define mgr__test_b()                                                          \
-    memgrind__alloc_array_interval(MEMGRIND__B_ITER_MAX, 1, MEMGRIND__B_INTERVAL)
-#define mgr__test_c() memgrind__alloc_random_range(MEMGRIND__C_ITER_MAX, 1, 1)
-#define mgr__test_d()                                                          \
-    memgrind__alloc_random_range(MEMGRIND__D_ITER_MAX, MEMGRIND__D_ALLOC_MIN, MEMGRIND__D_ALLOC_MAX)
-
-#define mgr__test_e()                                                          \
-    memgrind__red_black_tree(MEMGRIND__E_RBT_MIN, MEMGRIND__E_RBT_MAX, MEMGRIND__E_RBN_MIN, MEMGRIND__E_RBN_MAX)
-#define mgr__test_f()                                                          \
-    memgrind__random_string_generator(MEMGRIND__F_RNDSTR_ARR_MIN,              \
-                                      MEMGRIND__F_RNDSTR_ARR_MAX,              \
-                                      MEMGRIND__F_RNDSTR_COL_MIN,              \
-                                      MEMGRIND__F_RNDSTR_COL_MAX,              \
-                                      MEMGRIND__F_RNDSTR_LEN_MIN,              \
-                                      MEMGRIND__F_RNDSTR_LEN_MAX)
+#define MCS "µs"
 
 char *randstr(char *buffer, size_t length);
 
@@ -115,7 +101,7 @@ char *randstr(char *buffer, size_t length);
  *      Do this until you have ch_ptrarr_allocated 50 times.
  *
  *      Keep track of each operation
- *      so that you eventually malloc 50 bytes in total.
+ *      so that you eventually malloc 50 bytes in total_ns.
  *
  *      If you have already ch_ptrarr_allocated 50 times,
  *      disregard the random and just free() on each iteration
@@ -127,7 +113,8 @@ char *randstr(char *buffer, size_t length);
  *  D:  Randomly choose between a randomly-sized malloc() or free()ing a
  *      pointer -- do this many times (see below)
  *
- *      Keep track of each malloc so that all mallocs do not exceed your total
+ *      Keep track of each malloc so that all mallocs do not exceed your
+ total_ns
  *      memory capacity.
  *
  *      Keep track of each operation so that you eventually malloc 50 times.
@@ -155,6 +142,21 @@ char *randstr(char *buffer, size_t length);
  *  results.
  */
 
+/**< memgrind: testing routine */
+void mgr__run_test(void (*test)(uint32_t, uint32_t, uint32_t),
+                   char tch,
+                   uint32_t min,
+                   uint32_t max,
+                   uint32_t interval,
+                   FILE *dest);
+
+/**< memgrind: tests a through f (in order) */
+void mgr__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz, uint32_t dummy);
+void mgr__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t interval);
+void mgr__alloc_array_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t alloc_sz_max);
+void mgr__char_ptr_array(uint32_t min, uint32_t max, uint32_t dummy);
+void mgr__vector(uint32_t min, uint32_t max, uint32_t dummy);
+
 /**
  *  @brief  Program execution begins here
  *
@@ -164,114 +166,108 @@ char *randstr(char *buffer, size_t length);
  *  @return     exit status, 0 on success, else failure
  */
 int main(int argc, const char *argv[]) {
+    /**
+     *  Results may output to a filestream of choice, if preferred.
+     *  Default is stdout.
+     */
+    FILE *stream = stdout;
+
+    /**
+     *  Important for randomization.
+     */
     srand(time(NULL));
 
-    /*mgr__test_a();*/
-    /*mgr__test_b();*/
+    fprintf(stdout, "\n%s%s%s\n", KGRN_b, "mymalloc allocator stress tests", KNRM);
+    fprintf(stdout,
+            "Each individual test is run %lu times and wall-clock time "
+            "averaged.\n\n",
+            MGR__MAX_ITER);
+    fprintf(stdout, "All times are expressed in microseconds (%s)\n\n", MCS);
 
-    /*mgr__test_c();*/
-    /*mgr__test_d();*/
-    /*mgr__test_e();*/
-    /*mgr__test_f();*/
+    fprintf(stdout,
+            "-------------------------------------------------------------\n");
+    fprintf(stdout,
+            "%s%s%s\t\t%s%s%s\t\t%s%s%s\t\t%s%s%s\n",
+            KWHT_b,
+            "test",
+            KNRM,
+            KWHT_b,
+            "mean",
+            KNRM,
+            KWHT_b,
+            "slowest",
+            KNRM,
+            KWHT_b,
+            "total",
+            KNRM);
+    printf("-------------------------------------------------------------\n");
 
-    
+    mgr__run_test(mgr__simple_alloc_free, 'a', MGR__A_ITER_MAX, 1, 0, stream);
+    mgr__run_test(mgr__alloc_array_interval, 'b', MGR__B_ITER_MAX, 1, MGR__B_INTERVAL, stream);
+    mgr__run_test(mgr__alloc_array_range, 'c', MGR__C_ITER_MAX, 1, 1, stream);
+    mgr__run_test(mgr__alloc_array_range, 'd', MGR__D_ITER_MAX, MGR__D_ALLOC_MIN, MGR__D_ALLOC_MAX, stream);
+    mgr__run_test(mgr__char_ptr_array, 'e', MGR__E_MIN, MGR__E_MAX, 0, stream);
+    mgr__run_test(mgr__vector, 'f', MGR__F_MIN, MGR__F_MAX, 0, stream);
 
-    
-    /*
-    {
-        int num = 59;
-
-        char **ch_ptrarr = malloc(sizeof *ch_ptrarr * num);
-
-        int i = 0;
-
-        for (i = 0; i < num; i++) {
-            ch_ptrarr[i] = malloc(randrnge(1, 59));
-        }
-
-        for (i = 0; i < num; i++) {
-            bool to_erase = randrnge(false, true);
-
-            if (to_erase) {
-                if (ch_ptrarr[i]) {
-                    free(ch_ptrarr[i]);
-                    ch_ptrarr[i] = NULL;
-                }
-            }
-        }
-
-        listlog();
-
-        for (i = 0; i < num; i++) {
-            if (ch_ptrarr[i] == NULL) {
-                int num = randrnge(29, 59);
-                ch_ptrarr[i] = malloc(num);
-            }
-        }
-
-        listlog();
-
-        for (i = 0; i < num; i++) {
-            if (ch_ptrarr[i]) {
-                free(ch_ptrarr[i]);
-                ch_ptrarr[i] = NULL;
-            }
-        }
-
-        free(ch_ptrarr);
-        ch_ptrarr = NULL;
-        
-        listlog();
-    }
-    */
-    
-    /*
-    gcs__vstr vec, *v = &vec;
-    gcs__vstr_init(v, 64);
-    int i = 0;
-    for (i = 0; i < 128; i++) {
-        char *str = malloc(randrnge(1, 32));
-        gcs__vstr_pushb(v, &str);
-    }
-    */
-    /*
-    vector *v = v_newr(_int_, 32);
-    int i = 0;
-    for (i = 0; i < 128; i++) {
-        v_pushb(v, &i);
-    }
-    */
-
-    vector *v = v_newr(_char_ptr_, 5);
-    int i = 0;
-    char buffer[64];
-
-    listlog();
-
-    for (i = 0; i < 55; i++) {
-        char *str = randstr(buffer, randrnge(11, 55));
-        char *ptr = malloc(strlen(str) + 1);
-        strcpy(ptr, str);
-
-        v_pushb(v, &ptr);
-    }
-
-    listlog();
-
-    for (i = 0; i < 55; i++) {
-        char **ptr = v_back(v);
-        free((*ptr));
-        (*ptr) = NULL;
-        v_popb(v);
-    }
-    
-    v_delete(&v);
-    listlog();
+    printf("\n");
 
     return EXIT_SUCCESS;
 }
 
-void memgrind__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz) {
+/**
+ *  @brief function that conducts the stress test addressed by the
+ *         callback function pointer test, and output
+ */
+void mgr__run_test(void (*test)(uint32_t, uint32_t, uint32_t),
+                   char tch,
+                   uint32_t min,
+                   uint32_t max,
+                   uint32_t interval,
+                   FILE *dest) {
+    struct timespec x = { 0.0, 0.0 };
+    struct timespec y = { 0.0, 0.0 };
+
+    double total_ns = 0.0;
+    double elapsed_ns_avg = 0.0;
+    double time_slowest = 0.0;
+    double time_this = 0.0;
+
+    uint32_t i = 0;
+
+    total_ns = 0.0;
+    for (i = 0; i < MGR__MAX_ITER; i++) {
+        clock_gettime(CLOCK_REALTIME, &x);
+        test(min, max, interval);
+        clock_gettime(CLOCK_REALTIME, &y);
+
+        time_this = elapsed_time_ns(x, y);
+        time_slowest = time_this > time_slowest ? time_this : time_slowest;
+
+        total_ns += time_this;
+    }
+
+    elapsed_ns_avg = total_ns / MGR__MAX_ITER;
+
+    fprintf(dest,
+            "%s%c%s\t\t%.5lf %s%s%s\t%.5lf %s%s%s\t%.5lf %s%s%s\t\t\n",
+            KGRN_b,
+            tch,
+            KNRM,
+            convert_ns_to_mcs(elapsed_ns_avg),
+            KGRY,
+            MCS,
+            KNRM,
+            convert_ns_to_mcs(time_slowest),
+            KGRY,
+            MCS,
+            KNRM,
+            convert_ns_to_mcs(total_ns),
+            KGRY,
+            MCS,
+            KNRM);
+}
+
+void mgr__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz, uint32_t dummy) {
     uint32_t i = 0;
 
     listlog();
@@ -289,7 +285,7 @@ void memgrind__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz) {
     listlog();
 }
 
-void memgrind__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t interval) {
+void mgr__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t interval) {
     uint32_t i = 0;
 
     char **ch_ptrarr = NULL;
@@ -335,7 +331,7 @@ void memgrind__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32
     listlog();
 }
 
-void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t alloc_sz_max) {
+void mgr__alloc_array_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t alloc_sz_max) {
     struct {
         uint32_t allocs;
         int to_free;
@@ -367,7 +363,9 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
 
         if (max_allocs_met) {
             if (hit_max_allocs == false) {
+#ifndef MYMALLOC__RELEASE_MODE
                 LOG(__FILE__, KMAG_b "--- max allocs met ---");
+#endif
                 hit_max_allocs = true;
                 listlog();
             }
@@ -381,15 +379,21 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
                 free((*curr));
                 (*curr) = NULL;
 
+#ifndef MYMALLOC__RELEASE_MODE
                 LOG(__FILE__, KYEL_b "freed");
+#endif
             } else {
+#ifndef MYMALLOC__RELEASE_MODE
                 LOG(__FILE__, KYEL_b "skipped");
+#endif
             }
 
             --count.to_free;
         } else {
             if (randrnge(false, true)) {
+#ifndef MYMALLOC__RELEASE_MODE
                 LOG(__FILE__, "will free");
+#endif
 
                 if (count.allocs > 0) {
                     offset = count.allocs - 1;
@@ -401,12 +405,18 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
                         free((*curr));
                         (*curr) = NULL;
 
+#ifndef MYMALLOC__RELEASE_MODE
                         LOG(__FILE__, KYEL_b "freed");
+#endif
                     } else {
+#ifndef MYMALLOC__RELEASE_MODE
                         LOG(__FILE__, KRED_b "nothing to free");
+#endif
                     }
                 } else {
+#ifndef MYMALLOC__RELEASE_MODE
                     LOG(__FILE__, KRED_b "nothing to free");
+#endif
                 }
 
                 /*
@@ -442,7 +452,9 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
                     *(ch_ptrarr + count.allocs) = ch;
                     ++count.allocs;
 
+#ifndef MYMALLOC__RELEASE_MODE
                     LOG(__FILE__, "malloced");
+#endif
                 }
             }
         }
@@ -453,10 +465,101 @@ void memgrind__alloc_random_range(uint32_t max_allocs, uint32_t alloc_sz_min, ui
     free(ch_ptrarr);
     ch_ptrarr = NULL;
 
+#ifndef MYMALLOC__RELEASE_MODE
     printf("\ntotal iterations: %s%d%s\n\n", KYEL_b, k, KNRM);
+#endif
     listlog();
 }
 
+void mgr__char_ptr_array(uint32_t min, uint32_t max, uint32_t dummy) {
+    char **ch_ptrarr = NULL;
+    int i = 0;
+
+    ch_ptrarr = malloc(sizeof *ch_ptrarr * max);
+
+    for (i = 0; i < max; i++) {
+        ch_ptrarr[i] = malloc(randrnge(1, max));
+    }
+
+    for (i = 0; i < max; i++) {
+        bool to_erase = randrnge(false, true);
+
+        if (to_erase) {
+            if (ch_ptrarr[i]) {
+                free(ch_ptrarr[i]);
+                ch_ptrarr[i] = NULL;
+            }
+        }
+    }
+
+#ifndef MYMALLOC__RELEASE_MODE
+    listlog();
+#endif
+
+    for (i = 0; i < max; i++) {
+        if (ch_ptrarr[i] == NULL) {
+            int num = randrnge(min, max);
+            ch_ptrarr[i] = malloc(num);
+        }
+    }
+
+#ifndef MYMALLOC__RELEASE_MODE
+    listlog();
+#endif
+
+    for (i = 0; i < max; i++) {
+        if (ch_ptrarr[i]) {
+            free(ch_ptrarr[i]);
+            ch_ptrarr[i] = NULL;
+        }
+    }
+
+    free(ch_ptrarr);
+    ch_ptrarr = NULL;
+
+#ifndef MYMALLOC__RELEASE_MODE
+    listlog();
+#endif
+}
+
+void mgr__vector(uint32_t min, uint32_t max, uint32_t dummy) {
+    int i = 0;
+    char buffer[MGR__F_MAX];
+
+    vector *v = NULL;
+    v = v_newr(_char_ptr_, 5);
+
+#ifndef MYMALLOC__RELEASE_MODE
+    listlog();
+#endif
+
+    for (i = 0; i < max; i++) {
+        int num = randrnge(min, max);
+        char *str = randstr(buffer, num);
+        char *ptr = malloc(strlen(str) + 1);
+        strcpy(ptr, str);
+
+        v_pushb(v, &ptr);
+    }
+
+#ifndef MYMALLOC__RELEASE_MODE
+    listlog();
+#endif
+
+    for (i = 0; i < 55; i++) {
+        char **ptr = v_back(v);
+        free((*ptr));
+        (*ptr) = NULL;
+
+        v_popb(v);
+    }
+
+    v_delete(&v);
+
+#ifndef MYMALLOC__RELEASE_MODE
+    listlog();
+#endif
+}
 
 char *randstr(char *buffer, size_t length) {
     const char *charset = RANDSTR__CHARS;

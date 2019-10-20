@@ -468,6 +468,7 @@ void v_resize(vector *v, size_t n) {
 
     void *target = NULL;
     void *newstart = NULL;
+    void *temp = NULL;
 
     int back_index = 0;
     int i = 0;
@@ -506,8 +507,12 @@ void v_resize(vector *v, size_t n) {
     newstart = realloc(v->impl.start, n * v->ttbl->width);
     massert_realloc(newstart);
     */
+    if (old_capacity == n || n == 0) {
+        return;
+    }
+
     newstart = malloc(n * v->ttbl->width);
-    memcpy(newstart, v->impl.start, v->ttbl->width * old_capacity);
+    memcpy(newstart, v->impl.start, v->ttbl->width * old_size);
     free(v->impl.start);
     v->impl.start = NULL;
 

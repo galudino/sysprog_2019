@@ -178,7 +178,7 @@ void gcs__vstr_resize(gcs__vstr *v, size_t n) {
 #endif
     new_start = malloc(sizeof *new_start * n);
     massert_malloc(new_start);
-    memcpy(new_start, v->impl.start, sizeof *new_start * old_capacity);
+    memcpy(new_start, v->impl.start, sizeof *new_start * size);
     free(v->impl.start);
     v->impl.start = NULL;
 

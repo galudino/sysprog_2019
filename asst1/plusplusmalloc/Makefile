@@ -37,7 +37,7 @@ DEBUG 				= #-g
 OPTIMIZED			= -O2
 PTHREAD				= -pthread
 MATH 				= -lm
-PEDANTIC			= #-pedantic-errors
+PEDANTIC			= -pedantic-errors
 
 SANTIIZED 			= #-fsanitize=address
 W_ALL 				= #-Wall
