@@ -339,7 +339,6 @@ void myfree(void *ptr, const char *filename, size_t lineno) {
              *  (we don't have to zero-out anything --
              *   the memory will be overwritten over time.)
              */
-            /*header->free = true;*/
             header_toggle(header);
 
             /**
@@ -455,7 +454,7 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
                                        header_size(header) :
                                        info.largest_block_free);
 
-        fprintf(dest, "%s%p%s\t%s\t\t%hi\n", KGRY, (void *)(header + 1), KNRM, free, header_size(header));
+        fprintf(dest, "%s%p%s\t%s\t\t%d\n", KGRY, (void *)(header + 1), KNRM, free, header_size(header));
 
         next = header_is_last(header) ? NULL : header_next(header);
         header = next ? next : NULL;
