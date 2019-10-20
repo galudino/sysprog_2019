@@ -67,8 +67,8 @@ void test_f(void);
 #define MEMGRIND__E_RBT_MIN 2
 #define MEMGRIND__E_RBT_MAX 4
 
-#define MEMGRIND__E_RBN_MIN 8
-#define MEMGRIND__E_RBN_MAX 16
+#define MEMGRIND__E_RBN_MIN 16
+#define MEMGRIND__E_RBN_MAX 32
 
 #define MEMGRIND__F_RNDSTR_ARR_MIN 4
 #define MEMGRIND__F_RNDSTR_ARR_MAX 8
@@ -153,6 +153,11 @@ char *randstr(size_t length);
  *  Be sure to discuss your findings, especially any interesting or unexpected
  *  results.
  */
+        typedef struct metadata metadata_t;
+        struct metadata {
+            bool free;
+        };
+
 
 /**
  *  @brief  Program execution begins here
@@ -170,9 +175,9 @@ int main(int argc, const char *argv[]) {
     /*mgr__test_b();*/
 
     /*mgr__test_c();*/
-    /*mgr__test_d();*/
+    mgr__test_d();
     /*mgr__test_e();*/
-    mgr__test_f();
+    /*mgr__test_f();*/
 
     return EXIT_SUCCESS;
 }
@@ -347,6 +352,75 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
                               uint32_t tree_ct_max,
                               uint32_t node_ct_min,
                               uint32_t node_ct_max) {
+    /**/
+    uint32_t i = 0;
+    int j = 0;
+
+    const uint32_t rbt_max = randrnge(tree_ct_min, tree_ct_max);
+    
+    rbtree **rbt_ptrarr = NULL;
+    rbt_ptrarr = malloc(sizeof *rbt_ptrarr * rbt_max);
+    memset(rbt_ptrarr, 0, sizeof *rbt_ptrarr *rbt_max);
+
+    listlog();
+
+    for (i = 0; i < rbt_max; i++) {
+        bool erase_node = false;
+        bool erase_tree = false;
+
+        uint32_t node_ct = 0;
+
+        rbtree *t = NULL;
+
+        t = rbtree_new();
+        node_ct = randrnge(node_ct_min, node_ct_max);
+
+        for (j = 0; j < node_ct;) {
+        
+            erase_node = randrnge(false, true);
+
+            if (erase_node) {
+                if (rbtree_empty(t) == false) {
+                    bool erase_min = randrnge(false, true);
+
+                    if (erase_min) {
+                        rbtree_erase_min(t);
+                    } else {
+                        rbtree_erase_max(t);
+                    }
+                }
+            } else {
+                rbtree_insert(t, rand());
+                ++j;
+            }
+            
+        }
+
+        
+        erase_tree = randrnge(false, true);
+
+        if (erase_tree) {
+            uint32_t index = randrnge(0, i);
+
+            if (rbt_ptrarr[index]) {
+                rbtree_delete(rbt_ptrarr + index);
+            }
+        }
+
+        if (t) {
+            rbt_ptrarr[i] = t;
+        }
+        
+    }
+
+    listlog();
+}
+
+/*
+void memgrind__red_black_tree(uint32_t tree_ct_min,
+                              uint32_t tree_ct_max,
+                              uint32_t node_ct_min,
+                              uint32_t node_ct_max) {
     uint32_t i = 0;
     int j = 0;
 
@@ -433,6 +507,7 @@ void memgrind__red_black_tree(uint32_t tree_ct_min,
 
     listlog();
 }
+*/
 
 void memgrind__random_string_generator(uint32_t strarr_min,
                                        uint32_t strarr_max,
