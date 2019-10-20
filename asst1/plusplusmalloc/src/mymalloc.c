@@ -31,8 +31,6 @@
 
 #include "mymalloc.h"
 
-#ifdef MYMALLOC__LOW_PROFILE
-
 /**
  *  @typedef    header_t
  *  @brief      Alias for (struct header)
@@ -47,11 +45,12 @@ typedef struct header header_t;
  *              dynamically allocated by mymalloc
  */
 struct header {
-    int16_t size; /**< size of block aft header_t, negative size means used */
+    int16_t size; /**< size of block after header_t, negative size means used */
 };
 
 /**< myblock: block of memory in ./data/BSS segment */
 static char myblock[MYMALLOC__BLOCK_SIZE];
+
 #define MYMALLOC__END_ADDR ((void *)(myblock + (MYMALLOC__BLOCK_SIZE) - 1))
 
 #define MYMALLOC__END_BLOCK                                                    \
@@ -80,31 +79,6 @@ static bool header_validator(void *ptr);
 
 #define header_is_last(HEADER)                                                 \
     ((header_t *)((char *)((header_next(HEADER))) - (sizeof(header_t))) == (MYMALLOC__END_BLOCK))
-
-#endif /* MYMALLOC__LOW_PROFILE */
-
-/**
- *  Experimental - may or may not be used.
- *  rbheader_t is 24 bytes (left-leaning red-black tree)
- *  header_t is 16 bytes (singly-linked list)
- */
-#ifdef MYMALLOC__RBTREE
-
-typedef unsigned char rbt_color;
-#define RBT_BLACK false
-#define RBT_RED true
-
-typedef struct rbheader rbheader_t;
-struct rbheader {
-    uint16_t size;
-    bool free;
-
-    rbt_color color;
-    rbheader_t *left;
-    rbheader_t *right;
-};
-
-#endif
 
 /**
  *  @brief      Allocates size bytes from myblock
@@ -467,8 +441,8 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
 
     fprintf(dest, "------------------------------------------\n");
 
-    fprintf(dest, "Used blocks in list:\t%s%u%s\n", KWHT_b, info.block_used, KNRM);
-    fprintf(dest, "Free blocks in list:\t%s%u%s\n\n", KWHT_b, info.block_free, KNRM);
+    fprintf(dest, "Used blocks in list:\t%s%u%s blocks\n", KWHT_b, info.block_used, KNRM);
+    fprintf(dest, "Free blocks in list:\t%s%u%s blocks\n\n", KWHT_b, info.block_free, KNRM);
 
     fprintf(dest, "Free space:\t\t%s%u%s of %s%u%s bytes\n", KWHT_b, info.space_free, KNRM, KWHT_b, MYMALLOC__BLOCK_SIZE, KNRM);
 
@@ -516,6 +490,8 @@ void header_fputs(FILE *dest, const char *filename, const char *funcname, size_t
             KWHT_b,
             info.block_count_available,
             KNRM);
+
+    fprintf(dest, "Size of metadata:\t%s%lu%s bytes\n\n", KWHT_b, sizeof(header_t), KNRM);
 
     fprintf(dest, "[%s:%lu] %s%s%s\n%s%s %s%s\n", filename, lineno, KCYN, funcname, KNRM, KGRY, __DATE__, __TIME__, KNRM);
     fprintf(dest, "------------------------------------------\n\n");

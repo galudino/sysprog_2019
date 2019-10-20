@@ -33,7 +33,6 @@
 
 /*#define MYMALLOC__RELEASE_MODE*/
 
-#define MYMALLOC__LOW_PROFILE
 #define MYMALLOC__BLOCK_SIZE    4096
 
 #include <stdio.h>
