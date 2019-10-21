@@ -1,3 +1,162 @@
-/* Test plan goes here */
+/**
+ *  @file       testplan.txt
+ *  @brief      Testplan for Asst1: ++malloc
+ *
+ *  @author     Gemuele Aludino
+ *  @date       20 Oct 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+/**
+ *  Copyright © 2019 Gemuele Aludino
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining
+ *  a copy of this software and associated documentation files (the "Software"),
+ *  to deal in the Software without restriction, including without limitation
+ *  the rights to use, copy, modify, block_merge, publish, distribute,
+ *sublicense,
+ *  and/or sell copies of the Software, and to permit persons to whom the
+ *  Software is furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included
+ *  in all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ *  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ *  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+ *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 
-/**/
+All tests (including the prerequisite tests)
+are parameterized within the code, but I will be describing them
+with the values I specifically used for each test.
+
+All values were chosen so that if randomization chose maximum values
+for all parameters, the allocator would not run out of space.
+(the testing procedure needs to be fair, after all)
+
+Test E: mgr__char_ptr_array
+---------------------------
+This test involves the use of a dynamically allocated
+array of (char *), named ch_ptrarr, of size 59.
+
+char *ch_ptrarr = malloc(sizeof *ch_ptrarr * 59);
+
+First iteration:
+for all (char *) in ch_ptrarr {
+    determine a size at random, range [1, 60).
+    malloc size bytes for the current pointer.
+}
+
+Second iteration:
+for all (char *) in ch_ptrarr {
+    determine a decision at random, whether to free the current pointer or not.
+    if true, free the pointer ch_ptrarr[i] and set it NULL.
+}
+The purpose of this is to artifically create fragmentation --
+a lot of free spaces in between occupied blocks.
+
+Third iteration:
+for all (char *) in ch_ptrarr {
+    if ch_ptrarr[i] == NULL {
+        determine a size at random, range [29, 60)
+        malloc size bytes for the current pointer.
+        (the fragmentation and larger minimum size
+         should create a challenge for the allocator,
+         this is to test the coalescence policy)
+    }
+}
+
+Final iteration:
+for all (char *) in ch_ptrarr {
+    free the current pointer, set it NULL.
+}
+
+free ch_ptrarr, set it NULL.
+
+This test was included to see how the allocator handles fragmentation,
+by having randomly sized blocks allocated contigously (no freeing in between),
+randomly freeing across the entirety of myblock,
+and then trying to allocate randomly sized blocks, with a larger minimum
+size -- despite having freed blocks with a smaller minimum size.
+
+Test F: mgr__vector
+---------------------------
+I have written my own implementation of C++'s std::vector;
+this particular implementation uses (void *) as the type.
+The vector ADT has a "growable" buffer, and I wanted to see
+how my allocator would be able to use this.
+
+The type information for a vector is stored in a (struct typetable);
+a typetable has fields for
+    width, or (sizeof(T))
+    deep copy function (if applicable)
+    destructor function (if applicable)
+    swap function (if applicable)
+    comparator
+    print
+
+This instance of vector will use a _char_ptr_ typetable,
+which does not have a deep copy function or destructor function --
+for the purposes of this test, I wanted to have full control of the allocations.
+
+Normally, vector uses the deep copy function assigned at the typetable to
+make a true copy of whatever values are pushed/inserted into vector.
+(that is, if the typetable used has a deep copy function. _char_ptr_ does not.)
+
+In our case, we will allocate memory for any (char *) client side,
+and shallow copy them during pushes/inserts.
+
+First,
+    allocate memory for a pointer to vector (vector *), 
+    and initialize its buffer to size 5.
+        vector *v = v_newr(_char_ptr_, 5).
+
+Then,
+    for i = 0...55 {
+        determine a size sz at random, range [1, 56)
+        allocate memory for a randomly generated string of size sz.
+        char *str = randstr(randrnge(11, 55))
+
+        push the (char *) to the vector, like this:
+        v_pushb(v, &str);
+
+        v_pushb will check to see if the capacity its about to top out.
+        If it is,
+            a new buffer will be allocated that is double the current capacity,
+            the contents of the current buffer will be copied to the new buffer,
+            and then the old buffer will be freed -- its pointer will be reassigned
+            to the base address of the new buffer.
+
+            Being that the initial size is set to 5,
+            the vector will be resized 4 times before reaching size 55.
+}
+
+The challenge with this test is the expansion of vector's buffer --
+to the user, it appears to "grow", but in actuality, there needs to be
+enough space for both the old buffer and the new buffer (with their headers)
+in order for the reallocation to be successful.
+
+Even after the new buffer is made and reassigned to vector,
+the freed space for the old buffer might not be able to merge with the new
+buffer, unless they happen to be adjacent (which they won't be, in this case)
+
+After populating the vector,
+we traverse vector's buffer in order 
+and randomly decide to erase or keep the current pointer.
+    If erase, free the current pointer
+This artifically creates fragmentation.
+(we potentially erase elements at different points of vector's buffer,
+and vector will be shifting elements around to remove gaps after erasures.
+This adds to the overall test's complexity and time))
+
+Next, we add more dynamically allocated strings of random size to the vector,
+(range [11, 56)), iterating v_size(v) times (v_size(v) may be smaller than 55).
+
+Last, we free all the (char *), and vector itself.
+
+The test using vector takes a significantly larger amount of time
+than the other tests, but demonstrates a possible real-world use case
+of deleting random elements (strings) at will.

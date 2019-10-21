@@ -195,11 +195,14 @@ int main(int argc, const char *argv[]) {
     printf("-------------------------------------------------------------\n");
 
     mgr__run_test(mgr__simple_alloc_free, 'a', MGR__A_ITER_MAX, 1, 0, stream);
-    mgr__run_test(mgr__alloc_array_interval, 'b', MGR__B_ITER_MAX, 1, MGR__B_INTERVAL, stream);
+    mgr__run_test(mgr__alloc_array_interval, 'b', MGR__B_ITER_MAX, 1,
+    MGR__B_INTERVAL, stream);
     mgr__run_test(mgr__alloc_array_range, 'c', MGR__C_ITER_MAX, 1, 1, stream);
-    mgr__run_test(mgr__alloc_array_range, 'd', MGR__D_ITER_MAX, MGR__D_ALLOC_MIN, MGR__D_ALLOC_MAX, stream);
+    mgr__run_test(mgr__alloc_array_range, 'd', MGR__D_ITER_MAX,
+    MGR__D_ALLOC_MIN, MGR__D_ALLOC_MAX, stream);
     mgr__run_test(mgr__char_ptr_array, 'e', MGR__E_MIN, MGR__E_MAX, 0, stream);
-    mgr__run_test(mgr__vector, 'f', MGR__F_MIN, MGR__F_MAX, MGR__F_INITIAL, stream);
+    mgr__run_test(mgr__vector, 'f', MGR__F_MIN, MGR__F_MAX, MGR__F_INITIAL,
+    stream);
 
     printf("\n");
 
@@ -604,14 +607,21 @@ void mgr__vector(uint32_t min, uint32_t max, uint32_t initial) {
     char buffer[MGR__F_MAX];
 
     vector *v = NULL;
-    v = v_newr(_char_ptr_, initial);
+    iterator it = { NULL, NULL };
+
+    char **curr = NULL;
+    char **beg = NULL;
+    char **end = NULL;
+    int size = 0;
+
+    v = v_newr(_char_ptr_, 5);
 
 #ifndef MYMALLOC__RELEASE_MODE
     listlog();
 #endif
 
     for (i = 0; i < max; i++) {
-        int num = randrnge(min, max);
+        int num = randrnge(1, max);
         char *str = randstr(buffer, num);
         char *ptr = malloc(strlen(str) + 1);
         strcpy(ptr, str);
@@ -622,14 +632,42 @@ void mgr__vector(uint32_t min, uint32_t max, uint32_t initial) {
 #ifndef MYMALLOC__RELEASE_MODE
     listlog();
 #endif
+    
+    for (i = 0; i < v_size(v); i++) {
+        bool erase = randrnge(false, true);
+        if (erase) {
+            char **get = v_at(v, i);
+            free((*get));
+            (*get) = NULL;
 
-    for (i = 0; i < 55; i++) {
-        char **ptr = v_back(v);
-        free((*ptr));
-        (*ptr) = NULL;
-
-        v_popb(v);
+            v_erase_at(v, i);
+        }
     }
+
+    size = v_size(v);
+
+    for (i = 0; i < size; i++) {
+        int num = randrnge(min, max);
+        char *str = randstr(buffer, num);
+        char *ptr = malloc(strlen(str) + 1);
+        strcpy(ptr, str);
+
+        v_pushb(v, &ptr);
+    }
+
+    it = it_prev(v_end(v));
+    beg = it_curr(v_begin(v));
+    while ((curr = it_curr(it)) != beg) {
+        if ((*curr)) {
+            free((*curr));
+            (*curr) = NULL;
+            v_popb(v);
+        }
+        it_decr(&it);
+    }
+    
+    free(*curr);
+    (*curr) = NULL;
 
     v_delete(&v);
 
