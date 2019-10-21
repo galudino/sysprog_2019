@@ -173,7 +173,7 @@ int main(int argc, const char *argv[]) {
     fprintf(stdout,
             "Each individual test is run %lu times and wall-clock time "
             "averaged.\n\n",
-            MGR__MAX_ITER);
+            (long int)MGR__MAX_ITER);
     fprintf(stdout, "All times are expressed in microseconds (%s)\n\n", MCS);
 
     fprintf(stdout,
