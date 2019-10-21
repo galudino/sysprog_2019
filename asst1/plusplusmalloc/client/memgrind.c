@@ -38,7 +38,6 @@
 
 #include "mymalloc.h"
 #include "vector.h"
-#include "vector_str.h"
 
 #define MGR__A_ITER_MAX 150
 
@@ -56,16 +55,9 @@
 
 #define MGR__F_MIN 11
 #define MGR__F_MAX 55
-
-#define MGR__F_RNDSTR_ARR_MIN 4
-#define MGR__F_RNDSTR_ARR_MAX 8
-#define MGR__F_RNDSTR_COL_MIN 4
-#define MGR__F_RNDSTR_COL_MAX 8
-#define MGR__F_RNDSTR_LEN_MIN 16
-#define MGR__F_RNDSTR_LEN_MAX 48
+#define MGR__F_INITIAL 5
 
 #define MGR__MAX_ITER 100
-#define MGR__TEST_COUNT 6
 
 #define elapsed_time_ns(BEF, AFT)                                              \
     (((double)((pow(10.0, 9.0) * AFT.tv_sec) + (AFT.tv_nsec))) -               \
@@ -81,12 +73,12 @@
 
 #define MCS "µs"
 
-char *randstr(char *buffer, size_t length);
-
 #define randrnge(min, max) ((rand() % (int)(((max) + 1) - (min))) + (min))
 
 #define RANDSTR__CHARS                                                         \
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!;"
+
+static char *randstr(char *buffer, size_t length);
 
 /**
  *  memgrind unit tests
@@ -155,7 +147,7 @@ void mgr__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz, uint32_t dummy
 void mgr__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t interval);
 void mgr__alloc_array_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t alloc_sz_max);
 void mgr__char_ptr_array(uint32_t min, uint32_t max, uint32_t dummy);
-void mgr__vector(uint32_t min, uint32_t max, uint32_t dummy);
+void mgr__vector(uint32_t min, uint32_t max, uint32_t initial);
 
 /**
  *  @brief  Program execution begins here
@@ -207,7 +199,7 @@ int main(int argc, const char *argv[]) {
     mgr__run_test(mgr__alloc_array_range, 'c', MGR__C_ITER_MAX, 1, 1, stream);
     mgr__run_test(mgr__alloc_array_range, 'd', MGR__D_ITER_MAX, MGR__D_ALLOC_MIN, MGR__D_ALLOC_MAX, stream);
     mgr__run_test(mgr__char_ptr_array, 'e', MGR__E_MIN, MGR__E_MAX, 0, stream);
-    mgr__run_test(mgr__vector, 'f', MGR__F_MIN, MGR__F_MAX, 0, stream);
+    mgr__run_test(mgr__vector, 'f', MGR__F_MIN, MGR__F_MAX, MGR__F_INITIAL, stream);
 
     printf("\n");
 
@@ -216,7 +208,14 @@ int main(int argc, const char *argv[]) {
 
 /**
  *  @brief function that conducts the stress test addressed by the
- *         callback function pointer test, and output
+ *         callback function pointer test, and output results to dest
+ *
+ *  @param[in]  test    pointer-to-function that represents a test case
+ *  @param[in]  tch     character that will print to dest, reps test case
+ *  @param[in]  min     a nonnegative minimum value (differs between test cases)
+ *  @param[in]  max     a nonnegative maximum value (differs between test cases)
+ *  @param[in]  interval nonnegative interval value (differs between test cases)
+ *  @param[in]  dest    destination file stream
  */
 void mgr__run_test(void (*test)(uint32_t, uint32_t, uint32_t),
                    char tch,
@@ -267,6 +266,14 @@ void mgr__run_test(void (*test)(uint32_t, uint32_t, uint32_t),
             KNRM);
 }
 
+/**
+ *  @brief  Test a: mallocs alloc_sz byte(s) and immediately frees it, max_iter
+ *times
+ *
+ *  @param[in]  max_iter    a nonnegative value, max iterations for test
+ *  @param[in]  alloc_sz    a nonzero value, fixed allocation size
+ *  @param[in]  dummy       unused value -- needed for function uniformity
+ */
 void mgr__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz, uint32_t dummy) {
     uint32_t i = 0;
 
@@ -285,6 +292,15 @@ void mgr__simple_alloc_free(uint32_t max_iter, uint32_t alloc_sz, uint32_t dummy
     listlog();
 }
 
+/**
+ *  @brief  Test b: mallocs alloc_sz byte(s), stores it in an array -
+ *          After interval allocations, free interval pointers.
+ *          Repeats until max_iter allocations have been reached
+ *
+ *  @param[in]  max_iter    a nonnegative value, max iterations for test
+ *  @param[in]  alloc_sz    a nonzero value, fixed allocation size
+ *  @param[in]  dummy       unused value -- needed for function uniformity
+ */
 void mgr__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t interval) {
     uint32_t i = 0;
 
@@ -331,6 +347,15 @@ void mgr__alloc_array_interval(uint32_t max_iter, uint32_t alloc_sz, uint32_t in
     listlog();
 }
 
+/**
+ *  @brief  Test c/d: Randomly choose between alloc_sz_min and alloc_sz_max
+ *byte(s)
+ *          to allocated, repeats until max_allocs mallocs are made
+ *
+ *  @param[in]  max_allocs      nonnegative value, max allocations for test
+ *  @param[in]  alloc_sz_min    nonnegative value, minimum malloc size
+ *  @param[in]  alloc_sz_max    nonnegative valuie, maximum malloc size
+ */
 void mgr__alloc_array_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t alloc_sz_max) {
     struct {
         uint32_t allocs;
@@ -471,6 +496,32 @@ void mgr__alloc_array_range(uint32_t max_allocs, uint32_t alloc_sz_min, uint32_t
     listlog();
 }
 
+/**
+ *  @brief:     Test e:
+ *              malloc an array of (char *) of size max, named ch_ptrarr.
+ *
+ *              for all (char *) in ch_ptrarr,
+ *                  malloc an random size between 1 and max
+ *
+ *              Then for all (char *) in ch_ptrarr,
+ *                  randomly decide to free the current (char *), or keep it
+ *                  (artificially creates fragmentation)
+ *
+ *              Again, for all (char *) in ch_ptrarr,
+ *                  malloc a random size between min and max
+ *                  (the challenge is finding potentially bigger chunks
+ *                   despite having freed blocks of sizes that may have
+ *                   been smaller - tests coalescence)
+ *
+ *              Finally, for all (char *) in ch_ptrarr,
+ *                  free all (char *)
+ *
+ *              Free ch_ptrarr.
+ *
+ *  @param[in]  min     minimum byte value to allocate
+ *  @param[in]  max     max iterations/max byte value to allocate
+ *  @param[in]  dummy   unused value
+ */
 void mgr__char_ptr_array(uint32_t min, uint32_t max, uint32_t dummy) {
     char **ch_ptrarr = NULL;
     int i = 0;
@@ -522,12 +573,38 @@ void mgr__char_ptr_array(uint32_t min, uint32_t max, uint32_t dummy) {
 #endif
 }
 
-void mgr__vector(uint32_t min, uint32_t max, uint32_t dummy) {
+/**
+ *  @brief  test f:
+ *          allocate a pointer to a vector ADT,
+ *          initialize its internal buffer to size initial.
+ *
+ *          for i = 0...max
+ *              randomly generate a string of size between min and max
+ *              malloc memory for the string and push it to vector
+ *              (since the vector's buffer starts at size initial,
+ *               it will have to grow in order to accomodate the extra elements)
+ *
+ *              A new buffer will be malloced (double the size of the
+ *              current buffer) and the current buffer will be copied
+ *              to the newer, larger buffer. Then, the old buffer will be
+ *              freed and its pointer will be assigned the base address
+ *              of the new buffer.
+ *
+ *          for i = 0...max
+ *              for all (char *) in the vector's buffer
+ *
+ *          free the (vector *) variable
+ *
+ *  @param[in]  min     minimum string allocation size
+ *  @param[in]  max     maximum string allocation size
+ *  @param[in]  initial initial starting size of vector's buffer
+ */
+void mgr__vector(uint32_t min, uint32_t max, uint32_t initial) {
     int i = 0;
     char buffer[MGR__F_MAX];
 
     vector *v = NULL;
-    v = v_newr(_char_ptr_, 5);
+    v = v_newr(_char_ptr_, initial);
 
 #ifndef MYMALLOC__RELEASE_MODE
     listlog();
@@ -561,7 +638,13 @@ void mgr__vector(uint32_t min, uint32_t max, uint32_t dummy) {
 #endif
 }
 
-char *randstr(char *buffer, size_t length) {
+/**
+ *  @brief  Randomly generate a string of size length
+ *
+ *  @param[out] buffer  buffer to hold the characters for the string
+ *  @param[in]  length  the desired length for the generated string
+ */
+static char *randstr(char *buffer, size_t length) {
     const char *charset = RANDSTR__CHARS;
     char *random_string = NULL;
 
