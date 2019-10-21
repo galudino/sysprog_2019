@@ -203,7 +203,7 @@ int main(int argc, const char *argv[]) {
     mgr__run_test(mgr__char_ptr_array, 'e', MGR__E_MIN, MGR__E_MAX, 0, stream);
     mgr__run_test(mgr__vector, 'f', MGR__F_MIN, MGR__F_MAX, MGR__F_INITIAL,
     stream);
-
+    
     printf("\n");
 
     return EXIT_SUCCESS;
