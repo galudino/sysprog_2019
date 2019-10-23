@@ -1,0 +1,52 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       22 Oct 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+Processes:
+  OS abstraction for runnING code
+
+fork():
+  "duplicate" current processes
+    (it's not REALLY a copy)
+  differences immediately after fork
+    - PID (process ID)
+    - address space
+    - PPID (parent process ID)
+  - fork returns to both child and parent
+    child: 0
+    parent: PID of child
+
+exec():
+  - dump contents of current process, load in and set up
+    for new executable
+  at what circumstances does exec return?
+    - when it fails. (errno)
+    - if it succeeds, it returns to NO ONE.
+  
+
+wait():
+  all forks should be accompanied by wait().
+  - called by parent to get child return data/status
+    and inform OS that the child process
+    can be deallocated
+  - blocking call
+    suspends operation until something else happens
+
+Orphan:
+  process whos parent is no longer in the system
+  they continue running, but they will finish at some point
+  but no one will call wait for it...
+
+Zombie:
+  process that has consumed all runnable code
+  that wit() has not been called on
+
+You don't have to be an orphan to be a zombie.
+
+How to deal with zombie orphans?
+  have init/scheduler make itself their parent and wait()
