@@ -7,16 +7,20 @@
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 
+LAST CLASS:
+
 Processes:
   OS abstraction for runnING code
 
 fork():
   "duplicate" current processes
+
     (it's not REALLY a copy)
   differences immediately after fork
     - PID (process ID)
     - address space
     - PPID (parent process ID)
+
   - fork returns to both child and parent
     child: 0
     parent: PID of child
@@ -24,7 +28,8 @@ fork():
 exec():
   - dump contents of current process, load in and set up
     for new executable
-  at what circumstances does exec return?
+
+  - at what circumstances does exec return?
     - when it fails. (errno)
     - if it succeeds, it returns to NO ONE.
   
@@ -34,19 +39,108 @@ wait():
   - called by parent to get child return data/status
     and inform OS that the child process
     can be deallocated
+
   - blocking call
     suspends operation until something else happens
+
+  - system can deallocate/reap child pocess (and its resouces)
+    once it is waited on (and has terminated)
+
+  - parent knows how/why child terminated (and can get return value,
+    if useful)
 
 Orphan:
   process whos parent is no longer in the system
   they continue running, but they will finish at some point
   but no one will call wait for it...
 
+  (process without a parent)
+
 Zombie:
   process that has consumed all runnable code
-  that wit() has not been called on
+  that wait() has not been called on
 
 You don't have to be an orphan to be a zombie.
 
 How to deal with zombie orphans?
   have init/scheduler make itself their parent and wait()
+
+
+Orphan/zombie is not conditional - 
+  a process can be an orphan, zombie, or both
+  you can have a zombie process without an orphan
+------------------------------------------------------------
+Fetch, Decode, Execute
+------------------------------------------------------------
+------------------------------------------------------------
+Signals:
+  similar to exceptions (OOP)
+  signal is a software interrupt of your process's normal FDE loops
+
+  try {
+    /* code */
+  } catch (...) {
+    /* code */
+  }
+
+  instr0()
+  instr1()
+  instr2()
+  instr3()
+  in|----INTERRUPT----|str4()
+  instr5()
+  instr6()
+  instr7()
+
+  OS loads event handler:
+    jump to signal handler
+    signal handler runs
+    reload user code and restore program counter (PC)
+
+
+typedef void (*sighandler_t)(int);
+sighandler_t signal(int signum, sighandler_t handler);
+
+
+int atexit(void (*function)(void));
+
+using _exit() or _Exit() (unistd.h)
+  skips past normal exit semantics
+  stops code ASAP
+  won't get normal exit signal
+  otherwise, for normal exiting
+    use exit() (stdlib.h)
+------------------------------------------------------------
+why use processes:
+  - parallelization
+  - isolation
+
+PROCESSES:
+  pros:
+    - isolation, different address space
+    - load different code
+    - treat signals differently
+    - do different things with IO
+
+  cons:
+    - switching from one process to another takes time
+      (slow to switch between)
+    - building processes is slow
+      - needs space to copy stuff over
+    - isolation...different address space means it is hard to pass
+      data between processes
+    
+THREADS:
+  pros:
+    - switching from one process to another is fast
+    - building processes is fast
+    - no isolation...same address space means it is easy to pass
+      data between threads
+  
+  cons:
+    - isolation, same address space
+    - cannot load different code
+    - cannot treat signals differently
+    - cannot do different things with IO
+    - race conditions (threads may compete with each other)
+

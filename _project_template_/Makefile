@@ -34,6 +34,7 @@ CC 				= gcc
 ## Flag types - right-hand side can be modified or commented out to disable ##
 CSTD 				= -std=c89
 DEBUG 				= -g
+OPTIMIZED			= -O3
 PTHREAD				= -pthread
 MATH 				= -lm
 PEDANTIC			= -pedantic-errors
@@ -43,7 +44,7 @@ W_ALL 				= #-Wall
 W_ERR 				= #-Werror
 
 ## Add new flag categories here ##############################################
-CFLAGS 				= $(DEBUG) $(CSTD) $(PEDANTIC) $(W_ALL) $(W_ERR) $(SANITIZED)
+CFLAGS 				= $(DEBUG) $(OPTIMIZED) $(CSTD) $(PEDANTIC) $(W_ALL) $(W_ERR) $(SANITIZED)
 LIB 				= $(PTHREAD) $(MATH)
 INC 				= -I $(DIR_INC)
 ###############################################################################

@@ -56,7 +56,5 @@ typedef unsigned char bool;
 #include <dirent.h>
 #include <fcntl.h>
 
-
-
 #endif /* HEADER_H */
 

@@ -28,9 +28,12 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <signal.h>
 #include "header.h"
 
 
+void handler_segfault(int signum);
+void handler_exit(void);
 
 /**
  *  @brief  Program execution begins here
@@ -43,6 +46,25 @@
 int main(int argc, const char *argv[]) {
 
 
+    signal(SIGSEGV, handler_segfault);
+    atexit(handler_exit);
+
+
+
+    /*
+    signal(SIGSEGV, handler_segfault);
+    printf("%d\n", *((int *)(0)));
+    */
+
+    while (true);
+
     return EXIT_SUCCESS;
 }
 
+void handler_segfault(int signum) {
+    printf("%s\n", "handler: handler_segfault");
+}
+
+void handler_exit() {
+    printf("%s\n", "handler: handler_exit");
+}
