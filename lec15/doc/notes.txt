@@ -1,0 +1,157 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       29 Oct 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+LAST CLASS:
+
+------------------------------------------------------------
+Signals:
+  similar to exceptions (OOP)
+  signal is a software interrupt of your process's normal FDE loops
+
+  try {
+    /* code */
+  } catch (...) {
+    /* code */
+  }
+
+  instr0()
+  instr1()
+  instr2()
+  instr3()
+  in|----INTERRUPT----|str4()
+  instr5()
+  instr6()
+  instr7()
+
+  OS loads event handler:
+    jump to signal handler
+    signal handler runs
+    reload user code and restore program counter (PC)
+
+
+typedef void (*sighandler_t)(int);
+sighandler_t signal(int signum, sighandler_t handler);
+
+
+int atexit(void (*function)(void));
+
+using _exit() or _Exit() (unistd.h)
+  skips past normal exit semantics
+  stops code ASAP
+  won't get normal exit signal
+  otherwise, for normal exiting
+    use exit() (stdlib.h)
+------------------------------------------------------------
+why use processes:
+  - parallelization
+  - isolation
+
+PROCESSES:
+  pros:
+    - isolation, different address space
+    - load different code
+    - treat signals differently
+    - do different things with IO
+
+  cons:
+    - switching from one process to another takes time
+      (slow to switch between)
+    - building processes is slow
+      - needs space to copy stuff over
+    - isolation...different address space means it is hard to pass
+      data between processes
+    
+THREADS:
+  pros:
+    - switching from one process to another is fast
+    - building processes is fast
+    - no isolation...same address space means it is easy to pass
+      data between threads
+  
+  cons:
+    - isolation, same address space
+    - cannot load different code
+    - cannot treat signals differently
+    - cannot do different things with IO
+    - race conditions (threads may compete with each other)
+------------------------------------------------------------
+------------------------------------------------------------
+
+Signals
+  software interrupt
+  not necessarily an error...just something important
+  that needs to be dealt with right now
+
+  exception flavored, in that some code is invoked on your behalf
+  when the event occurs
+    but signals resume at the instruction running when the signal
+    occurred (IF the handler does not kill the proc)
+
+  kill sends a signal to a proc 
+    - by default, sends SIGKILL
+
+  fork
+    - make a new process by duplicating the current one
+  
+  wait
+    - suspends access of the calling process until one of its
+      child processe(s) terminates
+      (or waitpid() for a specific one)
+        pid_t wait(int *status);
+        pid_t waitpid(pid_t pid, int *status, int options);
+
+int atexit(void (*function)(void));
+
+
+
+Threads vs procs 
+----------------
+- threads share the same address space
+  - this means it is easy to pass data between them
+
+- kind of like a function you can call;
+  but not wait for a return in order to continue
+  (promote a function to be asynchronous)
+
+- fast to build
+- fast to swap between
+
+blocking
+  do not return until done
+non-blocking
+  may return before done
+asynchronous
+  always returns immediately, having started a "background"
+  effort to fulfill your request
+
+------------------------------------------------------------
+POSIX Thread Library (pthreads)
+------------------------------------------------------------
+
+pthread_create()
+  creates a thread
+
+  int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                     void *(*start_routine)(void *), void *arg);
+
+  if you have multiple args,
+  put it in a struct -- allocate an instance of that struct
+  on the heap.
+
+pthread_exit()
+  exits a thread
+
+pthread_join()
+  waits until a thread is done and gives exit val
+
+pthread_attr_init()
+
+pthread_attr_destroy()
+
+pthread_t is OPAQUE 
