@@ -3,7 +3,7 @@
 ##	@brief		General Makefile
 ##
 ##	@author		Gemuele Aludino
-##	@date       	18 Jul 2019
+##	@date       18 Jul 2019
 ##	@copyright 	Copyright © 2019 Gemuele Aludino. All rights reserved.
 ##
 
@@ -26,7 +26,7 @@ EXE_TST				= test
 ###############################################################################
 
 ## COMPILER ###################################################################
-CC 				= gcc
+CC 				    = gcc
 ###############################################################################
 
 ## FLAGS ######################################################################
@@ -40,8 +40,8 @@ MATH 				= -lm
 PEDANTIC			= -pedantic-errors
 
 SANTIIZED 			= #-fsanitize=address
-W_ALL 				= #-Wall
-W_ERR 				= #-Werror
+W_ALL 				= -Wall
+W_ERR 				= -Werror
 
 ## Add new flag categories here ##############################################
 CFLAGS 				= $(DEBUG) $(OPTIMIZED) $(CSTD) $(PEDANTIC) $(W_ALL) $(W_ERR) $(SANITIZED)
