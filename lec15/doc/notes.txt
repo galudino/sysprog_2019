@@ -6,9 +6,9 @@
  *  @date       29 Oct 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
-
+ 
+------------------------------------------------------------
 LAST CLASS:
-
 ------------------------------------------------------------
 Signals:
   similar to exceptions (OOP)
@@ -107,8 +107,6 @@ Signals
         pid_t waitpid(pid_t pid, int *status, int options);
 
 int atexit(void (*function)(void));
-
-
 
 Threads vs procs 
 ----------------

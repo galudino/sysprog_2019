@@ -35,7 +35,7 @@ CC 				= gcc
 CSTD 				= -std=c89
 DEBUG 				= -g
 OPTIMIZED			= -O3
-PTHREAD				= -pthread
+PTHREAD				= -lpthread
 MATH 				= -lm
 PEDANTIC			= -pedantic-errors
 
