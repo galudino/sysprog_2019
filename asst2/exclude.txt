@@ -6,5 +6,6 @@
 *.dSYM
 *.tar.gz
 build/*.o
+build/concurrent/*.o
 $filename_default
 $1
