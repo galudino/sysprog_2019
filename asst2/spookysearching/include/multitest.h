@@ -1,6 +1,6 @@
 /**
- *  @file       multitest_proc.c
- *  @brief      Process-specialized source file for Asst2: Spooky Search
+ *  @file       multitest.h
+ *  @brief      Header file for Asst2: Spooky Search
  *
  *  @author     Gemuele Aludino
  *  @date       04 Nov 2019
@@ -28,8 +28,39 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "multitest.h"
+#ifndef MULTITEST_H
+#define MULTITEST_H
 
-void test() {
-    printf("from proc\n");
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+
+#if __STD_VERSION__ >= 19990L
+#include <stdbool.h>
+#include <stdint.h>
+#else
+# define false  0
+# define true   1
+typedef unsigned char bool;
+#endif
+
+#if WIN32 || _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+#include <assert.h>
+#include <string.h>
+#include <strings.h>
+#include <dirent.h>
+#include <fcntl.h>
+
+
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+void test();
+
+#endif /* MULTITEST_H */

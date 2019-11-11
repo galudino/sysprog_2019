@@ -1,6 +1,6 @@
 /**
- *  @file       multitest_thread.c
- *  @brief      Thread-specialized source file for Asst2: Spooky Search
+ *  @file       multitest_proc.c
+ *  @brief      Process-specialized source file for Asst2: Spooky Search
  *
  *  @author     Gemuele Aludino
  *  @date       04 Nov 2019
@@ -30,6 +30,36 @@
 
 #include "multitest.h"
 
+void *func(void *arg) {
+    int *n = (int *)(arg);
+
+    printf("did process %d\n", (*n));
+
+    return NULL;
+}
+
 void test() {
-    printf("from thread\n");
+    int i = -1;
+    int status = -1;
+
+    pid_t pid = 0;
+
+    while (i < 10) {
+        /* do whatever you have to do here prior to spawning procs */
+
+        /* from here on out, each child proc will do its own work */
+        pid = fork();
+
+        if (pid == 0) {
+            /* do work here, call a function, do something... */
+            func(&i);
+
+            /* exit when done */
+            exit(EXIT_SUCCESS);
+        } else {
+            wait(&status);
+            printf("status of %d: %s (%d)\n\n", pid, strerror(status), status);
+            ++i;
+        }
+    }
 }

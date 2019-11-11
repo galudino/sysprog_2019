@@ -1,6 +1,6 @@
 /**
- *  @file       multitest.h
- *  @brief      Header file for Asst2: Spooky Search
+ *  @file       multitest_thread.c
+ *  @brief      Thread-specialized source file for Asst2: Spooky Search
  *
  *  @author     Gemuele Aludino
  *  @date       04 Nov 2019
@@ -28,34 +28,36 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MULTITEST_H
-#define MULTITEST_H
+#include "multitest.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
+void *func(void *arg) {
+    int *n = (int *)(arg);
+    int *tid = malloc(sizeof *tid);
+    (*tid) = 1008 + (*n);
 
-#if __STD_VERSION__ >= 19990L
-#include <stdbool.h>
-#include <stdint.h>
-#else
-# define false  0
-# define true   1
-typedef unsigned char bool;
-#endif
+    printf("did thread %d\n", (*n));
 
-#if WIN32 || _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
+    pthread_exit(tid);
+}
 
-#include <assert.h>
-#include <string.h>
-#include <strings.h>
-#include <dirent.h>
-#include <fcntl.h>
+void test() {
+    pthread_t threads[10];
 
-void test();
+    int i = 0;
+    int status = -1;
 
-#endif /* MULTITEST_H */
+    while (i < 10) {
+        status = pthread_create(threads + i, NULL, func, &i);
+
+        if (status) {
+
+        } else {
+            int *tid = NULL;
+            pthread_join(threads[i], (void **)(&tid));
+            printf("status of %x: %s (%d)\n\n", *tid, strerror(status), status);
+            free(tid);
+            tid = NULL;
+            ++i;
+        }
+    }
+}

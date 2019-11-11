@@ -28,7 +28,29 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <unistd.h>
+#include <time.h>
+#include <math.h>
+
 #include "multitest.h"
+
+#define elapsed_time_ns(BEF, AFT)                                              \
+    (((double)((pow(10.0, 9.0) * AFT.tv_sec) + (AFT.tv_nsec))) -               \
+     ((double)((pow(10.0, 9.0) * BEF.tv_sec) + (BEF.tv_nsec))))
+
+#define elapsed_time_ms(BEF, AFT)                                              \
+    ((elapsed_time_ns(BEF, AFT) * pow(10.0, -6.0)))
+#define elapsed_time_s(BEF, AFT) (elapsed_time_ns(BEF, AFT) * pow(10.0, -9.0))
+
+#define convert_ns_to_s(NS) ((NS) * pow(10.0, -9.0))
+#define convert_ns_to_ms(NS) ((NS) * pow(10.0, -6.0))
+#define convert_ns_to_mcs(NS) ((NS) * (pow(10.0, -3.0)))
+
+#define MCS "µs"
+
+#define randrnge(min, max) ((rand() % (int)(((max) + 1) - (min))) + (min))
+
+void test();
 
 /**
  *  @brief  Program execution begins here
@@ -39,7 +61,21 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
+    srand(time(NULL));
+    
     test();
 
+    {
+        unsigned long int p = randrnge(250, 25000);
+        unsigned long int q = randrnge(2, 250);
+
+        while (p % q != 0) {
+            p = randrnge(250, 25000);
+            q = randrnge(2, 250);
+        }
+
+        printf("p = %lu\nq = %lu\n\n", p, q);
+    }
+    
     return EXIT_SUCCESS;
 }
