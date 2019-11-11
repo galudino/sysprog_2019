@@ -61,21 +61,66 @@ void test();
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    srand(time(NULL));
+    int instance = 0;
+
+    size_t *arr = NULL;
+    size_t capacity = randrnge(256, 65536);
+
+    size_t search_val = 28;
+
+    size_t i = 0;
+    size_t index = 0;
+    size_t temp = 0;
     
-    test();
+    srand(time(NULL));
 
-    {
-        unsigned long int p = randrnge(250, 25000);
-        unsigned long int q = randrnge(2, 250);
+    arr = malloc(sizeof *arr * capacity);
 
-        while (p % q != 0) {
-            p = randrnge(250, 25000);
-            q = randrnge(2, 250);
+    for (i = 0; i < capacity; i++) {
+        arr[i] = i;
+    }
+
+    for (i = 0; i < capacity; i++) {
+        size_t r0 = randrnge(0, capacity);
+        size_t r1 = randrnge(0, capacity);
+
+        while (r0 == r1) {
+            r0 = randrnge(0, capacity);
         }
 
-        printf("p = %lu\nq = %lu\n\n", p, q);
+        temp = arr[r0];
+            
+        arr[r0] = arr[r1];
+        arr[r1] = temp;
     }
-    
+
+    for (i = 0; i < capacity; i++) {
+        if (arr[i] == search_val) {
+            index = i;
+            printf("found %lu at %lu\n", search_val, i);
+            break;
+        }
+    }
+
+    for (instance = 1; instance < 50; instance++) {
+        size_t r0 = randrnge(0, capacity);
+
+        temp = arr[r0];
+        
+        arr[r0] = arr[index];
+        arr[index] = temp;
+
+        for (i = 0; i < capacity; i++) {
+            if (arr[i] == search_val) {
+                index = i;
+                printf("found %lu at %lu\n", search_val, i);
+                break;
+            }
+        }
+    }
+
+    free(arr);
+    arr = NULL;
+
     return EXIT_SUCCESS;
 }
