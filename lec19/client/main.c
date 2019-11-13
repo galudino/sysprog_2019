@@ -31,6 +31,14 @@
 #include "header.h"
 
 int main(int argc, const char *argv[]) {
+    int fd = -9999;
+    char ch = '\0';
+
+    fd = open("./newfile", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+
+    lseek(fd, 2047, SEEK_END);
+    write(fd, &ch, 1);
+    close(fd);
 
     return 0;
 }
