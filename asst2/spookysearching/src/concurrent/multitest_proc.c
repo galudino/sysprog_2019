@@ -44,7 +44,7 @@ void test() {
 
     pid_t pid = 0;
 
-    while (i < 10) {
+    while (i < TEST_NUM) {
         /* do whatever you have to do here prior to spawning procs */
 
         /* from here on out, each child proc will do its own work */

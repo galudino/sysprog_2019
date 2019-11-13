@@ -41,12 +41,12 @@ void *func(void *arg) {
 }
 
 void test() {
-    pthread_t threads[10];
+    pthread_t threads[TEST_NUM];
 
     int i = 0;
     int status = -1;
 
-    while (i < 10) {
+    while (i < TEST_NUM) {
         status = pthread_create(threads + i, NULL, func, &i);
 
         if (status) {
@@ -61,4 +61,3 @@ void test() {
         }
     }
 }
-

@@ -61,11 +61,14 @@ typedef unsigned int uint32_t;
 #include <dirent.h>
 #include <fcntl.h>
 
-
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#define TEST_NUM    10
+
 void test();
+
+
 
 #endif /* MULTITEST_H */

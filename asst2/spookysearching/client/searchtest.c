@@ -50,8 +50,6 @@
 
 #define randrnge(min, max) ((rand() % (int)(((max) + 1) - (min))) + (min))
 
-void test();
-
 /**
  *  @brief  Program execution begins here
  *
@@ -65,6 +63,7 @@ int main(int argc, const char *argv[]) {
 
     size_t *arr = NULL;
     size_t capacity = randrnge(256, 65536);
+    size_t subcap = 0;
 
     size_t search_val = 28;
 
