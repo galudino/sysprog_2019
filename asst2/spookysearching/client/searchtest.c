@@ -48,7 +48,12 @@
 
 #define MCS "µs"
 
-#define randrnge(min, max) ((rand() % (int)(((max) + 1) - (min))) + (min))
+/* randrnge has an inclusive, exclusive ranging: [min, max) */
+#define randrnge(min, max) ((rand()) % ((size_t)(((max) - (min))) + (min)))
+
+#define ARR_RANGE_START 256
+#define ARR_RANGE_END   pow(ARR_RANGE_START, 2.0) + 1
+#define ARR_SUBCAP      251
 
 /**
  *  @brief  Program execution begins here
@@ -62,18 +67,38 @@ int main(int argc, const char *argv[]) {
     int instance = 0;
 
     size_t *arr = NULL;
-    size_t capacity = randrnge(256, 65536);
+    size_t capacity = 0;
     size_t subcap = 0;
 
     size_t search_val = 28;
 
     size_t i = 0;
-    size_t index = 0;
+    long int index = 0;
     size_t temp = 0;
     
     srand(time(NULL));
 
-    arr = malloc(sizeof *arr * capacity);
+    do {
+        ++i;
+
+        capacity = randrnge(ARR_RANGE_START, ARR_RANGE_END);
+        subcap = randrnge(4, ARR_SUBCAP);
+
+        printf("capacity: %lu\nsubcap: %lu\n\n", capacity, subcap);
+    } while (capacity % subcap != 0 && subcap < capacity);
+
+    printf("did %lu times\n", i);
+
+    printf("CAPACITY: %lu\nSUBCAP: %lu\n\n", capacity, subcap);
+
+    arr = calloc(capacity, sizeof *arr);
+
+    if (arr == NULL) {
+        fprintf(stderr, 
+               "calloc failed to allocate %lu bytes.\n", 
+                capacity * sizeof *arr);
+        exit(EXIT_FAILURE);
+    }
 
     for (i = 0; i < capacity; i++) {
         arr[i] = i;
@@ -109,15 +134,17 @@ int main(int argc, const char *argv[]) {
         arr[r0] = arr[index];
         arr[index] = temp;
 
+        index = -1;
+
         for (i = 0; i < capacity; i++) {
             if (arr[i] == search_val) {
                 index = i;
-                printf("found %lu at %lu\n", search_val, i);
+                printf("[%d]: found %lu at %lu\n", instance, search_val, i);
                 break;
             }
         }
     }
-
+    
     free(arr);
     arr = NULL;
 

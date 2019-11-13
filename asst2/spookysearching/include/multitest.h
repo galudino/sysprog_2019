@@ -69,6 +69,4 @@ typedef unsigned int uint32_t;
 
 void test();
 
-
-
 #endif /* MULTITEST_H */
