@@ -1,0 +1,80 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       12 Nov 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+------------------------------------------------------------
+LAST CLASS
+------------------------------------------------------------
+Files:
+  - primitive types
+  - functions
+  - other pointers (void *)
+  - user-defined types
+
+What is an array?
+  name (identifier) 
+  of array is the base address of a block of memory.
+  go index steps of length sizeof(typename),
+    stop at capacity
+
+What is a string:
+  name (identifier) 
+  of string is the base address of a block of memory.
+  count bytes from base address until '\0' byte is reached
+
+What is a function?
+  name (identifier)
+  of function is the base address of the instructions
+  keep on consuming next (instruction) until ...
+    (stop at ret) stop symbol
+
+
+What is a ____?
+  name (identifier)
+  of ____ holds base address
+  keep on consuming next (____) until (stop symbol)
+
+  
+  open
+  close
+  read
+  write
+
+  open(<path/filename> <flags>)
+    O_RDONLY
+    O_WRONLY
+    O_RDWR
+
+  open on error returns -1 and sets errno
+    on term: perror <error number>
+
+  file:
+    name of (file) holds a descriptor to identify it
+    keep on consuming next (byte)
+    until...(EOF) stop symbol
+
+  read/write(<file descriptor>,
+             <memory location to read/write from>,
+             <qty bytes to read/write>))
+
+{
+    int bytes_total = 100;
+    int bytes_read = 0;
+    int status = -1;
+
+    char buffer[101];
+    memset(buffer, '\0', 101);
+
+    do {
+      status = read(fd, buffer, 10);
+      bytes_read += status > 0 ? status : 0;
+    } while (status > 0);
+}
+------------------------------------------------------------
+------------------------------------------------------------
+
