@@ -34,27 +34,6 @@
 
 #include "multitest.h"
 
-#define elapsed_time_ns(BEF, AFT)                                              \
-    (((double)((pow(10.0, 9.0) * AFT.tv_sec) + (AFT.tv_nsec))) -               \
-     ((double)((pow(10.0, 9.0) * BEF.tv_sec) + (BEF.tv_nsec))))
-
-#define elapsed_time_ms(BEF, AFT)                                              \
-    ((elapsed_time_ns(BEF, AFT) * pow(10.0, -6.0)))
-#define elapsed_time_s(BEF, AFT) (elapsed_time_ns(BEF, AFT) * pow(10.0, -9.0))
-
-#define convert_ns_to_s(NS) ((NS) * pow(10.0, -9.0))
-#define convert_ns_to_ms(NS) ((NS) * pow(10.0, -6.0))
-#define convert_ns_to_mcs(NS) ((NS) * (pow(10.0, -3.0)))
-
-#define MCS "µs"
-
-/* randrnge has an inclusive, exclusive ranging: [min, max) */
-#define randrnge(min, max) ((rand()) % ((size_t)(((max) - (min))) + (min)))
-
-#define ARR_RANGE_START 256
-#define ARR_RANGE_END   pow(ARR_RANGE_START, 2.0) + 1
-#define ARR_SUBCAP      251
-
 /**
  *  @brief  Program execution begins here
  *
@@ -81,8 +60,12 @@ int main(int argc, const char *argv[]) {
     do {
         ++i;
 
-        capacity = randrnge(ARR_RANGE_START, ARR_RANGE_END);
-        subcap = randrnge(4, ARR_SUBCAP);
+        capacity = randrnge(ARR_RANGE_START, ARR_RANGE_END + 1);
+        subcap = ARR_SUBCAP;
+        
+        if (subcap >= capacity) {
+            continue;
+        }
 
         printf("capacity: %lu\nsubcap: %lu\n\n", capacity, subcap);
     } while (capacity % subcap != 0 && subcap < capacity);
@@ -126,7 +109,7 @@ int main(int argc, const char *argv[]) {
         }
     }
 
-    for (instance = 1; instance < 50; instance++) {
+    for (instance = 1; instance < TEST_NUM; instance++) {
         size_t r0 = randrnge(0, capacity);
 
         temp = arr[r0];

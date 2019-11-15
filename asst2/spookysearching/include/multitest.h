@@ -67,6 +67,27 @@ typedef unsigned int uint32_t;
 
 #define TEST_NUM    10
 
+#define elapsed_time_ns(BEF, AFT)                                              \
+    (((double)((pow(10.0, 9.0) * AFT.tv_sec) + (AFT.tv_nsec))) -               \
+     ((double)((pow(10.0, 9.0) * BEF.tv_sec) + (BEF.tv_nsec))))
+
+#define elapsed_time_ms(BEF, AFT)                                              \
+    ((elapsed_time_ns(BEF, AFT) * pow(10.0, -6.0)))
+#define elapsed_time_s(BEF, AFT) (elapsed_time_ns(BEF, AFT) * pow(10.0, -9.0))
+
+#define convert_ns_to_s(NS) ((NS) * pow(10.0, -9.0))
+#define convert_ns_to_ms(NS) ((NS) * pow(10.0, -6.0))
+#define convert_ns_to_mcs(NS) ((NS) * (pow(10.0, -3.0)))
+
+#define MCS "µs"
+
+/* randrnge has an inclusive, exclusive ranging: [min, max) */
+#define randrnge(min, max) ((rand()) % (((max) - (min)) + (min)))
+
+#define ARR_RANGE_START 256
+#define ARR_RANGE_END   ((ARR_RANGE_START) * (ARR_RANGE_START))
+#define ARR_SUBCAP      250
+
 void test();
 
 #endif /* MULTITEST_H */
