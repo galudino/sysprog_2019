@@ -1,0 +1,99 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       14 Nov 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+------------------------------------------------------------
+LAST CLASS:
+------------------------------------------------------------
+Files:
+  open(<path/name>, <flags>)
+    O_RDONLY
+    O_WRONLY
+    O_RDWR
+  
+  fd: (open ret)
+    < 0: error (check errno for reason)
+    > 0: valid file descriptor
+
+  read(<fd>, <addr>, <byte count>)
+  write(<fd>, <addr>, <byte count>)
+    read/write ret:
+      < 0: error (check errno to find out why)
+     == 0: for read - EOF, for write, did 0
+      > 0: the amount of bytes read/written
+
+  read/write are NON-BLOCKING.
+  
+  asynchronous - doing its own thing.
+
+  close(<fd>)
+
+  do {
+    if ((status = read(fd, buffer + bytes_read, num_bytes - bytes_read)) < 0) {
+      // error
+    } else {
+      // end of file
+      break;
+      bytes_read += status;
+    }
+
+  } while (bytes_read < num_bytes);
+
+  buffer:
+     0   1   2   3   4   5   6   7   8   9
+    [h] [e] [l] [l] [o] [ ] [ ] [ ] [ ] [ ]
+
+  file:
+    hellothere
+
+  file descriptor: I/O resource
+  file handle: cursor/position in resource
+
+  stateful:
+  the parameters, plus something else, determines the result
+  read(fd, buffer, bytes_read);
+  read(fd, buffer, bytes_read);   /* you get the next ten bytes read into buffer */
+
+  stateless:
+  the parameters only determine the result
+  tan(31.13);
+  tan(31.13);                     /* same result returned */
+
+  lseek:
+  reposition read/write file offset
+
+  #include <sys/types.h>
+  #include <unistd.h>
+
+  off_t lseek(int fd, off_t offset, int whence);
+
+  shift the file handle (cursor/position) with lseek()
+    can expand file by seeking past end and writing
+    can find file size by seeking to end with 0 offset and grabbing return value
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+int open(const char *pathname, int flags);
+int open(const char *pathname, int flags, mode_t mode);
+
+int creat(const char *pathname, mode_t mode);
+
+"123", convert this to the integer 123?
+
+atoi("123");
+
+#include <stdlib.h>
+
+int atoi(const char *nptr);
+long atol(const char *nptr);
+long long atoll(const char *nptr);
+slong long atoq(const char *nptr);
+------------------------------------------------------------
+------------------------------------------------------------
