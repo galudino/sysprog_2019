@@ -30,8 +30,26 @@
 
 #include "header.h"
 
-int main(int argc, const char *argv[]) {
+void desc0();
+void desc1();
 
+int main(int argc, const char *argv[]) {
+    desc1();
 
     return 0;
+}
+
+void desc0() {
+    char buff[] = "hello";
+    int fd = open("./mynewfile", O_RDWR | O_CREAT,  S_IRUSR | S_IWUSR);
+    /* if mynewfile doesn't exist, create it...otherwise do nothing */
+    /*int fd = open("./mynewfile", O_RDWR | O_CREAT, 00600);*/
+    write(fd, buff, 10);
+    printf("%d\n", fd);
+    close(fd);
+}
+
+void desc1() {
+    char buff[] = "hello, world!";
+    write(STDOUT_FILENO, buff, 14);
 }

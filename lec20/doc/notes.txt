@@ -97,3 +97,45 @@ long long atoll(const char *nptr);
 slong long atoq(const char *nptr);
 ------------------------------------------------------------
 ------------------------------------------------------------
+Final Exam
+1600-1900 18 Dec
+Location:
+TBA
+
+|  is BITWISE OR
+|| is LOGICAL OR
+
+O_CREAT is conditional.
+
+STDIN_FILENO      0
+STDOUT_FILENO     1
+STDERR_FILENO     2
+
+File descriptors can be used for:
+- files
+- anything that can be read/written to
+- sockets
+
+------------------------------------------------------------
+sockets - file descriptor connected to somewhere on network
+  client socket
+  server socket
+
+client:
+  socket(): construct a basic socket
+    set up data structures to represent the server
+  connect(): connect client socket to some other server socket
+
+server:
+  socket(): construct a basic socket
+  bind(): 'welds' socket to a given port number.
+  listen(): make this a server socket that only listens for connections
+  accept(): start listening for connection requests
+
+  use a port > 8000.
+
+  accept is a blocking call.
+  it waits until you get a connection request
+  once accept returns, you are not getting requests anymore
+
+  
