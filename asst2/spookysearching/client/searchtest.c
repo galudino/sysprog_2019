@@ -48,6 +48,7 @@ int main(int argc, const char *argv[]) {
     size_t *arr = NULL;
     size_t capacity = 0;
     size_t subcap = 0;
+    size_t parts = 0;
 
     size_t search_val = 28;
 
@@ -60,19 +61,17 @@ int main(int argc, const char *argv[]) {
     do {
         ++i;
 
-        capacity = randrnge(ARR_RANGE_START, ARR_RANGE_END + 1);
-        subcap = ARR_SUBCAP;
-        
-        if (subcap >= capacity) {
-            continue;
-        }
+        capacity = randrnge(ARR_RANGE_START, ARR_RANGE_END);
+        subcap = randrnge(ARR_RANGE_START_SUB, ARR_RANGE_END_SUB);
 
         printf("capacity: %lu\nsubcap: %lu\n\n", capacity, subcap);
-    } while (capacity % subcap != 0 && subcap < capacity);
+    } while (capacity % subcap != 0);
 
-    printf("did %lu times\n", i);
+    parts = capacity / subcap;
 
-    printf("CAPACITY: %lu\nSUBCAP: %lu\n\n", capacity, subcap);
+    printf("Took %lu iterations to find a (capacity %% subcap) that != 0.\n", i);
+
+    printf("CAPACITY (capacity of array): %lu\nSUBCAP (subcapacity of array): %lu\nPARTS (amount of procs/threads): %lu\n\n", capacity, subcap, parts);
 
     arr = calloc(capacity, sizeof *arr);
 
@@ -100,7 +99,7 @@ int main(int argc, const char *argv[]) {
         arr[r0] = arr[r1];
         arr[r1] = temp;
     }
-
+  
     for (i = 0; i < capacity; i++) {
         if (arr[i] == search_val) {
             index = i;

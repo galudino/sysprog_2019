@@ -82,11 +82,12 @@ typedef unsigned int uint32_t;
 #define MCS "µs"
 
 /* randrnge has an inclusive, exclusive ranging: [min, max) */
-#define randrnge(min, max) ((rand()) % (((max) - (min)) + (min)))
+#define randrnge(min, max) ((rand() % ((max) - (min))) + (min))
 
-#define ARR_RANGE_START 256
-#define ARR_RANGE_END   ((ARR_RANGE_START) * (ARR_RANGE_START))
-#define ARR_SUBCAP      250
+#define ARR_RANGE_START     (256)
+#define ARR_RANGE_END       (65536 + 1)
+#define ARR_RANGE_START_SUB (16)
+#define ARR_RANGE_END_SUB   (250 + 1)
 
 void test();
 
