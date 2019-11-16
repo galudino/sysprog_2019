@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stddef.h>
 
 #if __STD_VERSION__ >= 19990L
 #include <stdbool.h>
@@ -84,10 +85,34 @@ typedef unsigned int uint32_t;
 /* randrnge has an inclusive, exclusive ranging: [min, max) */
 #define randrnge(min, max) ((rand() % ((max) - (min))) + (min))
 
+ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
+
+#define ARR_SEARCH_VALUE    28
 #define ARR_RANGE_START     (256)
-#define ARR_RANGE_END       (65536 + 1)
+#define ARR_RANGE_END       ((65536) + (1))
 #define ARR_RANGE_START_SUB (16)
-#define ARR_RANGE_END_SUB   (250 + 1)
+#define ARR_RANGE_END_SUB   ((250) + (1))
+
+typedef struct linear_search_arguments lsargs_t;
+struct linear_search_arguments {
+    struct {
+        size_t *base;
+        size_t capacity;
+        size_t subcapacity;
+    } array;
+
+    struct {
+        size_t key;
+        int64_t value;
+        size_t range_start;
+        size_t range_end;
+        size_t partition;
+    } search;
+};
+
+#define lsearch(lsargs_addr)    handler_lsearch(lsargs_addr)
+
+void *handler_lsearch(void *arg);
 
 void test();
 

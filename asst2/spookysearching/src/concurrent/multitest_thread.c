@@ -30,6 +30,10 @@
 
 #include "multitest.h"
 
+void *handler_lsearch(void *arg) {
+    return NULL;
+}
+
 void *func(void *arg) {
     int *n = (int *)(arg);
     int *tid = malloc(sizeof *tid);

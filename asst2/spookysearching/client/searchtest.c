@@ -35,14 +35,26 @@
 #include "multitest.h"
 
 /**
- *  @brief  Program execution begins here
+ *  Determine the memory "block" distance between two addresses,
+ *  beg and end, by their "block" widths, determined by sizeof(TYPENAME)
  *
- *  @param[in]  argc    argument count
- *  @param[in]  argv    command line arguments
+ *  @param[in]  beg     the beginning address
+ *  @param[in]  end     the ending address
+ *  @param[in]  width   sizeof(TYPENAME), or size in bytes of TYPENAME
  *
- *  @return     exit status
+ *  @return     distance between beg and end
+ *
+ *  Precondition: beg and end must be non-NULL and pointing to memory
+ *                of the same data type
  */
-int main(int argc, const char *argv[]) {
+ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width) {
+    char *start = (((char *)(beg)) + (width));
+    char *finish = (((char *)(end)) + (width));
+
+    return ((finish - start) / width);
+}
+
+void function() {
     int instance = 0;
 
     size_t *arr = NULL;
@@ -129,6 +141,137 @@ int main(int argc, const char *argv[]) {
     
     free(arr);
     arr = NULL;
+}
+
+/**
+ *  @brief  Program execution begins here
+ *
+ *  @param[in]  argc    argument count
+ *  @param[in]  argv    command line arguments
+ *
+ *  @return     exit status
+ */
+int main(int argc, const char *argv[]) {
+    lsargs_t *lsa = NULL;
+    size_t i = 0;
+
+    {
+        lsa = malloc(sizeof *lsa);
+        assert(lsa);
+    }
+
+    {
+        size_t key = ARR_SEARCH_VALUE;
+
+        lsa->array.base = NULL;
+        lsa->array.capacity = 0;
+        lsa->array.subcapacity = 0;
+    
+        lsa->search.key = key;
+        lsa->search.value = -1;
+        lsa->search.range_start = 0;
+        lsa->search.range_end = 0;
+        lsa->search.partition = 0;
+    }
+
+    srand(time(NULL));
+
+    {
+        size_t capacity = 0;
+        size_t subcapacity = 0;
+        i = 0;
+
+        do {
+            ++i;
+
+            capacity = randrnge(ARR_RANGE_START, ARR_RANGE_END);
+            subcapacity = randrnge(ARR_RANGE_START, ARR_RANGE_END);
+        } while (capacity % subcapacity != 0);
+
+        lsa->array.capacity = capacity;
+        lsa->array.subcapacity = subcapacity;
+    }
+
+    {
+        size_t *base = NULL;
+
+        base = calloc(lsa->array.capacity, sizeof *lsa->array.base);
+        assert(base);
+
+        lsa->array.base = base;
+    }
+
+    {
+        for (i = 0; i < lsa->array.capacity; i++) {
+            lsa->array.base[i] = i;
+        }
+    }
+
+    {
+        size_t r0 = 0;
+        size_t r1 = 0;
+        size_t temp = 0;
+
+        for (i = 0; i < lsa->array.capacity; i++) {
+            r0 = randrnge(0, lsa->array.capacity);
+            r1 = randrnge(0, lsa->array.capacity);
+
+            while (r0 == r1) {
+                r0 = randrnge(0, lsa->array.capacity);
+            }
+
+            temp = lsa->array.base[r0];
+
+            lsa->array.base[r0] = lsa->array.base[r1];
+            lsa->array.base[r1] = temp;
+        }
+    }
+    
+    for (i = 0; i < lsa->array.capacity; i++) {
+        bool partition_boundary_reached 
+        = ((i + 1) % lsa->array.subcapacity == 0);
+
+        if (partition_boundary_reached) {
+            lsa->search.range_start = ((i + 1) - lsa->array.subcapacity);
+            lsa->search.range_end = lsa->search.range_start + lsa->array.subcapacity;
+
+            lsearch(&lsa);
+
+            ++lsa->search.partition;
+
+            if (lsa->search.value > -1) {
+                break;
+            }
+        }
+    }
+
+    if (lsa->search.value > -1) {
+        printf("\nat partition %lu:\n", lsa->search.partition);
+        printf("found %lu at index %ld\n\n", lsa->search.key, lsa->search.value);
+    } else {
+        printf("search failed\n");
+    }
+
+    printf("array size: %lu\n", lsa->array.capacity);
+    printf("array partition size: %lu\n", lsa->array.subcapacity);
+    printf("array partition count: %lu\n\n", lsa->array.capacity / lsa->array.subcapacity);
+
+    {
+        lsa->search.partition = 0;
+        lsa->search.range_end = 0;
+        lsa->search.range_start = 0;
+        lsa->search.value = -1;
+        lsa->search.key = 0;
+
+        lsa->array.subcapacity = 0;
+        lsa->array.capacity = 0;
+
+        free(lsa->array.base);
+        lsa->array.base = NULL;
+
+        free(lsa);
+        lsa = NULL;
+    }
 
     return EXIT_SUCCESS;
 }
