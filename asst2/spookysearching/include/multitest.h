@@ -87,7 +87,7 @@ typedef unsigned int uint32_t;
 
 ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
 
-#define ARR_SEARCH_VALUE    28
+#define ARR_SEARCH_VALUE    411
 #define ARR_RANGE_START     (256)
 #define ARR_RANGE_END       ((65536) + (1))
 #define ARR_RANGE_START_SUB (16)
@@ -96,19 +96,22 @@ ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
 typedef struct linear_search_arguments lsargs_t;
 struct linear_search_arguments {
     struct {
-        size_t *base;
-        size_t capacity;
-        size_t subcapacity;
+        int32_t *base;
+        int32_t capacity;
+        int32_t subcapacity;
     } array;
 
     struct {
-        size_t key;
-        int64_t value;
-        size_t range_start;
-        size_t range_end;
-        size_t partition;
+        int32_t key;
+        int32_t value;
+        int32_t range_start;
+        int32_t range_end;
+        int32_t partition;
+        int32_t position;
     } search;
 };
+
+void lsargs_search(lsargs_t **l);
 
 #define lsearch(lsargs_addr)    handler_lsearch(lsargs_addr)
 

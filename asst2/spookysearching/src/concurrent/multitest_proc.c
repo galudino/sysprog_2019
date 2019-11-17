@@ -30,17 +30,91 @@
 
 #include "multitest.h"
 
-void *handler_lsearch(void *arg) {
-    lsargs_t *lsa = *(lsargs_t **)(arg);
+void lsargs_search(lsargs_t **l) {
+    lsargs_t *lsa = *(lsargs_t **)(l);
+    int i = 0;
+    pid_t pid = -1;
+    int status = -1;
+
+    for (i = 0; i < lsa->array.capacity; i++) {
+        bool partition_boundary_reached 
+        = ((i + 1) % lsa->array.subcapacity == 0);
+
+        if (partition_boundary_reached) {
+            ++lsa->search.partition;
+
+            lsa->search.range_start = ((i + 1) - lsa->array.subcapacity);
+            lsa->search.range_end = lsa->search.range_start + lsa->array.subcapacity;
+
+            pid = fork();
+
+            if (pid == -1) {
+                perror("fork");
+                exit(EXIT_FAILURE);
+            }
+
+            if (pid == 0) {
+                handler_lsearch(&lsa);
+
+                if (lsa->search.value > -1) {
+                    exit(lsa->search.partition);
+                }
+
+                exit(EXIT_SUCCESS);
+            } else {
+                wait(&status);
+
+                if (status > 0) {     
+                    lsa->search.partition = status / lsa->array.subcapacity;
+                    lsa->search.value = i;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
+/*
+void lsargs_search(lsargs_t **l) {
+    lsargs_t *lsa = *(lsargs_t **)(l);
     size_t i = 0;
 
+    for (i = 0; i < lsa->array.capacity; i++) {
+        bool partition_boundary_reached 
+        = ((i + 1) % lsa->array.subcapacity == 0);
+
+        if (partition_boundary_reached) {
+            ++lsa->search.partition;
+
+            lsa->search.range_start = ((i + 1) - lsa->array.subcapacity);
+            lsa->search.range_end = lsa->search.range_start + lsa->array.subcapacity;
+
+            handler_lsearch(&lsa);
+
+            if (lsa->search.value > -1) {
+                break;
+            }
+        }
+    }
+}
+*/
+
+void *handler_lsearch(void *arg) {
+    lsargs_t *lsa = *(lsargs_t **)(arg);
+    int32_t i = 0;
+    int32_t position = 0;
+
     for (i = lsa->search.range_start; i < lsa->search.range_end; i++) {
-        printf("array[%lu]: %lu\n", i, lsa->array.base[i]);
-        
+        printf("array[%d]: %d\n", i, lsa->array.base[i]);
+
         if (lsa->array.base[i] == lsa->search.key) {
             lsa->search.value = i;
+            lsa->search.position = position;
             break;
         }
+
+        ++position;
     }
 
     return NULL;

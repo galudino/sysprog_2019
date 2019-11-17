@@ -31,6 +31,18 @@
 #include "multitest.h"
 
 void *handler_lsearch(void *arg) {
+    lsargs_t *lsa = *(lsargs_t **)(arg);
+    size_t i = 0;
+
+    for (i = lsa->search.range_start; i < lsa->search.range_end; i++) {
+        printf("array[%d]: %d\n", i, lsa->array.base[i]);
+        
+        if (lsa->array.base[i] == lsa->search.key) {
+            lsa->search.value = i;
+            break;
+        }
+    }
+
     return NULL;
 }
 
