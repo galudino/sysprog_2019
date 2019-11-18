@@ -30,71 +30,110 @@
 
 #include "multitest.h"
 
+#include <signal.h>
+
 void lsargs_search(lsargs_t **l) {
     lsargs_t *lsa = *(lsargs_t **)(l);
+
     int i = 0;
-    pid_t pid = -1;
     int status = -1;
+    pid_t pid = -1;
 
-    for (i = 0; i < lsa->array.capacity; i++) {
-        bool partition_boundary_reached 
-        = ((i + 1) % lsa->array.subcapacity == 0);
+    struct {
+        pid_t *base;
+        size_t capacity;
+        size_t length;
+    } v_pid = { NULL, 16, 0 };
 
-        if (partition_boundary_reached) {
-            ++lsa->search.partition;
+    v_pid.base = calloc(16, sizeof *v_pid.base);
+    assert(v_pid.base);
+    v_pid.capacity = 16;
+    v_pid.length = 0;
 
-            lsa->search.range_start = ((i + 1) - lsa->array.subcapacity);
-            lsa->search.range_end = lsa->search.range_start + lsa->array.subcapacity;
+    v_pid.base[v_pid.length++] = getpid();
 
-            pid = fork();
+    for (i = 0; i < lsa->array.capacity; i += lsa->array.subcapacity) {
+        ++lsa->search.partition;
 
-            if (pid == -1) {
-                perror("fork");
-                exit(EXIT_FAILURE);
+        lsa->search.range_start = i;
+        lsa->search.range_end = i + lsa->array.subcapacity;
+
+        pid = fork();
+
+        if (pid == -1) {
+            perror("fork\n");
+            exit(EXIT_FAILURE);
+        }
+
+        if (pid == 0) {
+            handler_lsearch(&lsa);
+            printf("FOUND at %d\n", lsa->search.value);
+            exit(lsa->search.position);
+        } else {
+            int32_t index = -1;
+            int32_t position_relative = -1;
+
+            if (v_pid.length == v_pid.capacity) {
+                pid_t *new_base = NULL;
+                size_t new_capacity = v_pid.capacity * 2;
+                new_base = realloc(v_pid.base, sizeof *v_pid.base * new_capacity);
+                assert(new_base);
+
+                v_pid.base = new_base;
+                v_pid.capacity = new_capacity;
             }
 
-            if (pid == 0) {
-                handler_lsearch(&lsa);
+            v_pid.base[v_pid.length++] = pid;
 
-                if (lsa->search.value > -1) {
-                    exit(lsa->search.partition);
-                }
+            wait(&status);
+            position_relative = (status / 256);
 
-                exit(EXIT_SUCCESS);
-            } else {
-                wait(&status);
+            index = position_relative 
+            + (lsa->array.subcapacity * (i / lsa->array.subcapacity));
 
-                if (status > 0) {     
-                    lsa->search.partition = status / lsa->array.subcapacity;
-                    lsa->search.value = i;
-                    break;
-                }
+            printf("i: %d\n", i);
+            printf("status: %d\n", status);
+            printf("position_relative, or (status / 256): %d\n", position_relative);
+            printf("index, or (status / 256) + (i / subcap): %d\n", index);
+            
+            printf("the \"master\" pid is %d\n\n", getpid());
+
+            if (lsa->array.base[index] == lsa->search.key) {
+                lsa->search.value = index;
+                break;
             }
         }
     }
-}
 
+    for (i = 0; i < v_pid.length; i++) {
+        printf("v_pid.base[%d]: %d\n", i, v_pid.base[i]);
+    }
+
+    {
+        free(v_pid.base);
+        v_pid.base = NULL;
+
+        v_pid.capacity = 0;
+        v_pid.length = 0;
+    }
+}
 
 /*
 void lsargs_search(lsargs_t **l) {
     lsargs_t *lsa = *(lsargs_t **)(l);
-    size_t i = 0;
 
-    for (i = 0; i < lsa->array.capacity; i++) {
-        bool partition_boundary_reached 
-        = ((i + 1) % lsa->array.subcapacity == 0);
+    int i = 0;
 
-        if (partition_boundary_reached) {
-            ++lsa->search.partition;
+    for (i = 0; i < lsa->array.capacity; i += lsa->array.subcapacity) {
+        ++lsa->search.partition;
 
-            lsa->search.range_start = ((i + 1) - lsa->array.subcapacity);
-            lsa->search.range_end = lsa->search.range_start + lsa->array.subcapacity;
+        lsa->search.range_start = i;
+        lsa->search.range_end = lsa->search.range_start + lsa->array.subcapacity;
 
-            handler_lsearch(&lsa);
+        handler_lsearch(&lsa);
 
-            if (lsa->search.value > -1) {
-                break;
-            }
+        if (lsa->search.value > -1) {
+            break;
         }
     }
 }
@@ -102,20 +141,22 @@ void lsargs_search(lsargs_t **l) {
 
 void *handler_lsearch(void *arg) {
     lsargs_t *lsa = *(lsargs_t **)(arg);
-    int32_t i = 0;
+    int32_t j = 0;
     int32_t position = 0;
 
-    for (i = lsa->search.range_start; i < lsa->search.range_end; i++) {
-        printf("array[%d]: %d\n", i, lsa->array.base[i]);
+    printf("\n");
+    for (j = lsa->search.range_start; j < lsa->search.range_end; j++) {
+        printf("array[%d]: %d\n", j, lsa->array.base[j]);
 
-        if (lsa->array.base[i] == lsa->search.key) {
-            lsa->search.value = i;
+        if (lsa->array.base[j] == lsa->search.key) {
+            lsa->search.value = j;
             lsa->search.position = position;
             break;
         }
 
         ++position;
     }
+    printf("\n");
 
     return NULL;
 }

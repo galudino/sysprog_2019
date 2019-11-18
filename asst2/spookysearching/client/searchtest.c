@@ -125,13 +125,12 @@ int main(int argc, const char *argv[]) {
         }
     }
     
-    /*
     {
         int32_t r0 = 0;
         int32_t r1 = 0;
         int32_t temp = 0;
 
-        for (i = 0; i < lsa->array.capacity; i++) {
+        for (i = 0; i < lsa->array.capacity - 1; i++) {
             r0 = randrnge(0, lsa->array.capacity);
             r1 = randrnge(0, lsa->array.capacity);
 
@@ -145,7 +144,8 @@ int main(int argc, const char *argv[]) {
             lsa->array.base[r1] = temp;
         }
     }
-    */
+
+    printf("searching for key %d\n", lsa->search.key);
 
     lsargs_search(&lsa);
     
@@ -155,6 +155,8 @@ int main(int argc, const char *argv[]) {
     } else {
         printf("\nsearch failed\n");
     }
+
+    printf("FOUND key at value (index): %d\n", lsa->search.value);
 
     printf("\narray size: %d\n", lsa->array.capacity);
     printf("array partition size: %d\n", lsa->array.subcapacity);

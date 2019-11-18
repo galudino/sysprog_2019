@@ -32,7 +32,7 @@ CC 				    = gcc
 ## FLAGS ######################################################################
 
 ## Flag types - right-hand side can be modified or commented out to disable ##
-CSTD 				= -std=c89
+CSTD 				= #-std=c89
 DEBUG 				= -g
 OPTIMIZED			= -O3
 PTHREAD				= -lpthread
