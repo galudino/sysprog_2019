@@ -67,11 +67,18 @@ void lsargs_search(lsargs_t **l) {
 
         if (pid == 0) {
             handler_lsearch(&lsa);
-            printf("FOUND at %d\n", lsa->search.value);
+
+            if (lsa->array.base[lsa->search.value] == lsa->search.key) {
+                printf("from CHILD, FOUND at %d\n\n", lsa->search.value);
+            } else {
+                printf("from CHILD, UNABLE TO FIND KEY\n");
+            }
+
             exit(lsa->search.position);
         } else {
             int32_t index = -1;
             int32_t position_relative = -1;
+            int32_t partition_number = -1;
 
             if (v_pid.length == v_pid.capacity) {
                 pid_t *new_base = NULL;
@@ -86,27 +93,31 @@ void lsargs_search(lsargs_t **l) {
             v_pid.base[v_pid.length++] = pid;
 
             wait(&status);
-            position_relative = (status / 256);
 
-            index = position_relative 
-            + (lsa->array.subcapacity * (i / lsa->array.subcapacity));
+            position_relative = WEXITSTATUS(status);
 
-            printf("i: %d\n", i);
-            printf("status: %d\n", status);
-            printf("position_relative, or (status / 256): %d\n", position_relative);
-            printf("index, or (status / 256) + (i / subcap): %d\n", index);
-            
-            printf("the \"master\" pid is %d\n\n", getpid());
+            if (position_relative >= 0 && position_relative < lsa->array.subcapacity) {
+                partition_number = (i / lsa->array.subcapacity);
+                index = position_relative + (lsa->array.subcapacity * partition_number);
 
-            if (lsa->array.base[index] == lsa->search.key) {
+                lsa->search.position = position_relative;
+                lsa->search.partition = partition_number;
                 lsa->search.value = index;
-                break;
+
+                printf("position_relative:\t%d\n", lsa->search.position);
+                printf("partition_number:\t%d\n", lsa->search.partition);
+                printf("index (value):\t\t%d\n\n", lsa->search.value);
+
+                if (lsa->array.base[index] == lsa->search.key) {
+                    lsa->search.value = index;
+                    break;
+                }
             }
         }
     }
 
     for (i = 0; i < v_pid.length; i++) {
-        printf("v_pid.base[%d]: %d\n", i, v_pid.base[i]);
+        printf("v_pid.base[%d]:\t%d\n", i, v_pid.base[i]);
     }
 
     {
@@ -128,7 +139,8 @@ void lsargs_search(lsargs_t **l) {
         ++lsa->search.partition;
 
         lsa->search.range_start = i;
-        lsa->search.range_end = lsa->search.range_start + lsa->array.subcapacity;
+        lsa->search.range_end = lsa->search.range_start +
+lsa->array.subcapacity;
 
         handler_lsearch(&lsa);
 
@@ -146,7 +158,7 @@ void *handler_lsearch(void *arg) {
 
     printf("\n");
     for (j = lsa->search.range_start; j < lsa->search.range_end; j++) {
-        printf("array[%d]: %d\n", j, lsa->array.base[j]);
+        printf("array[%d]:\t%d\n", j, lsa->array.base[j]);
 
         if (lsa->array.base[j] == lsa->search.key) {
             lsa->search.value = j;

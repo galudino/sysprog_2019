@@ -156,11 +156,9 @@ int main(int argc, const char *argv[]) {
         printf("\nsearch failed\n");
     }
 
-    printf("FOUND key at value (index): %d\n", lsa->search.value);
-
-    printf("\narray size: %d\n", lsa->array.capacity);
-    printf("array partition size: %d\n", lsa->array.subcapacity);
-    printf("array partition count: %d\n\n", lsa->array.capacity / lsa->array.subcapacity);
+    printf("array size:\t\t%d\n", lsa->array.capacity);
+    printf("array partition size:\t%d\n", lsa->array.subcapacity);
+    printf("array partition count:\t%d\n\n", lsa->array.capacity / lsa->array.subcapacity);
 
     {
         lsa->search.partition = 0;

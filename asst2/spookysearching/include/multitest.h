@@ -87,7 +87,7 @@ typedef unsigned int uint32_t;
 
 ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
 
-#define ARR_SEARCH_VALUE    411
+#define ARR_SEARCH_VALUE    28
 #define ARR_RANGE_START     (256)
 #define ARR_RANGE_END       ((65536) + (1))
 #define ARR_RANGE_START_SUB (16)
