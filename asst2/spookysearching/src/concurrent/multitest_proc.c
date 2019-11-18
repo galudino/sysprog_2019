@@ -39,6 +39,10 @@ void lsargs_search(lsargs_t **l) {
     int status = -1;
     pid_t pid = -1;
 
+    int32_t index = -1;
+    int32_t position_relative = -1;
+    int32_t partition_number = -1;
+
     struct {
         pid_t *base;
         size_t capacity;
@@ -76,10 +80,6 @@ void lsargs_search(lsargs_t **l) {
 
             exit(lsa->search.position);
         } else {
-            int32_t index = -1;
-            int32_t position_relative = -1;
-            int32_t partition_number = -1;
-
             if (v_pid.length == v_pid.capacity) {
                 pid_t *new_base = NULL;
                 size_t new_capacity = v_pid.capacity * 2;
@@ -91,33 +91,31 @@ void lsargs_search(lsargs_t **l) {
             }
 
             v_pid.base[v_pid.length++] = pid;
-
-            wait(&status);
-
-            position_relative = WEXITSTATUS(status);
-
-            if (position_relative >= 0 && position_relative < lsa->array.subcapacity) {
-                partition_number = (i / lsa->array.subcapacity);
-                index = position_relative + (lsa->array.subcapacity * partition_number);
-
-                lsa->search.position = position_relative;
-                lsa->search.partition = partition_number;
-                lsa->search.value = index;
-
-                printf("position_relative:\t%d\n", lsa->search.position);
-                printf("partition_number:\t%d\n", lsa->search.partition);
-                printf("index (value):\t\t%d\n\n", lsa->search.value);
-
-                if (lsa->array.base[index] == lsa->search.key) {
-                    lsa->search.value = index;
-                    break;
-                }
-            }
         }
     }
 
     for (i = 0; i < v_pid.length; i++) {
-        printf("v_pid.base[%d]:\t%d\n", i, v_pid.base[i]);
+        waitpid(v_pid.base[i], &status, 0);
+
+        position_relative = WEXITSTATUS(status);
+
+        if (position_relative >= 0 && position_relative < lsa->array.subcapacity) {
+            partition_number = (i / lsa->array.subcapacity);
+            index = position_relative + (lsa->array.subcapacity * partition_number);
+
+            lsa->search.position = position_relative;
+            lsa->search.partition = partition_number;
+            lsa->search.value = index;
+
+            printf("position_relative:\t%d\n", lsa->search.position);
+            printf("partition_number:\t%d\n", lsa->search.partition);
+            printf("index (value):\t\t%d\n\n", lsa->search.value);
+
+            if (lsa->array.base[index] == lsa->search.key) {
+                lsa->search.value = index;
+                break;
+            }
+        }
     }
 
     {
