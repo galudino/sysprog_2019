@@ -32,90 +32,107 @@
 
 #include <signal.h>
 
-void lsargs_search(lsargs_t **l) {
-    lsargs_t *lsa = *(lsargs_t **)(l);
+void lsargs_search(lsargs_t *l) {
+    lsargs_t *lsa = (lsargs_t *)(l);
 
-    int i = 0;
-    int status = -1;
+    int32_t i = 0;
+    int32_t j = 0;
+    int32_t status = -1;
+    int32_t status_found = -1;
+    
     pid_t pid = -1;
 
     int32_t index = -1;
-    int32_t position_relative = -1;
-    int32_t partition_number = -1;
+    int32_t position = -1;
+    int32_t partition = -1;
 
     struct {
-        pid_t *base;
+        pid_t (*base)[2];
         size_t capacity;
         size_t length;
     } v_pid = { NULL, 16, 0 };
 
-    v_pid.base = calloc(16, sizeof *v_pid.base);
-    assert(v_pid.base);
-    v_pid.capacity = 16;
-    v_pid.length = 0;
+    {
+        v_pid.base = calloc(16, sizeof *v_pid.base);
+        assert(v_pid.base);
+        v_pid.capacity = 16;
+        v_pid.length = 0;
+    }
 
-    v_pid.base[v_pid.length++] = getpid();
+    v_pid.base[v_pid.length][j++] = getpid();
+    v_pid.base[v_pid.length++][j] = partition;
+
+    j = 0;
 
     for (i = 0; i < lsa->array.capacity; i += lsa->array.subcapacity) {
-        ++lsa->search.partition;
-
         lsa->search.range_start = i;
         lsa->search.range_end = i + lsa->array.subcapacity;
 
         pid = fork();
 
-        if (pid == -1) {
-            perror("fork\n");
-            exit(EXIT_FAILURE);
-        }
+        ++partition;
 
         if (pid == 0) {
-            handler_lsearch(&lsa);
-
-            if (lsa->array.base[lsa->search.value] == lsa->search.key) {
-                printf("from CHILD, FOUND at %d\n\n", lsa->search.value);
-            } else {
-                printf("from CHILD, UNABLE TO FIND KEY\n");
-            }
-
+            lsa->search.partition = partition;
+            handler_lsearch(lsa);
             exit(lsa->search.position);
-        } else {
-            if (v_pid.length == v_pid.capacity) {
-                pid_t *new_base = NULL;
-                size_t new_capacity = v_pid.capacity * 2;
-                new_base = realloc(v_pid.base, sizeof *v_pid.base * new_capacity);
-                assert(new_base);
+        } else if (pid > 0) {
+            {
+                if (v_pid.length == v_pid.capacity) {
+                    pid_t (*new_base)[2] = NULL;
+                    size_t new_capacity = v_pid.capacity * 2;
 
-                v_pid.base = new_base;
-                v_pid.capacity = new_capacity;
+                    new_base = realloc(v_pid.base, sizeof *v_pid.base * new_capacity);
+
+                    assert(new_base);
+
+                    v_pid.base = new_base;
+                    v_pid.capacity = new_capacity;
+                }
             }
 
-            v_pid.base[v_pid.length++] = pid;
+            v_pid.base[v_pid.length][j++] = pid;
+            v_pid.base[v_pid.length++][j] = partition;
+
+            j = 0;
+        } else {
+            perror("fork\n");
+            _exit(EXIT_FAILURE);
         }
     }
 
-    for (i = 0; i < v_pid.length; i++) {
-        waitpid(v_pid.base[i], &status, 0);
+    i = 0;
+    j = 0;
 
-        position_relative = WEXITSTATUS(status);
+    while ((pid = waitpid(v_pid.base[++i][j], &status, 0)) > 0) {
+        position = WEXITSTATUS(status);
 
-        if (position_relative >= 0 && position_relative < lsa->array.subcapacity) {
-            partition_number = (i / lsa->array.subcapacity);
-            index = position_relative + (lsa->array.subcapacity * partition_number);
+        if (position == lsa->array.subcapacity) {
+       
+        } else {
+            status_found = status;
+            partition = v_pid.base[i][1];
+            index = position + (partition * lsa->array.subcapacity);
 
-            lsa->search.position = position_relative;
-            lsa->search.partition = partition_number;
+            lsa->search.position = position;
+            lsa->search.partition = partition;
             lsa->search.value = index;
-
-            printf("position_relative:\t%d\n", lsa->search.position);
-            printf("partition_number:\t%d\n", lsa->search.partition);
-            printf("index (value):\t\t%d\n\n", lsa->search.value);
-
-            if (lsa->array.base[index] == lsa->search.key) {
-                lsa->search.value = index;
-                break;
-            }
         }
+    }
+
+    printf("status: %d\n", status_found);
+    printf("position: %d\n", lsa->search.position);
+    printf("index: %d\n", lsa->search.value);
+    printf("partition number: %d\n\n", lsa->search.partition);
+
+    j = 0;
+
+    for (i = 0; i < v_pid.length; i++) {
+        for (j = 0; j < 2; j++) {
+            printf("v_pid.base[%d][%d]: %d\n", i, j, v_pid.base[i][j]);
+        }
+
+        printf("\n");
     }
 
     {
@@ -128,8 +145,8 @@ void lsargs_search(lsargs_t **l) {
 }
 
 /*
-void lsargs_search(lsargs_t **l) {
-    lsargs_t *lsa = *(lsargs_t **)(l);
+void lsargs_search(lsargs_t *l) {
+    lsargs_t *lsa = (lsargs_t *)(l);
 
     int i = 0;
 
@@ -150,23 +167,33 @@ lsa->array.subcapacity;
 */
 
 void *handler_lsearch(void *arg) {
-    lsargs_t *lsa = *(lsargs_t **)(arg);
+    lsargs_t *lsa = (lsargs_t *)(arg);
+
     int32_t j = 0;
     int32_t position = 0;
 
     printf("\n");
+    printf("\nBeginning search for partition %d...\n", lsa->search.partition);
+
     for (j = lsa->search.range_start; j < lsa->search.range_end; j++) {
-        printf("array[%d]:\t%d\n", j, lsa->array.base[j]);
+        printf("partition %d, array[%d]:\t%d\n", lsa->search.partition, j, lsa->array.base[j]);
 
         if (lsa->array.base[j] == lsa->search.key) {
             lsa->search.value = j;
             lsa->search.position = position;
+
+            printf("\n\nhandler: found %d at %d\n\n", lsa->search.key, lsa->search.value);
+
             break;
         }
 
         ++position;
     }
-    printf("\n");
+
+    lsa->search.position = lsa->search.value != -1 ? position : -6;
+
+    printf("\nSearch ended for partition %d.\n", lsa->search.partition);
+    printf("was %s\n\n", lsa->search.value != -1 ? "SUCCESSFUL" : "unsuccessful");
 
     return NULL;
 }

@@ -111,7 +111,7 @@ struct linear_search_arguments {
     } search;
 };
 
-void lsargs_search(lsargs_t **l);
+void lsargs_search(lsargs_t *l);
 
 #define lsearch(lsargs_addr)    handler_lsearch(lsargs_addr)
 

@@ -147,7 +147,7 @@ int main(int argc, const char *argv[]) {
 
     printf("searching for key %d\n", lsa->search.key);
 
-    lsargs_search(&lsa);
+    lsargs_search(lsa);
     
     if (lsa->search.value > -1) {
         printf("\nat partition %d:\n", lsa->search.partition);

@@ -31,19 +31,57 @@
 #include "multitest.h"
 
 void *handler_lsearch(void *arg) {
-    lsargs_t *lsa = *(lsargs_t **)(arg);
-    size_t i = 0;
+    lsargs_t *lsa = (lsargs_t *)(arg);
+    int32_t j = 0;
+    int32_t position = 0;
 
-    for (i = lsa->search.range_start; i < lsa->search.range_end; i++) {
-        printf("array[%d]: %d\n", i, lsa->array.base[i]);
-        
-        if (lsa->array.base[i] == lsa->search.key) {
-            lsa->search.value = i;
+    printf("\n");
+    printf("\nBeginning search for partition %d...\n", lsa->search.partition);
+    for (j = lsa->search.range_start; j < lsa->search.range_end; j++) {
+        printf("partition %d, array[%d]:\t%d\n", lsa->search.partition, j, lsa->array.base[j]);
+
+        if (lsa->array.base[j] == lsa->search.key) {
+            lsa->search.value = j;
+            lsa->search.position = position;
+
+            printf("\n\nhandler: found %d at %d\n\n", lsa->search.key, lsa->search.value);
+
+            break;
+        }
+
+        ++position;
+    }
+
+    printf("\nSearch ended for partition %d.\n", lsa->search.partition);
+    
+    printf("was %s\n", lsa->search.value != -1 ? "SUCCESSFUL" : "unsuccessful");
+    
+    lsa->search.position 
+    = lsa->search.value != -1 ? position : -6;
+    
+    printf("\n");
+
+    return NULL;
+}
+
+void lsargs_search(lsargs_t *l) {
+    lsargs_t *lsa = (lsargs_t *)(l);
+
+    int i = 0;
+
+    for (i = 0; i < lsa->array.capacity; i += lsa->array.subcapacity) {
+        ++lsa->search.partition;
+
+        lsa->search.range_start = i;
+        lsa->search.range_end = lsa->search.range_start +
+lsa->array.subcapacity;
+
+        handler_lsearch(&lsa);
+
+        if (lsa->search.value > -1) {
             break;
         }
     }
-
-    return NULL;
 }
 
 void *func(void *arg) {
