@@ -29,3 +29,23 @@
  */
 
 #include "header.h"
+
+/**
+ *  Determine the memory "block" distance between two addresses,
+ *  beg and end, by their "block" widths, determined by sizeof(TYPENAME)
+ *
+ *  @param[in]  beg     the beginning address
+ *  @param[in]  end     the ending address
+ *  @param[in]  width   sizeof(TYPENAME), or size in bytes of TYPENAME
+ *
+ *  @return     distance between beg and end
+ *
+ *  Precondition: beg and end must be non-NULL and pointing to memory
+ *                of the same data type
+ */
+ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width) {
+    char *start = (((char *)(beg)) + (width));
+    char *finish = (((char *)(end)) + (width));
+
+    return ((finish - start) / width);
+}

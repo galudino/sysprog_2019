@@ -30,11 +30,13 @@
 
 #include "multitest.h"
 
+static void *handler_lsearch(void *arg);
+
 void lsobject_search(lsobject_t **l) {
     lsobject_t *lso = *(lsobject_t **)(l);
 
     int32_t i = 0;
-    
+
     int32_t range_start = 0;
     int32_t range_end = 0;
     int32_t partition = -1;
@@ -49,8 +51,8 @@ void lsobject_search(lsobject_t **l) {
         lso->search->range_start = range_start;
         lso->search->range_end = range_end;
         lso->search->partition = partition;
-        lso->search->position = -1;
-
+        lso->search->position = -1;             
+            
         handler_lsearch(l);
 
         if (lso->search->value > -1) {
@@ -58,28 +60,24 @@ void lsobject_search(lsobject_t **l) {
         }
     }
 
-    printf("position: %d\n", lso->search->position);
-    printf("index: %d\n", lso->search->value);
-    printf("partition number: %d\n\n", lso->search->partition);
+    printf("position: %d\nindex: %d\npartition number: %d\n\n", lso->search->position, lso->search->value, lso->search->partition);
 }
 
-void *handler_lsearch(void *arg) {
+static void *handler_lsearch(void *arg) {
     lsobject_t *lso = *(lsobject_t **)(arg);
 
     int32_t j = 0;
     int32_t position = 0;
 
-    printf("\n");
-    printf("\nBeginning search for partition %d...\n", lso->search->partition);
+    /*
+    printf("\n\nBeginning search for partition %d...\n", lso->search->partition);
+    */
 
     for (j = lso->search->range_start; j < lso->search->range_end; j++) {
         if (lso->vec.base[j] == lso->key) {
             lso->search->value = j;
-            lso->search->position = position;
-            
-            printf("partition %d, vec[%d]:\t%d\n", lso->search->partition, j, lso->vec.base[j]);
 
-            printf("\n\nhandler: found %d at %d\n\n", lso->key, lso->search->value);
+            printf("partition %d, vec[%d]:\t%d\nhandler: found key %d at index %d, partition %d\n\n", lso->search->partition, j, lso->vec.base[j], lso->key, lso->search->value, lso->search->partition);
 
             break;
         }
@@ -87,17 +85,18 @@ void *handler_lsearch(void *arg) {
         ++position;
     }
 
-    lso->search->position = lso->search->value != -1 ? position : -6;
+    lso->search->position = lso->search->value != -1 ? position : lso->vec.subcapacity;
 
-    printf("\nSearch ended for partition %d.\n", lso->search->partition);
-    printf("was %s\n\n", lso->search->value != -1 ? "SUCCESSFUL" : "unsuccessful");
+    /*
+    printf("\nSearch ended for partition %d.\nwas %s\n\n", lso->search->partition, lso->search->value != -1 ? "SUCCESSFUL" : "unsuccessful");
+    */
 
     return arg;
 }
 
 void *func(void *arg) {
-    int *n = (int *)(arg);
-    int *tid = malloc(sizeof *tid);
+    int32_t *n = (int *)(arg);
+    int32_t *tid = malloc(sizeof *tid);
     (*tid) = 1008 + (*n);
 
     printf("did thread %d\n", (*n));
@@ -108,14 +107,15 @@ void *func(void *arg) {
 void test() {
     pthread_t threads[TEST_NUM];
 
-    int i = 0;
-    int status = -1;
-    int *tid = NULL;
-    int thread_args[TEST_NUM];
+    int32_t i = 0;
+    int32_t status = -1;
+    int32_t *tid = NULL;
+    int32_t thread_args[TEST_NUM];
 
     /* deploy all threads */
     for (i = 0; i < TEST_NUM; i++) {
         thread_args[i] = i;
+        
         printf("spawning thread %d\n", i);
         status = pthread_create(threads + i, NULL, func, thread_args + i);
     }
@@ -123,7 +123,9 @@ void test() {
     /* join all threads, free resources */
     for (i = 0; i < TEST_NUM; i++) {
         pthread_join(threads[i], (void **)(&tid));
+        
         printf("status of %d: %s (%d)\n\n", (*tid), strerror(status), status);
+
         free(tid);
         tid = NULL;
     }

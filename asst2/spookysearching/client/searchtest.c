@@ -32,27 +32,8 @@
 #include <time.h>
 #include <math.h>
 
+#include "header.h"
 #include "multitest.h"
-
-/**
- *  Determine the memory "block" distance between two addresses,
- *  beg and end, by their "block" widths, determined by sizeof(TYPENAME)
- *
- *  @param[in]  beg     the beginning address
- *  @param[in]  end     the ending address
- *  @param[in]  width   sizeof(TYPENAME), or size in bytes of TYPENAME
- *
- *  @return     distance between beg and end
- *
- *  Precondition: beg and end must be non-NULL and pointing to memory
- *                of the same data type
- */
-ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width) {
-    char *start = (((char *)(beg)) + (width));
-    char *finish = (((char *)(end)) + (width));
-
-    return ((finish - start) / width);
-}
 
 /**
  *  @brief  Program execution begins here
@@ -86,7 +67,7 @@ int main(int argc, const char *argv[]) {
             lso->search->range_start = 0;
             lso->search->range_end = 0;
             lso->search->partition = 0;
-            lso->search->position = 0;
+            lso->search->position = -1;
         }
 
         lso->key = key;
@@ -102,8 +83,8 @@ int main(int argc, const char *argv[]) {
         do {
             ++i;
 
-            capacity = 1000;
-            subcapacity = 250;
+            capacity = randrnge(ARR_RANGE_START, ARR_RANGE_END);
+            subcapacity = randrnge(ARR_RANGE_START_SUB, ARR_RANGE_END_SUB);
         } while (capacity % subcapacity != 0);
 
         assert(subcapacity < capacity);
@@ -164,6 +145,7 @@ int main(int argc, const char *argv[]) {
 
     {
         lso->search->partition = 0;
+        lso->search->position = -1;
         lso->search->range_end = 0;
         lso->search->range_start = 0;
         lso->search->value = -1;

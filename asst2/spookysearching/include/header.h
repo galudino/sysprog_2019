@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stddef.h>
 
 #if __STD_VERSION__ >= 19990L
 #include <stdbool.h>
@@ -42,6 +43,11 @@
 # define false  0
 # define true   1
 typedef unsigned char bool;
+typedef short int16_t;
+typedef int int32_t;
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
 #endif
 
 #if WIN32 || _WIN32
@@ -55,6 +61,25 @@ typedef unsigned char bool;
 #include <strings.h>
 #include <dirent.h>
 #include <fcntl.h>
+
+#define elapsed_time_ns(BEF, AFT)                                              \
+    (((double)((pow(10.0, 9.0) * AFT.tv_sec) + (AFT.tv_nsec))) -               \
+     ((double)((pow(10.0, 9.0) * BEF.tv_sec) + (BEF.tv_nsec))))
+
+#define elapsed_time_ms(BEF, AFT)                                              \
+    ((elapsed_time_ns(BEF, AFT) * pow(10.0, -6.0)))
+#define elapsed_time_s(BEF, AFT) (elapsed_time_ns(BEF, AFT) * pow(10.0, -9.0))
+
+#define convert_ns_to_s(NS) ((NS) * pow(10.0, -9.0))
+#define convert_ns_to_ms(NS) ((NS) * pow(10.0, -6.0))
+#define convert_ns_to_mcs(NS) ((NS) * (pow(10.0, -3.0)))
+
+#define MCS "µs"
+
+/* randrnge has an inclusive, exclusive ranging: [min, max) */
+#define randrnge(min, max) ((rand() % ((max) - (min))) + (min))
+
+ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
 
 
 
