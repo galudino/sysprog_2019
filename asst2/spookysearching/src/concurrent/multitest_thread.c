@@ -30,21 +30,56 @@
 
 #include "multitest.h"
 
+void lsobject_search(lsobject_t **l) {
+    lsobject_t *lso = *(lsobject_t **)(l);
+
+    int32_t i = 0;
+    
+    int32_t range_start = 0;
+    int32_t range_end = 0;
+    int32_t partition = -1;
+
+    for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
+        range_start = i;
+        range_end = i + lso->vec.subcapacity;
+
+        ++partition;
+
+        lso->search->value = -1;
+        lso->search->range_start = range_start;
+        lso->search->range_end = range_end;
+        lso->search->partition = partition;
+        lso->search->position = -1;
+
+        handler_lsearch(l);
+
+        if (lso->search->value > -1) {
+            break;
+        }
+    }
+
+    printf("position: %d\n", lso->search->position);
+    printf("index: %d\n", lso->search->value);
+    printf("partition number: %d\n\n", lso->search->partition);
+}
+
 void *handler_lsearch(void *arg) {
-    lsargs_t *lsa = (lsargs_t *)(arg);
+    lsobject_t *lso = *(lsobject_t **)(arg);
+
     int32_t j = 0;
     int32_t position = 0;
 
     printf("\n");
-    printf("\nBeginning search for partition %d...\n", lsa->search.partition);
-    for (j = lsa->search.range_start; j < lsa->search.range_end; j++) {
-        printf("partition %d, array[%d]:\t%d\n", lsa->search.partition, j, lsa->array.base[j]);
+    printf("\nBeginning search for partition %d...\n", lso->search->partition);
 
-        if (lsa->array.base[j] == lsa->search.key) {
-            lsa->search.value = j;
-            lsa->search.position = position;
+    for (j = lso->search->range_start; j < lso->search->range_end; j++) {
+        if (lso->vec.base[j] == lso->key) {
+            lso->search->value = j;
+            lso->search->position = position;
+            
+            printf("partition %d, vec[%d]:\t%d\n", lso->search->partition, j, lso->vec.base[j]);
 
-            printf("\n\nhandler: found %d at %d\n\n", lsa->search.key, lsa->search.value);
+            printf("\n\nhandler: found %d at %d\n\n", lso->key, lso->search->value);
 
             break;
         }
@@ -52,36 +87,12 @@ void *handler_lsearch(void *arg) {
         ++position;
     }
 
-    printf("\nSearch ended for partition %d.\n", lsa->search.partition);
-    
-    printf("was %s\n", lsa->search.value != -1 ? "SUCCESSFUL" : "unsuccessful");
-    
-    lsa->search.position 
-    = lsa->search.value != -1 ? position : -6;
-    
-    printf("\n");
+    lso->search->position = lso->search->value != -1 ? position : -6;
 
-    return NULL;
-}
+    printf("\nSearch ended for partition %d.\n", lso->search->partition);
+    printf("was %s\n\n", lso->search->value != -1 ? "SUCCESSFUL" : "unsuccessful");
 
-void lsargs_search(lsargs_t *l) {
-    lsargs_t *lsa = (lsargs_t *)(l);
-
-    int i = 0;
-
-    for (i = 0; i < lsa->array.capacity; i += lsa->array.subcapacity) {
-        ++lsa->search.partition;
-
-        lsa->search.range_start = i;
-        lsa->search.range_end = lsa->search.range_start +
-lsa->array.subcapacity;
-
-        handler_lsearch(&lsa);
-
-        if (lsa->search.value > -1) {
-            break;
-        }
-    }
+    return arg;
 }
 
 void *func(void *arg) {
@@ -99,19 +110,21 @@ void test() {
 
     int i = 0;
     int status = -1;
+    int *tid = NULL;
+    int thread_args[TEST_NUM];
 
-    while (i < TEST_NUM) {
-        status = pthread_create(threads + i, NULL, func, &i);
+    /* deploy all threads */
+    for (i = 0; i < TEST_NUM; i++) {
+        thread_args[i] = i;
+        printf("spawning thread %d\n", i);
+        status = pthread_create(threads + i, NULL, func, thread_args + i);
+    }
 
-        if (status) {
-
-        } else {
-            int *tid = NULL;
-            pthread_join(threads[i], (void **)(&tid));
-            printf("status of %x: %s (%d)\n\n", *tid, strerror(status), status);
-            free(tid);
-            tid = NULL;
-            ++i;
-        }
+    /* join all threads, free resources */
+    for (i = 0; i < TEST_NUM; i++) {
+        pthread_join(threads[i], (void **)(&tid));
+        printf("status of %d: %s (%d)\n\n", (*tid), strerror(status), status);
+        free(tid);
+        tid = NULL;
     }
 }

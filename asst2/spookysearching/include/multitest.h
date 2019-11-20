@@ -93,29 +93,31 @@ ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
 #define ARR_RANGE_START_SUB (16)
 #define ARR_RANGE_END_SUB   ((250) + (1))
 
-typedef struct linear_search_arguments lsargs_t;
-struct linear_search_arguments {
-    struct {
+typedef struct linear_search_object lsobject_t;
+typedef struct linear_search_vector lsvector_t;
+typedef struct linear_search_params lsparams_t;
+
+struct linear_search_object {
+    struct linear_search_vector {
         int32_t *base;
         int32_t capacity;
         int32_t subcapacity;
-    } array;
+    } vec;
 
-    struct {
-        int32_t key;
+    struct linear_search_params {
         int32_t value;
         int32_t range_start;
         int32_t range_end;
         int32_t partition;
         int32_t position;
-    } search;
+    } *search; 
+
+    int32_t key;
 };
 
-void lsargs_search(lsargs_t *l);
-
-#define lsearch(lsargs_addr)    handler_lsearch(lsargs_addr)
-
+void lsobject_search(lsobject_t **l);
 void *handler_lsearch(void *arg);
+#define lsearch(lsobject_addr)    lsobject_search(lsobject_addr)
 
 void test();
 

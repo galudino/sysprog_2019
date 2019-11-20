@@ -32,19 +32,22 @@
 
 #include <signal.h>
 
-void lsargs_search(lsargs_t *l) {
-    lsargs_t *lsa = (lsargs_t *)(l);
+void lsobject_search(lsobject_t **l) {
+    lsobject_t *lso = *(lsobject_t **)(l);
 
     int32_t i = 0;
     int32_t j = 0;
+
     int32_t status = -1;
     int32_t status_found = -1;
     
-    pid_t pid = -1;
+    pid_t c_pid = -1;
 
     int32_t index = -1;
-    int32_t position = -1;
+    int32_t range_start = 0;
+    int32_t range_end = 0;
     int32_t partition = -1;
+    int32_t position = -1;
 
     struct {
         pid_t (*base)[2];
@@ -64,19 +67,30 @@ void lsargs_search(lsargs_t *l) {
 
     j = 0;
 
-    for (i = 0; i < lsa->array.capacity; i += lsa->array.subcapacity) {
-        lsa->search.range_start = i;
-        lsa->search.range_end = i + lsa->array.subcapacity;
+    for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
+        range_start = i;
+        range_end = i + lso->vec.subcapacity;
 
-        pid = fork();
+        c_pid = fork();
 
         ++partition;
 
-        if (pid == 0) {
-            lsa->search.partition = partition;
-            handler_lsearch(lsa);
-            exit(lsa->search.position);
-        } else if (pid > 0) {
+        if (c_pid == 0) {
+            lso->search->value = -1;
+            lso->search->range_start = range_start;
+            lso->search->range_end = range_end;
+            lso->search->partition = partition;
+            lso->search->position = -1;             
+            
+            handler_lsearch(lso);
+
+            position = lso->search->position;
+
+            free(lso->search);
+            lso->search = NULL;
+
+            exit(position);
+        } else if (c_pid > 0) {
             {
                 if (v_pid.length == v_pid.capacity) {
                     pid_t (*new_base)[2] = NULL;
@@ -91,7 +105,7 @@ void lsargs_search(lsargs_t *l) {
                 }
             }
 
-            v_pid.base[v_pid.length][j++] = pid;
+            v_pid.base[v_pid.length][j++] = c_pid;
             v_pid.base[v_pid.length++][j] = partition;
 
             j = 0;
@@ -104,26 +118,26 @@ void lsargs_search(lsargs_t *l) {
     i = 0;
     j = 0;
 
-    while ((pid = waitpid(v_pid.base[++i][j], &status, 0)) > 0) {
+    while ((c_pid = waitpid(v_pid.base[++i][j], &status, 0)) > 0) {
         position = WEXITSTATUS(status);
 
-        if (position == lsa->array.subcapacity) {
+        if (position == lso->vec.subcapacity) {
        
         } else {
             status_found = status;
             partition = v_pid.base[i][1];
-            index = position + (partition * lsa->array.subcapacity);
-
-            lsa->search.position = position;
-            lsa->search.partition = partition;
-            lsa->search.value = index;
+            index = position + (partition * lso->vec.subcapacity);
+                
+            lso->search->position = position;
+            lso->search->partition = partition;
+            lso->search->value = index;
         }
     }
 
     printf("status: %d\n", status_found);
-    printf("position: %d\n", lsa->search.position);
-    printf("index: %d\n", lsa->search.value);
-    printf("partition number: %d\n\n", lsa->search.partition);
+    printf("position: %d\n", lso->search->position);
+    printf("index: %d\n", lso->search->value);
+    printf("partition number: %d\n\n", lso->search->partition);
 
     j = 0;
 
@@ -145,21 +159,21 @@ void lsargs_search(lsargs_t *l) {
 }
 
 /*
-void lsargs_search(lsargs_t *l) {
-    lsargs_t *lsa = (lsargs_t *)(l);
+void lsobject_search(lsobject_t *l) {
+    lsobject_t *lso = (lsobject_t *)(l);
 
     int i = 0;
 
-    for (i = 0; i < lsa->array.capacity; i += lsa->array.subcapacity) {
-        ++lsa->search.partition;
+    for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
+        ++lso->search->partition;
 
-        lsa->search.range_start = i;
-        lsa->search.range_end = lsa->search.range_start +
-lsa->array.subcapacity;
+        lso->search->range_start = i;
+        lso->search->range_end = lso->search->range_start +
+lso->vec.subcapacity;
 
-        handler_lsearch(&lsa);
+        handler_lsearch(&lso);
 
-        if (lsa->search.value > -1) {
+        if (lso->search->value > -1) {
             break;
         }
     }
@@ -167,22 +181,22 @@ lsa->array.subcapacity;
 */
 
 void *handler_lsearch(void *arg) {
-    lsargs_t *lsa = (lsargs_t *)(arg);
+    lsobject_t *lso = (lsobject_t *)(arg);
 
     int32_t j = 0;
     int32_t position = 0;
 
     printf("\n");
-    printf("\nBeginning search for partition %d...\n", lsa->search.partition);
+    printf("\nBeginning search for partition %d...\n", lso->search->partition);
 
-    for (j = lsa->search.range_start; j < lsa->search.range_end; j++) {
-        printf("partition %d, array[%d]:\t%d\n", lsa->search.partition, j, lsa->array.base[j]);
+    for (j = lso->search->range_start; j < lso->search->range_end; j++) {
+        if (lso->vec.base[j] == lso->key) {
+            lso->search->value = j;
+            lso->search->position = position;
+            
+            printf("partition %d, vec[%d]:\t%d\n", lso->search->partition, j, lso->vec.base[j]);
 
-        if (lsa->array.base[j] == lsa->search.key) {
-            lsa->search.value = j;
-            lsa->search.position = position;
-
-            printf("\n\nhandler: found %d at %d\n\n", lsa->search.key, lsa->search.value);
+            printf("\n\nhandler: found %d at %d\n\n", lso->key, lso->search->value);
 
             break;
         }
@@ -190,44 +204,49 @@ void *handler_lsearch(void *arg) {
         ++position;
     }
 
-    lsa->search.position = lsa->search.value != -1 ? position : -6;
+    lso->search->position = lso->search->value != -1 ? position : -6;
 
-    printf("\nSearch ended for partition %d.\n", lsa->search.partition);
-    printf("was %s\n\n", lsa->search.value != -1 ? "SUCCESSFUL" : "unsuccessful");
+    printf("\nSearch ended for partition %d.\n", lso->search->partition);
+    printf("was %s\n\n", lso->search->value != -1 ? "SUCCESSFUL" : "unsuccessful");
 
-    return NULL;
+    return arg;
 }
 
 void *func(void *arg) {
     int *n = (int *)(arg);
-
     printf("did process %d\n", (*n));
 
     return NULL;
 }
 
 void test() {
-    int i = -1;
+    int i = 0;
     int status = -1;
 
-    pid_t pid = 0;
+    pid_t c_pid = 0;
 
+    /* deploy all processes */
     while (i < TEST_NUM) {
         /* do whatever you have to do here prior to spawning procs */
 
-        /* from here on out, each child proc will do its own work */
-        pid = fork();
 
-        if (pid == 0) {
+        /* from here on out, each child proc will do its own work */
+        c_pid = fork();
+
+        if (c_pid == 0) {
             /* do work here, call a function, do something... */
             func(&i);
 
             /* exit when done */
-            exit(EXIT_SUCCESS);
-        } else {
-            wait(&status);
-            printf("status of %d: %s (%d)\n\n", pid, strerror(status), status);
-            ++i;
+            status = 0;
+            exit(status);
         }
+
+        ++i;
+    }
+
+    /* reap all child processes */
+    while ((c_pid = waitpid(-1, &status, 0)) > 0) {
+        printf("status of %d: %s (%d)\n\n", c_pid, strerror(status), status);
     }
 }
