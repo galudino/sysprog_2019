@@ -52,5 +52,39 @@ server:
   once accept returns, you are not getting requests anymore
 ------------------------------------------------------------
 ------------------------------------------------------------
+a file is metadata, attached to an address.
 
-  
+tty - teletype
+
+int main(int argc, const char *argv[]) {
+  printf("hello?\n");
+  close(STDIN_FILENO);
+
+  open("/dev/tty", O_WRONLY);
+  printf("i'm back!\n");
+
+  return EXIT_SUCCESS;
+}
+
+sockets
+  file descriptors that allow you to talk
+  to machines (processes) across a network
+  (network file descriptor)
+
+client:
+  socket()
+  connect()
+
+server:
+  socket()
+
+  bind()
+
+  listen()
+
+  accept()  blocking call, until it gets a request, 
+            then returns a socket connected to client side
+
+
+max portno 
+4096 >= n < 65536

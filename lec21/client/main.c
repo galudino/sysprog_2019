@@ -30,8 +30,20 @@
 
 #include "header.h"
 
+void close_STDOUT(void);
 
 int main(int argc, const char *argv[]) {
 
-    return 0;
+
+    return EXIT_SUCCESS;
+}
+
+void close_STDOUT() {
+    printf("hello?\n");
+    close(STDOUT_FILENO);
+
+    printf("hello???\n");
+
+    open("/dev/tty", O_WRONLY);
+    printf("i'm back!\n");
 }
