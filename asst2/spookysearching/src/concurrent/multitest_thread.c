@@ -51,7 +51,7 @@ void lsobject_search(lsobject_t **l) {
         lso->search->range_start = range_start;
         lso->search->range_end = range_end;
         lso->search->partition = partition;
-        lso->search->position = -1;             
+        lso->search->position = -1;       
             
         handler_lsearch(l);
 
@@ -115,7 +115,7 @@ void test() {
     /* deploy all threads */
     for (i = 0; i < TEST_NUM; i++) {
         thread_args[i] = i;
-        
+
         printf("spawning thread %d\n", i);
         status = pthread_create(threads + i, NULL, func, thread_args + i);
     }

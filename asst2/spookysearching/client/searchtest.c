@@ -144,22 +144,26 @@ int main(int argc, const char *argv[]) {
     printf("vec partition count:\t%d\n\n", lso->vec.capacity / lso->vec.subcapacity);
 
     {
-        lso->search->partition = 0;
-        lso->search->position = -1;
-        lso->search->range_end = 0;
-        lso->search->range_start = 0;
-        lso->search->value = -1;
+        {
+            lso->search->partition = 0;
+            lso->search->position = -1;
+            lso->search->range_end = 0;
+            lso->search->range_start = 0;
+            lso->search->value = -1;
 
-        free(lso->search);
-        lso->search = NULL;
+            free(lso->search);
+            lso->search = NULL;
+        }
 
         lso->key = 0;
 
-        lso->vec.subcapacity = 0;
-        lso->vec.capacity = 0;
+        {
+            lso->vec.subcapacity = 0;
+            lso->vec.capacity = 0;
 
-        free(lso->vec.base);
-        lso->vec.base = NULL;
+            free(lso->vec.base);
+            lso->vec.base = NULL;
+        }
 
         free(lso);
         lso = NULL;

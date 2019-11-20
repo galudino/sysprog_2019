@@ -80,8 +80,8 @@ void lsobject_search(lsobject_t **l) {
             lso->search->range_start = range_start;
             lso->search->range_end = range_end;
             lso->search->partition = partition;
-            lso->search->position = -1;             
-            
+            lso->search->position = -1;
+
             handler_lsearch(l);
 
             position = lso->search->position;
@@ -94,11 +94,37 @@ void lsobject_search(lsobject_t **l) {
                 v_pid.base = NULL;
             }
 
+            {
+                {
+                    lso->search->partition = 0;
+                    lso->search->position = -1;
+                    lso->search->range_end = 0;
+                    lso->search->range_start = 0;
+                    lso->search->value = -1;
+
+                    free(lso->search);
+                    lso->search = NULL;
+                }
+
+                lso->key = 0;
+
+                {
+                    lso->vec.subcapacity = 0;
+                    lso->vec.capacity = 0;
+
+                    free(lso->vec.base);
+                    lso->vec.base = NULL;
+                }
+
+                free((*l));
+                (*l) = NULL;
+            }
+
             exit(position);
         } else if (c_pid > 0) {
             {
                 if (v_pid.length == v_pid.capacity) {
-                    pid_t (*new_base)[2] = NULL;
+                    pid_t(*new_base)[2] = NULL;
                     size_t new_capacity = v_pid.capacity * 2;
 
                     new_base = realloc(v_pid.base, sizeof *v_pid.base * new_capacity);
@@ -112,7 +138,7 @@ void lsobject_search(lsobject_t **l) {
 
             v_pid.base[v_pid.length][j++] = c_pid;
             v_pid.base[v_pid.length++][j] = partition;
-            
+
             j = 0;
 
             if (lso->search->value > -1) {
@@ -145,7 +171,11 @@ void lsobject_search(lsobject_t **l) {
         }
     }
 
-    printf("status: %d\nposition: %d\nindex: %d\npartition number: %d\n\n", status_found, lso->search->position, lso->search->value, lso->search->partition);
+    printf("status: %d\nposition: %d\nindex: %d\npartition number: %d\n\n",
+           status_found,
+           lso->search->position,
+           lso->search->value,
+           lso->search->partition);
 
     /*
     {
@@ -168,7 +198,6 @@ void lsobject_search(lsobject_t **l) {
     }
 }
 
-
 /* vanilla lsobject_search, for one process only */
 /*
 void lsobject_search(lsobject_t **l) {
@@ -190,8 +219,8 @@ void lsobject_search(lsobject_t **l) {
         lso->search->range_start = range_start;
         lso->search->range_end = range_end;
         lso->search->partition = partition;
-        lso->search->position = -1;             
-            
+        lso->search->position = -1;
+
         handler_lsearch(l);
 
         if (lso->search->value > -1) {
@@ -199,7 +228,8 @@ void lsobject_search(lsobject_t **l) {
         }
     }
 
-    printf("position: %d\nindex: %d\npartition number: %d\n\n", lso->search->position, lso->search->value, lso->search->partition);
+    printf("position: %d\nindex: %d\npartition number: %d\n\n",
+lso->search->position, lso->search->value, lso->search->partition);
 }
 */
 
@@ -210,14 +240,22 @@ static void *handler_lsearch(void *arg) {
     int32_t position = 0;
 
     /*
-    printf("\n\nBeginning search for partition %d...\n", lso->search->partition);
+    printf("\n\nBeginning search for partition %d...\n",
+    lso->search->partition);
     */
 
     for (j = lso->search->range_start; j < lso->search->range_end; j++) {
         if (lso->vec.base[j] == lso->key) {
             lso->search->value = j;
 
-            printf("partition %d, vec[%d]:\t%d\nhandler: found key %d at index %d, partition %d\n\n", lso->search->partition, j, lso->vec.base[j], lso->key, lso->search->value, lso->search->partition);
+            printf("partition %d, vec[%d]:\t%d\nhandler: found key %d at index "
+                   "%d, partition %d\n\n",
+                   lso->search->partition,
+                   j,
+                   lso->vec.base[j],
+                   lso->key,
+                   lso->search->value,
+                   lso->search->partition);
 
             break;
         }
@@ -228,7 +266,9 @@ static void *handler_lsearch(void *arg) {
     lso->search->position = lso->search->value != -1 ? position : lso->vec.subcapacity;
 
     /*
-    printf("\nSearch ended for partition %d.\nwas %s\n\n", lso->search->partition, lso->search->value != -1 ? "SUCCESSFUL" : "unsuccessful");
+    printf("\nSearch ended for partition %d.\nwas %s\n\n",
+    lso->search->partition, lso->search->value != -1 ? "SUCCESSFUL" :
+    "unsuccessful");
     */
 
     return arg;
@@ -250,7 +290,6 @@ void test() {
     /* deploy all processes */
     while (i < TEST_NUM) {
         /* do whatever you have to do here prior to spawning procs */
-
 
         /* from here on out, each child proc will do its own work */
         c_pid = fork();
