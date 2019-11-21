@@ -31,6 +31,7 @@
 #include "multitest.h"
 
 static void *handler_lsearch(void *arg);
+static void handler_time(int n);
 
 void lsobject_search(lsobject_t **l) {
     lsobject_t *lso = *(lsobject_t **)(l);
@@ -40,6 +41,8 @@ void lsobject_search(lsobject_t **l) {
     int32_t range_start = 0;
     int32_t range_end = 0;
     int32_t partition = -1;
+
+    signal(SIGUSR1, handler_time);
 
     for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
         range_start = i;
@@ -63,6 +66,10 @@ void lsobject_search(lsobject_t **l) {
     printf("position: %d\nindex: %d\npartition number: %d\n\n", lso->search->position, lso->search->value, lso->search->partition);
 }
 
+static void handler_time(int n) {
+    printf("---found---\n");
+}
+
 static void *handler_lsearch(void *arg) {
     lsobject_t *lso = *(lsobject_t **)(arg);
 
@@ -70,14 +77,26 @@ static void *handler_lsearch(void *arg) {
     int32_t position = 0;
 
     /*
-    printf("\n\nBeginning search for partition %d...\n", lso->search->partition);
+    printf("\n\nBeginning search for partition %d...\n",
+    lso->search->partition);
     */
 
     for (j = lso->search->range_start; j < lso->search->range_end; j++) {
+        printf("vec[%d]: %d\n", j, lso->vec.base[j]);
+        
         if (lso->vec.base[j] == lso->key) {
             lso->search->value = j;
 
-            printf("partition %d, vec[%d]:\t%d\nhandler: found key %d at index %d, partition %d\n\n", lso->search->partition, j, lso->vec.base[j], lso->key, lso->search->value, lso->search->partition);
+            printf("partition %d, vec[%d]:\t%d\nhandler: found key %d at index "
+                   "%d, partition %d\n\n",
+                   lso->search->partition,
+                   j,
+                   lso->vec.base[j],
+                   lso->key,
+                   lso->search->value,
+                   lso->search->partition);
+
+            raise(SIGUSR1);
 
             break;
         }
@@ -88,7 +107,9 @@ static void *handler_lsearch(void *arg) {
     lso->search->position = lso->search->value != -1 ? position : lso->vec.subcapacity;
 
     /*
-    printf("\nSearch ended for partition %d.\nwas %s\n\n", lso->search->partition, lso->search->value != -1 ? "SUCCESSFUL" : "unsuccessful");
+    printf("\nSearch ended for partition %d.\nwas %s\n\n",
+    lso->search->partition, lso->search->value != -1 ? "SUCCESSFUL" :
+    "unsuccessful");
     */
 
     return arg;

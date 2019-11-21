@@ -33,6 +33,7 @@
 #include <signal.h>
 
 static void *handler_lsearch(void *arg);
+static void handler_time(int n);
 
 void lsobject_search(lsobject_t **l) {
     lsobject_t *lso = *(lsobject_t **)(l);
@@ -66,6 +67,8 @@ void lsobject_search(lsobject_t **l) {
     v_pid.base[v_pid.length++][j] = partition;
 
     j = 0;
+
+    signal(SIGUSR1, handler_time);
 
     for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
         range_start = i;
@@ -209,6 +212,8 @@ void lsobject_search(lsobject_t **l) {
     int32_t range_end = 0;
     int32_t partition = -1;
 
+    signal(SIGUSR1, handler_time);
+
     for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
         range_start = i;
         range_end = i + lso->vec.subcapacity;
@@ -219,8 +224,8 @@ void lsobject_search(lsobject_t **l) {
         lso->search->range_start = range_start;
         lso->search->range_end = range_end;
         lso->search->partition = partition;
-        lso->search->position = -1;
-
+        lso->search->position = -1;       
+            
         handler_lsearch(l);
 
         if (lso->search->value > -1) {
@@ -228,10 +233,13 @@ void lsobject_search(lsobject_t **l) {
         }
     }
 
-    printf("position: %d\nindex: %d\npartition number: %d\n\n",
-lso->search->position, lso->search->value, lso->search->partition);
+    printf("position: %d\nindex: %d\npartition number: %d\n\n", lso->search->position, lso->search->value, lso->search->partition);
 }
 */
+
+static void handler_time(int n) {
+    printf("---found---\n");
+}
 
 static void *handler_lsearch(void *arg) {
     lsobject_t *lso = *(lsobject_t **)(arg);
@@ -245,6 +253,8 @@ static void *handler_lsearch(void *arg) {
     */
 
     for (j = lso->search->range_start; j < lso->search->range_end; j++) {
+        printf("vec[%d]: %d\n", j, lso->vec.base[j]);
+        
         if (lso->vec.base[j] == lso->key) {
             lso->search->value = j;
 
@@ -256,6 +266,8 @@ static void *handler_lsearch(void *arg) {
                    lso->key,
                    lso->search->value,
                    lso->search->partition);
+
+            raise(SIGUSR1);
 
             break;
         }
