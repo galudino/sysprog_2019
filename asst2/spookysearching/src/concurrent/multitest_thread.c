@@ -44,26 +44,26 @@ void lsobject_search(lsobject_t **l) {
 
     signal(SIGUSR1, handler_time);
 
-    for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
+    for (i = 0; i < lso->vec->capacity; i += lso->vec->subcapacity) {
         range_start = i;
-        range_end = i + lso->vec.subcapacity;
+        range_end = i + lso->vec->subcapacity;
 
         ++partition;
 
-        lso->search->value = -1;
-        lso->search->range_start = range_start;
-        lso->search->range_end = range_end;
-        lso->search->partition = partition;
-        lso->search->position = -1;       
+        lso->search.value = -1;
+        lso->search.range_start = range_start;
+        lso->search.range_end = range_end;
+        lso->search.partition = partition;
+        lso->search.position = -1;       
             
         handler_lsearch(l);
 
-        if (lso->search->value > -1) {
+        if (lso->search.value > -1) {
             break;
         }
     }
 
-    printf("position: %d\nindex: %d\npartition number: %d\n\n", lso->search->position, lso->search->value, lso->search->partition);
+    printf("position: %d\nindex: %d\npartition number: %d\n\n", lso->search.position, lso->search.value, lso->search.partition);
 }
 
 static void handler_time(int n) {
@@ -78,23 +78,23 @@ static void *handler_lsearch(void *arg) {
 
     /*
     printf("\n\nBeginning search for partition %d...\n",
-    lso->search->partition);
+    lso->search.partition);
     */
 
-    for (j = lso->search->range_start; j < lso->search->range_end; j++) {
-        printf("vec[%d]: %d\n", j, lso->vec.base[j]);
+    for (j = lso->search.range_start; j < lso->search.range_end; j++) {
+        printf("vec[%d]: %d\n", j, lso->vec->base[j]);
         
-        if (lso->vec.base[j] == lso->key) {
-            lso->search->value = j;
+        if (lso->vec->base[j] == lso->key) {
+            lso->search.value = j;
 
             printf("partition %d, vec[%d]:\t%d\nhandler: found key %d at index "
                    "%d, partition %d\n\n",
-                   lso->search->partition,
+                   lso->search.partition,
                    j,
-                   lso->vec.base[j],
+                   lso->vec->base[j],
                    lso->key,
-                   lso->search->value,
-                   lso->search->partition);
+                   lso->search.value,
+                   lso->search.partition);
 
             raise(SIGUSR1);
 
@@ -104,11 +104,11 @@ static void *handler_lsearch(void *arg) {
         ++position;
     }
 
-    lso->search->position = lso->search->value != -1 ? position : lso->vec.subcapacity;
+    lso->search.position = lso->search.value != -1 ? position : lso->vec->subcapacity;
 
     /*
     printf("\nSearch ended for partition %d.\nwas %s\n\n",
-    lso->search->partition, lso->search->value != -1 ? "SUCCESSFUL" :
+    lso->search.partition, lso->search.value != -1 ? "SUCCESSFUL" :
     "unsuccessful");
     */
 
