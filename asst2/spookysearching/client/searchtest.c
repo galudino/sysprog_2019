@@ -95,7 +95,7 @@ int main(int argc, const char *argv[]) {
             subcapacity = randrnge(ARR_RANGE_START_SUB, ARR_RANGE_END_SUB);
             */
 
-            capacity = 250;
+            capacity = 25000;
             subcapacity = 25;
         } while (capacity % subcapacity != 0);
 

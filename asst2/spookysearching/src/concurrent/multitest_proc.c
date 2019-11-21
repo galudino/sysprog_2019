@@ -33,7 +33,9 @@
 #include <signal.h>
 
 static void *handler_lsearch(void *arg);
+/*
 static void handler_time(int n);
+*/
 
 void lsobject_search(lsobject_t **l) {
     lsobject_t *lso = *(lsobject_t **)(l);
@@ -54,13 +56,19 @@ void lsobject_search(lsobject_t **l) {
 
     struct {
         pid_t (*base)[2];
-        size_t capacity;
         size_t length;
-    } v_pid = { NULL, 16, 0 };
+    } v_pid;
+
+    size_t process_count = lso->vec->capacity % lso->vec->subcapacity == 0 ? lso->vec->capacity / lso->vec->subcapacity : (lso->vec->capacity / lso->vec->subcapacity) + 1;
 
     {
-        v_pid.base = calloc(v_pid.capacity, sizeof *v_pid.base);
-        assert(v_pid.base);
+        pid_t (*base)[2] = NULL;
+
+        v_pid.length = 0;
+        base = calloc(process_count, sizeof *base);
+        assert(base);
+
+        v_pid.base = base;
     }
 
     v_pid.base[v_pid.length][j++] = getpid();
@@ -68,7 +76,9 @@ void lsobject_search(lsobject_t **l) {
 
     j = 0;
 
+    /*
     signal(SIGUSR1, handler_time);
+    */
 
     for (i = 0; i < lso->vec->capacity; i += lso->vec->subcapacity) {
         range_start = i;
@@ -91,7 +101,7 @@ void lsobject_search(lsobject_t **l) {
                 lso_process->search.range_start = range_start;
                 lso_process->search.range_end = range_end;
                 lso_process->search.partition = partition;
-                lso_process->search.position = position = -1;
+                lso_process->search.position = -1;
 
                 lso_process->key = lso->key;
             }
@@ -102,7 +112,6 @@ void lsobject_search(lsobject_t **l) {
 
             {
                 v_pid.length = 0;
-                v_pid.capacity = 0;
 
                 free(v_pid.base);
                 v_pid.base = NULL;
@@ -151,20 +160,6 @@ void lsobject_search(lsobject_t **l) {
 
             exit(position);
         } else if (c_pid > 0) {
-            {
-                if (v_pid.length == v_pid.capacity) {
-                    pid_t(*new_base)[2] = NULL;
-                    size_t new_capacity = v_pid.capacity * 2;
-
-                    new_base = realloc(v_pid.base, sizeof *v_pid.base * new_capacity);
-
-                    assert(new_base);
-
-                    v_pid.base = new_base;
-                    v_pid.capacity = new_capacity;
-                }
-            }
-
             v_pid.base[v_pid.length][j++] = c_pid;
             v_pid.base[v_pid.length++][j] = partition;
 
@@ -222,7 +217,6 @@ void lsobject_search(lsobject_t **l) {
         free(v_pid.base);
         v_pid.base = NULL;
 
-        v_pid.capacity = 0;
         v_pid.length = 0;
     }
 }
@@ -263,9 +257,11 @@ void lsobject_search(lsobject_t **l) {
 }
 */
 
+/*
 static void handler_time(int n) {
     printf("---found---\n");
 }
+*/
 
 static void *handler_lsearch(void *arg) {
     lsobject_t *lso = *(lsobject_t **)(arg);
@@ -279,7 +275,9 @@ static void *handler_lsearch(void *arg) {
     */
 
     for (j = lso->search.range_start; j < lso->search.range_end; j++) {
+        /*
         printf("vec[%d]: %d\n", j, lso->vec->base[j]);
+        */
         
         if (lso->vec->base[j] == lso->key) {
             lso->search.value = j;
@@ -293,7 +291,9 @@ static void *handler_lsearch(void *arg) {
                    lso->search.value,
                    lso->search.partition);
 
+            /*
             raise(SIGUSR1);
+            */
 
             break;
         }
