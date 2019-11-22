@@ -57,14 +57,15 @@ void lsobject_search(lsobject_t **l) {
     struct {
         pid_t (*base)[2];
         size_t length;
-    } v_pid;
+    } v_pid = { NULL, 0 };
 
-    size_t process_count = lso->vec->capacity % lso->vec->subcapacity == 0 ? lso->vec->capacity / lso->vec->subcapacity : (lso->vec->capacity / lso->vec->subcapacity) + 1;
+    size_t process_count = 0;
+    
+    process_count = lso->vec->capacity % lso->vec->subcapacity == 0 ? (lso->vec->capacity / lso->vec->subcapacity) + 1 : (lso->vec->capacity / lso->vec->subcapacity) + 2;
 
     {
         pid_t (*base)[2] = NULL;
 
-        v_pid.length = 0;
         base = calloc(process_count, sizeof *base);
         assert(base);
 
@@ -176,7 +177,9 @@ void lsobject_search(lsobject_t **l) {
 
     i = 0;
 
-    while ((c_pid = waitpid(v_pid.base[++i][0], &status, 0)) > 0) {
+    for (i = 1; i < v_pid.length; i++) {
+        waitpid(v_pid.base[i][0], &status, 0);
+
         position = WEXITSTATUS(status);
 
         if (position == lso->vec->subcapacity) {
@@ -192,7 +195,7 @@ void lsobject_search(lsobject_t **l) {
             lso->search.position = position;
             lso->search.partition = partition;
             lso->search.value = index;
-        }
+        }        
     }
 
     printf("status: %d\nposition: %d\nindex: %d\npartition number: %d\n\n",
@@ -201,7 +204,6 @@ void lsobject_search(lsobject_t **l) {
            lso->search.value,
            lso->search.partition);
 
-    /*
     {
         for (i = 0; i < v_pid.length; i++) {
             for (j = 0; j < 2; j++) {
@@ -211,7 +213,6 @@ void lsobject_search(lsobject_t **l) {
             printf("\n");
         }
     }
-    */
 
     {
         free(v_pid.base);

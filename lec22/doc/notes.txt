@@ -1,0 +1,104 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       21 Nov 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+------------------------------------------------------------
+LAST CLASS:
+------------------------------------------------------------
+a file is metadata, attached to an address.
+
+tty - teletype
+
+int main(int argc, const char *argv[]) {
+  printf("hello?\n");
+  close(STDIN_FILENO);
+
+  open("/dev/tty", O_WRONLY);
+  printf("i'm back!\n");
+
+  return EXIT_SUCCESS;
+}
+
+sockets
+  file descriptors that allow you to talk
+  to machines (processes) across a network
+  (network file descriptor)
+
+client:
+  socket()
+  connect()
+
+server:
+  socket()
+
+  bind()
+
+  listen()
+
+  accept()  blocking call, until it gets a request, 
+            then returns a socket connected to client side
+
+
+max portno 
+4096 >= n < 65536
+------------------------------------------------------------
+------------------------------------------------------------
+client vs. server
+  server sockets can
+  server listens for connection requests (and cannot second/receive arbitrary bytes)
+    - gets a client type socket from accept
+  client sockets can send and receive arbitrary bytes
+
+  to connect: IP addr and port number
+  IP addr: find machine
+  port: find proc on machine
+
+  IO devices
+  ----------
+    character
+    block
+    network
+
+  how do you know how many bytes to read?
+    constant size:
+      static message length
+      make size of message the first thing (and have it be either a static size or delimiter)
+
+    dynamic size:
+      footer/flag
+
+    IP address: 255.255.255.255
+    every IP addr is 32 bits long
+
+    2^32 - 1
+
+    192.168.1.1
+
+    Global information - lots of work to get, impossible to maintain
+    Local information - easy to get and maintain....so store and forward.
+    ...but only approximate
+      (and no service guarantees)
+
+    Routing:
+      if myself, yay! deliver to process
+      else if someone directly connected to, relay to them
+      else relay to some host that has a more general IP address (manages a segment of the network)
+
+    192.X.X.X - class A address, one octets set
+    192.168.X.X - class B address, two octets set
+    192.168.1.X - class C address, three octets set
+    192.168.1.3 - class D address, all octets set
+
+    Classless InterDomain Routing (CIDR)
+
+      192.168.1.3/8
+      192.168.1.3/16 
+      192.168.1.3/31
+
+      Domain Name Service (DNS)
+      convert from hostname to IP addresss

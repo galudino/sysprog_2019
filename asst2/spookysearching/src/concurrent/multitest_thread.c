@@ -50,14 +50,17 @@ void lsobject_search(lsobject_t **l) {
     struct {
         pthread_t *base;
         size_t length;
-    } v_tid;
+    } v_tid = { NULL, 0 };
 
-    size_t thread_count = lso->vec->capacity % lso->vec->subcapacity == 0 ? lso->vec->capacity / lso->vec->subcapacity : (lso->vec->capacity / lso->vec->subcapacity) + 1;
+    size_t thread_count = 0;
+
+    v_tid.length = 0;
+
+    thread_count = lso->vec->capacity % lso->vec->subcapacity == 0 ? lso->vec->capacity / lso->vec->subcapacity : (lso->vec->capacity / lso->vec->subcapacity) + 1;
 
     {
         pthread_t *base = NULL;
 
-        v_tid.length = 0;
         base = calloc(thread_count, sizeof *base);
         assert(base);
 
@@ -88,15 +91,10 @@ void lsobject_search(lsobject_t **l) {
             lso_thread->vec = lso->vec;
 
             lso_thread->search.value = -1;
-            
             lso_thread->search.range_start = range_start;
             lso_thread->search.range_end = range_end;
-            
             lso_thread->search.partition = partition;
             lso_thread->search.position = -1;
-
-            lso_thread->search.range_start = range_start;
-            lso_thread->search.range_end = range_end;
 
             lso_thread->key = lso->key;
 

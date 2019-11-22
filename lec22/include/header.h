@@ -1,9 +1,9 @@
 /**
- *  @file       multitest.h
- *  @brief      Header file for Asst2: Spooky Search
+ *  @file       header.h
+ *  @brief      Header file
  *
  *  @author     Gemuele Aludino
- *  @date       04 Nov 2019
+ *  @date       21 Nov 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -28,52 +28,40 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MULTITEST_H
-#define MULTITEST_H
+#ifndef HEADER_H
+#define HEADER_H
 
-#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+
+#if __STD_VERSION__ >= 19990L
+#include <stdbool.h>
+#include <stdint.h>
+#else
+# define false  0
+# define true   1
+typedef unsigned char bool;
+#endif
+
+#if WIN32 || _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+#include <assert.h>
+#include <string.h>
+#include <strings.h>
+#include <dirent.h>
+#include <fcntl.h>
+
+#include <errno.h>
+#include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 
-#include "header.h"
+#include <signal.h>
+#include <pthread.h>
 
-#define TEST_NUM    10
+#endif /* HEADER_H */
 
-#define lsearch(lsobject_addr)    lsobject_search(lsobject_addr)
-#define lsearch_int32(base, capacity, key) __linear_search_int32__(base, capacity, key)
-
-#define ARR_SEARCH_VALUE    99
-#define ARR_RANGE_START     (256)
-#define ARR_RANGE_END       ((65536) + (1))
-#define ARR_RANGE_START_SUB (16)
-#define ARR_RANGE_END_SUB   ((250) + (1))
-
-typedef struct linear_search_object lsobject_t;
-typedef struct linear_search_vector lsvector_t;
-typedef struct linear_search_params lsparams_t;
-
-struct linear_search_object {
-    struct linear_search_vector {
-        int32_t *base;
-        int32_t capacity;
-        int32_t subcapacity;
-    } *vec;
-
-    struct linear_search_params {
-        int32_t value;
-        int32_t range_start;
-        int32_t range_end;
-        int32_t partition;
-        int32_t position;
-    } search; 
-
-    int32_t key;
-};
-
-void lsobject_search(lsobject_t **l);
-
-int __linear_search_int32__(int32_t *base, size_t capacity, int32_t key);
-
-void test();
-
-#endif /* MULTITEST_H */

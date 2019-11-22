@@ -154,7 +154,7 @@ int main(int argc, const char *argv[]) {
     printf("vec size:\t\t%d\n", lso->vec->capacity);
     printf("vec partition size:\t%d\n", lso->vec->subcapacity);
     printf("vec partition count:\t%d\n\n", lso->vec->capacity / lso->vec->subcapacity);
-
+    
     {
         {
             lso->search.partition = 0;
