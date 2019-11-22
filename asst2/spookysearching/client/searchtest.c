@@ -44,47 +44,18 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    lsobject_t *lso = NULL;
-    lsvector_t *lsv = NULL;
-    
+    int32_t *base = NULL;
+    int32_t capacity = 0;
+    int32_t subcapacity = 0;
+
+    int32_t key = -1;
+    int32_t result = -1;
+
     int32_t i = 0;
-
-    {
-        lso = malloc(sizeof *lso);
-        assert(lso);
-    }
-
-    {
-        lsv = malloc(sizeof *lsv);
-        assert(lsv);
-
-        lsv->base = NULL;
-        lsv->capacity = 0;
-        lsv->subcapacity = 0;
-
-        lso->vec = lsv;
-    }
-
-    {
-        int32_t key = ARR_SEARCH_VALUE;
-        
-        {
-            lso->search.value = -1;
-            lso->search.range_start = 0;
-            lso->search.range_end = 0;
-            lso->search.partition = 0;
-            lso->search.position = -1;
-        }
-
-        lso->key = key;
-    }
-
 
     srand(time(NULL));
 
     {
-        int32_t capacity = 0;
-        int32_t subcapacity = 0;
         i = 0;
 
         do {
@@ -95,91 +66,57 @@ int main(int argc, const char *argv[]) {
             subcapacity = randrnge(ARR_RANGE_START_SUB, ARR_RANGE_END_SUB);
             */
 
-            capacity = 25000;
+            capacity = 250;
             subcapacity = 25;
         } while (capacity % subcapacity != 0);
 
         assert(subcapacity < capacity);
-
-        lso->vec->capacity = capacity;
-        lso->vec->subcapacity = subcapacity;
     }
 
     {
-        int32_t *base = NULL;
-
-        base = calloc(lso->vec->capacity, sizeof *lso->vec->base);
+        base = calloc(capacity, sizeof *base);
         assert(base);
-
-        lso->vec->base = base;
     }
 
     {
-        for (i = 0; i < lso->vec->capacity; i++) {
-            lso->vec->base[i] = i;
+        for (i = 0; i < capacity; i++) {
+            base[i] = i;
         }
     }
-    
+
     {
         int32_t r0 = 0;
         int32_t r1 = 0;
         int32_t temp = 0;
 
-        for (i = 0; i < lso->vec->capacity - 1; i++) {
-            r0 = randrnge(0, lso->vec->capacity);
-            r1 = randrnge(0, lso->vec->capacity);
+        for (i = 0; i < capacity - 1; i++) {
+            r0 = randrnge(0, capacity);
+            r1 = randrnge(0, capacity);
 
             while (r0 == r1) {
-                r0 = randrnge(0, lso->vec->capacity);
+                r0 = randrnge(0, capacity);
             }
 
-            temp = lso->vec->base[r0];
+            temp = base[r0];
 
-            lso->vec->base[r0] = lso->vec->base[r1];
-            lso->vec->base[r1] = temp;
+            base[r0] = base[r1];
+            base[r1] = temp;
         }
     }
 
-    printf("searching for key %d\n", lso->key);
+    key = ARR_SEARCH_VALUE;
 
-    lsearch(&lso);
-    
-    if (lso->search.value > -1) {
-        printf("\nat partition %d:\n", lso->search.partition);
-        printf("found %d at index %d\n\n", lso->key, lso->search.value);
+    printf("searching for key %d\n", key);
+    result = lsearch_int32(base, capacity, subcapacity, key);
+
+    if (result <= -1) {
+        printf("search failed\n");
     } else {
-        printf("\nsearch failed\n");
+        printf("result: %d\n", result);
     }
 
-    printf("vec size:\t\t%d\n", lso->vec->capacity);
-    printf("vec partition size:\t%d\n", lso->vec->subcapacity);
-    printf("vec partition count:\t%d\n\n", lso->vec->capacity / lso->vec->subcapacity);
-    
-    {
-        {
-            lso->search.partition = 0;
-            lso->search.position = -1;
-            lso->search.range_end = 0;
-            lso->search.range_start = 0;
-            lso->search.value = -1;
-        }
-
-        lso->key = 0;
-
-        {
-            lso->vec->subcapacity = 0;
-            lso->vec->capacity = 0;
-
-            free(lso->vec->base);
-            lso->vec->base = NULL;
-
-            free(lso->vec);
-            lso->vec = NULL;
-        }
-
-        free(lso);
-        lso = NULL;
-    }
+    free(base);
+    base = NULL;
 
     return EXIT_SUCCESS;
 }

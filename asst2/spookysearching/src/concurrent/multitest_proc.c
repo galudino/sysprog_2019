@@ -33,18 +33,14 @@
 #include <signal.h>
 
 static void *handler_lsearch(void *arg);
-/*
-static void handler_time(int n);
-*/
 
-void lsobject_search(lsobject_t **l) {
-    lsobject_t *lso = *(lsobject_t **)(l);
+int __linear_search_int32__(int32_t *base, size_t capacity, int32_t subcapacity, int32_t key) {
+    lsobject_t *lso = NULL;
 
     int32_t i = 0;
     int32_t j = 0;
 
     int32_t status = -1;
-    int32_t status_found = -1;
 
     pid_t c_pid = -1;
 
@@ -60,11 +56,30 @@ void lsobject_search(lsobject_t **l) {
     } v_pid = { NULL, 0 };
 
     size_t process_count = 0;
-    
-    process_count = lso->vec->capacity % lso->vec->subcapacity == 0 ? (lso->vec->capacity / lso->vec->subcapacity) + 1 : (lso->vec->capacity / lso->vec->subcapacity) + 2;
 
     {
-        pid_t (*base)[2] = NULL;
+        lso = malloc(sizeof *lso);
+        assert(lso);
+
+        lso->vec.base = base;
+        lso->vec.capacity = capacity;
+        lso->vec.subcapacity = subcapacity;
+
+        lso->key = key;
+
+        lso->search.partition = partition;
+        lso->search.position = -1;
+        lso->search.range_start = range_start;
+        lso->search.range_end = range_end;
+        lso->search.value = index;
+    }
+
+    process_count = lso->vec.capacity % lso->vec.subcapacity == 0 ?
+                        (lso->vec.capacity / lso->vec.subcapacity) + 1 :
+                        (lso->vec.capacity / lso->vec.subcapacity) + 2;
+
+    {
+        pid_t(*base)[2] = NULL;
 
         base = calloc(process_count, sizeof *base);
         assert(base);
@@ -77,13 +92,9 @@ void lsobject_search(lsobject_t **l) {
 
     j = 0;
 
-    /*
-    signal(SIGUSR1, handler_time);
-    */
-
-    for (i = 0; i < lso->vec->capacity; i += lso->vec->subcapacity) {
+    for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
         range_start = i;
-        range_end = i + lso->vec->subcapacity;
+        range_end = i + lso->vec.subcapacity;
 
         ++partition;
 
@@ -96,7 +107,9 @@ void lsobject_search(lsobject_t **l) {
                 lso_process = malloc(sizeof *lso_process);
                 assert(lso_process);
 
-                lso_process->vec = lso->vec;
+                lso_process->vec.base = lso->vec.base;
+                lso_process->vec.capacity = lso->vec.capacity;
+                lso_process->vec.subcapacity = lso->vec.subcapacity;
 
                 lso_process->search.value = -1;
                 lso_process->search.range_start = range_start;
@@ -145,18 +158,12 @@ void lsobject_search(lsobject_t **l) {
                 lso->key = 0;
 
                 {
-                    lso->vec->subcapacity = 0;
-                    lso->vec->capacity = 0;
-
-                    free(lso->vec->base);
-                    lso->vec->base = NULL;
-
-                    free(lso->vec);
-                    lso->vec = NULL;
+                    lso->vec.subcapacity = 0;
+                    lso->vec.capacity = 0;
                 }
 
-                free((*l));
-                (*l) = NULL;
+                free(lso);
+                lso = NULL;
             }
 
             exit(position);
@@ -182,28 +189,26 @@ void lsobject_search(lsobject_t **l) {
 
         position = WEXITSTATUS(status);
 
-        if (position == lso->vec->subcapacity) {
+        if (position == lso->vec.subcapacity) {
 
         } else {
             int32_t offset = -1;
 
-            status_found = status;
             partition = v_pid.base[i][1];
-            offset = partition * lso->vec->subcapacity;
+            offset = partition * lso->vec.subcapacity;
             index = offset + position;
 
             lso->search.position = position;
             lso->search.partition = partition;
             lso->search.value = index;
-        }        
+        }
     }
 
-    printf("status: %d\nposition: %d\nindex: %d\npartition number: %d\n\n",
-           status_found,
+    printf("position: %d\nindex: %d\npartition number: %d\n\n",
            lso->search.position,
            lso->search.value,
            lso->search.partition);
-
+    /*
     {
         for (i = 0; i < v_pid.length; i++) {
             for (j = 0; j < 2; j++) {
@@ -213,6 +218,7 @@ void lsobject_search(lsobject_t **l) {
             printf("\n");
         }
     }
+    */
 
     {
         free(v_pid.base);
@@ -220,6 +226,11 @@ void lsobject_search(lsobject_t **l) {
 
         v_pid.length = 0;
     }
+
+    free(lso);
+    lso = NULL;
+
+    return index;
 }
 
 /* vanilla lsobject_search, for one process only */
@@ -235,9 +246,9 @@ void lsobject_search(lsobject_t **l) {
 
     signal(SIGUSR1, handler_time);
 
-    for (i = 0; i < lso->vec->capacity; i += lso->vec->subcapacity) {
+    for (i = 0; i < lso->vec.capacity; i += lso->vec.subcapacity) {
         range_start = i;
-        range_end = i + lso->vec->subcapacity;
+        range_end = i + lso->vec.subcapacity;
 
         ++partition;
 
@@ -245,8 +256,8 @@ void lsobject_search(lsobject_t **l) {
         lso->search.range_start = range_start;
         lso->search.range_end = range_end;
         lso->search.partition = partition;
-        lso->search.position = -1;       
-            
+        lso->search.position = -1;
+
         handler_lsearch(l);
 
         if (lso->search.value > -1) {
@@ -254,13 +265,8 @@ void lsobject_search(lsobject_t **l) {
         }
     }
 
-    printf("position: %d\nindex: %d\npartition number: %d\n\n", lso->search.position, lso->search.value, lso->search.partition);
-}
-*/
-
-/*
-static void handler_time(int n) {
-    printf("---found---\n");
+    printf("position: %d\nindex: %d\npartition number: %d\n\n",
+lso->search.position, lso->search.value, lso->search.partition);
 }
 */
 
@@ -277,17 +283,17 @@ static void *handler_lsearch(void *arg) {
 
     for (j = lso->search.range_start; j < lso->search.range_end; j++) {
         /*
-        printf("vec[%d]: %d\n", j, lso->vec->base[j]);
+        printf("vec[%d]: %d\n", j, lso->vec.base[j]);
         */
-        
-        if (lso->vec->base[j] == lso->key) {
+
+        if (lso->vec.base[j] == lso->key) {
             lso->search.value = j;
 
             printf("partition %d, vec[%d]:\t%d\nhandler: found key %d at index "
                    "%d, partition %d\n\n",
                    lso->search.partition,
                    j,
-                   lso->vec->base[j],
+                   lso->vec.base[j],
                    lso->key,
                    lso->search.value,
                    lso->search.partition);
@@ -302,7 +308,7 @@ static void *handler_lsearch(void *arg) {
         ++position;
     }
 
-    lso->search.position = lso->search.value != -1 ? position : lso->vec->subcapacity;
+    lso->search.position = lso->search.value != -1 ? position : lso->vec.subcapacity;
 
     /*
     printf("\nSearch ended for partition %d.\nwas %s\n\n",
@@ -311,42 +317,4 @@ static void *handler_lsearch(void *arg) {
     */
 
     return arg;
-}
-
-void *func(void *arg) {
-    int32_t *n = (int *)(arg);
-    printf("did process %d\n", (*n));
-
-    return NULL;
-}
-
-void test() {
-    int32_t i = 0;
-    int32_t status = -1;
-
-    pid_t c_pid = 0;
-
-    /* deploy all processes */
-    while (i < TEST_NUM) {
-        /* do whatever you have to do here prior to spawning procs */
-
-        /* from here on out, each child proc will do its own work */
-        c_pid = fork();
-
-        if (c_pid == 0) {
-            /* do work here, call a function, do something... */
-            func(&i);
-
-            /* exit when done */
-            status = 0;
-            exit(status);
-        }
-
-        ++i;
-    }
-
-    /* reap all child processes */
-    while ((c_pid = waitpid(-1, &status, 0)) > 0) {
-        printf("status of %d: %s (%d)\n\n", c_pid, strerror(status), status);
-    }
 }

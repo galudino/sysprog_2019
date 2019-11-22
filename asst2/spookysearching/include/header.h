@@ -40,8 +40,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #else
-# define false  0
-# define true   1
+#define false 0
+#define true 1
 typedef unsigned char bool;
 typedef short int16_t;
 typedef int int32_t;
@@ -80,7 +80,5 @@ typedef unsigned int uint32_t;
 #define randrnge(min, max) ((rand() % ((max) - (min))) + (min))
 
 ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
-
-
 
 #endif /* HEADER_H */

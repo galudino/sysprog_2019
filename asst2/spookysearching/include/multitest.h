@@ -37,16 +37,17 @@
 
 #include "header.h"
 
-#define TEST_NUM    10
+#define TEST_NUM 10
 
-#define lsearch(lsobject_addr)    lsobject_search(lsobject_addr)
-#define lsearch_int32(base, capacity, key) __linear_search_int32__(base, capacity, key)
+#define lsearch(lsobject_addr) lsobject_search(lsobject_addr)
+#define lsearch_int32(base, capacity, subcapacity, key)                        \
+    __linear_search_int32__(base, capacity, subcapacity, key)
 
-#define ARR_SEARCH_VALUE    99
-#define ARR_RANGE_START     (256)
-#define ARR_RANGE_END       ((65536) + (1))
+#define ARR_SEARCH_VALUE 99
+#define ARR_RANGE_START (256)
+#define ARR_RANGE_END ((65536) + (1))
 #define ARR_RANGE_START_SUB (16)
-#define ARR_RANGE_END_SUB   ((250) + (1))
+#define ARR_RANGE_END_SUB ((250) + (1))
 
 typedef struct linear_search_object lsobject_t;
 typedef struct linear_search_vector lsvector_t;
@@ -57,7 +58,7 @@ struct linear_search_object {
         int32_t *base;
         int32_t capacity;
         int32_t subcapacity;
-    } *vec;
+    } vec;
 
     struct linear_search_params {
         int32_t value;
@@ -65,14 +66,12 @@ struct linear_search_object {
         int32_t range_end;
         int32_t partition;
         int32_t position;
-    } search; 
+    } search;
 
     int32_t key;
 };
 
-void lsobject_search(lsobject_t **l);
-
-int __linear_search_int32__(int32_t *base, size_t capacity, int32_t key);
+int __linear_search_int32__(int32_t *base, size_t capacity, int32_t subcapacity, int32_t key);
 
 void test();
 
