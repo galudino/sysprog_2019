@@ -35,12 +35,18 @@
 #include "header.h"
 #include "multitest.h"
 
+/**
+ * 
+ */
 void test_set(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),      
               size_t capacity, 
               int32_t subcapacity, 
               int32_t key, 
               int32_t iterations);
 
+/**
+ * 
+ */
 void test_case(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),
                int32_t *base,
                size_t capacity,
@@ -59,7 +65,30 @@ void test_case(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),
 int main(int argc, const char *argv[]) {
     srand(time(NULL));
 
-    test_set(lsearch_int32, 250, 25, 99, 100);
+    test_set(lsearch_int32, 500, 25, 99, 100);
+    test_set(lsearch_int32, 500, 50, 99, 100);
+    test_set(lsearch_int32, 500, 125, 99, 100);
+    test_set(lsearch_int32, 500, 250, 99, 100);
+
+    test_set(lsearch_int32, 5000, 25, 99, 100);
+    test_set(lsearch_int32, 5000, 50, 99, 100);
+    test_set(lsearch_int32, 5000, 125, 99, 100);
+    test_set(lsearch_int32, 5000, 250, 99, 100);
+
+    test_set(lsearch_int32, 10000, 25, 99, 100);
+    test_set(lsearch_int32, 10000, 50, 99, 100);
+    test_set(lsearch_int32, 10000, 125, 99, 100);
+    test_set(lsearch_int32, 10000, 250, 99, 100);
+
+    test_set(lsearch_int32, 20000, 25, 99, 100);
+    test_set(lsearch_int32, 20000, 50, 99, 100);
+    test_set(lsearch_int32, 20000, 125, 99, 100);
+    test_set(lsearch_int32, 20000, 250, 99, 100);
+
+    test_set(lsearch_int32, 25000, 25, 99, 100);
+    test_set(lsearch_int32, 25000, 50, 99, 100);
+    test_set(lsearch_int32, 25000, 125, 99, 100);
+    test_set(lsearch_int32, 50000, 250, 99, 100);
 
     return EXIT_SUCCESS;
 }
@@ -141,8 +170,6 @@ void test_case(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),
         result = -1;
 
         printf("searching for key %d\n", key);
-        capacity = 250;
-        subcapacity = 25;
         result = lsearch_int32(base, capacity, subcapacity, key);
 
         if (result <= -1) {
