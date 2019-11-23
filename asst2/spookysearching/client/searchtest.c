@@ -35,6 +35,19 @@
 #include "header.h"
 #include "multitest.h"
 
+void test_set(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),      
+              size_t capacity, 
+              int32_t subcapacity, 
+              int32_t key, 
+              int32_t iterations);
+
+void test_case(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),
+               int32_t *base,
+               size_t capacity,
+               int32_t subcapacity,
+               int32_t key,
+               int32_t iterations);
+
 /**
  *  @brief  Program execution begins here
  *
@@ -44,34 +57,27 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    int32_t *base = NULL;
-    int32_t capacity = 0;
-    int32_t subcapacity = 0;
+    srand(time(NULL));
 
-    int32_t key = -1;
-    int32_t result = -1;
+    test_set(lsearch_int32, 250, 25, 99, 100);
+
+    return EXIT_SUCCESS;
+}
+
+void test_set(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),      
+              size_t capacity, 
+              int32_t subcapacity, 
+              int32_t key, 
+              int32_t iterations) {
+    int32_t *base = NULL;
+
+    int32_t r0 = 0;
+    int32_t r1 = 0;
+    int32_t temp = 0;
 
     int32_t i = 0;
 
     srand(time(NULL));
-
-    {
-        i = 0;
-
-        do {
-            ++i;
-
-            /*
-            capacity = randrnge(ARR_RANGE_START, ARR_RANGE_END);
-            subcapacity = randrnge(ARR_RANGE_START_SUB, ARR_RANGE_END_SUB);
-            */
-
-            capacity = 250;
-            subcapacity = 25;
-        } while (capacity % subcapacity != 0);
-
-        assert(subcapacity < capacity);
-    }
 
     {
         base = calloc(capacity, sizeof *base);
@@ -85,10 +91,6 @@ int main(int argc, const char *argv[]) {
     }
 
     {
-        int32_t r0 = 0;
-        int32_t r1 = 0;
-        int32_t temp = 0;
-
         for (i = 0; i < capacity - 1; i++) {
             r0 = randrnge(0, capacity);
             r1 = randrnge(0, capacity);
@@ -102,21 +104,51 @@ int main(int argc, const char *argv[]) {
             base[r0] = base[r1];
             base[r1] = temp;
         }
-    }
+    }    
 
-    key = ARR_SEARCH_VALUE;
-
-    printf("searching for key %d\n", key);
-    result = lsearch_int32(base, capacity, subcapacity, key);
-
-    if (result <= -1) {
-        printf("search failed\n");
-    } else {
-        printf("result: %d\n", result);
-    }
-
+    test_case(searchfunc, base, capacity, subcapacity, key, iterations);
+    
     free(base);
     base = NULL;
+    
+}
 
-    return EXIT_SUCCESS;
+void test_case(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),
+               int32_t *base,
+               size_t capacity,
+               int32_t subcapacity,
+               int32_t key,
+               int32_t iterations) {
+    int32_t r0 = 0;
+    int32_t temp = 0;
+    int32_t result = -1;
+    int32_t i = 0;
+
+    for (i = 0; i < iterations; i++) {
+        result = result > -1 ? result : capacity - 1;
+
+        {
+            do {
+                temp = base[result];
+
+                r0 = randrnge(0, capacity);
+
+                base[result] = base[r0];
+                base[r0] = temp;
+            } while (result == r0);
+        }
+
+        result = -1;
+
+        printf("searching for key %d\n", key);
+        capacity = 250;
+        subcapacity = 25;
+        result = lsearch_int32(base, capacity, subcapacity, key);
+
+        if (result <= -1) {
+            printf("search failed\n");
+        } else {
+            printf("result: %d\n--------\n\n", result);
+        }
+    }
 }

@@ -39,9 +39,7 @@
 
 #define TEST_NUM 10
 
-#define lsearch(lsobject_addr) lsobject_search(lsobject_addr)
-#define lsearch_int32(base, capacity, subcapacity, key)                        \
-    __linear_search_int32__(base, capacity, subcapacity, key)
+#define lsearch_int32 __linear_search_int32__
 
 #define ARR_SEARCH_VALUE 99
 #define ARR_RANGE_START (256)
