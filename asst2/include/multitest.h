@@ -40,6 +40,7 @@
 #define TEST_NUM 10
 
 #define lsearch_int32 __linear_search_int32__
+#define lsearch_int32_control __linear_search_int32__CONTROL__
 
 #define ARR_SEARCH_VALUE 99
 #define ARR_RANGE_START (256)
@@ -71,6 +72,6 @@ struct linear_search_object {
 
 int __linear_search_int32__(int32_t *base, size_t capacity, int32_t subcapacity, int32_t key);
 
-void test();
+int __linear_search_int32__CONTROL__(int32_t *base, size_t capacity, int32_t subcapacity, int32_t key);
 
 #endif /* MULTITEST_H */

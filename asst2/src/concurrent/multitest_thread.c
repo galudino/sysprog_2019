@@ -53,7 +53,7 @@ int __linear_search_int32__(int32_t *base, size_t capacity, int32_t subcapacity,
 
     size_t thread_count = 0;
 
-    v_tid.length = 0;
+    printf("Multithreaded linear search (-thread)\n");
 
     {
         lso = malloc(sizeof *lso);
@@ -162,10 +162,61 @@ int __linear_search_int32__(int32_t *base, size_t capacity, int32_t subcapacity,
         v_tid.length = 0;
     }
 
+    /*
     printf("position: %d\nindex: %d\npartition number: %d\n\n",
            lso->search.position,
            lso->search.value,
            lso->search.partition);
+    */
+
+    free(lso);
+    lso = NULL;
+ 
+    return index;
+}
+
+int __linear_search_int32__CONTROL__(int32_t *base, size_t capacity, int32_t subcapacity, int32_t key) {
+    lsobject_t *lso = NULL;
+
+    int32_t index = -1;
+    int32_t range_start = 0;
+    int32_t range_end = capacity;
+    int32_t partition = subcapacity;
+    int32_t i = 0;
+
+    {
+        lso = malloc(sizeof *lso);
+        assert(lso);
+
+        lso->vec.base = base;
+        lso->vec.capacity = capacity;
+        lso->vec.subcapacity = subcapacity;
+
+        lso->key = key;
+
+        lso->search.partition = partition;
+        lso->search.position = -1;
+        lso->search.range_start = range_start;
+        lso->search.range_end = range_end;
+        lso->search.value = index;
+    }
+
+    printf("Single process linear search\n");
+
+    for (i = 0; i < lso->vec.capacity; i++) {
+        if (lso->vec.base[i] == lso->key) {
+            lso->search.value = i;
+        }
+    }
+
+    index = lso->search.value;
+
+    /*
+    printf("position: %d\nindex: %d\npartition number: %d\n\n",
+           lso->search.position,
+           lso->search.value,
+           lso->search.partition);
+    */
 
     free(lso);
     lso = NULL;
@@ -192,14 +243,13 @@ static void *handler_lsearch(void *arg) {
         if (lso->vec.base[j] == lso->key) {
             lso->search.value = j;
 
-            printf("partition %d, vec[%d]:\t%d\nhandler: found key %d at index "
+            /*
+            printf("handler: found key %d at index "
                    "%d, partition %d\n\n",
-                   lso->search.partition,
-                   j,
-                   lso->vec.base[j],
                    lso->key,
                    lso->search.value,
                    lso->search.partition);
+            */
 
             /*
             raise(SIGUSR1);
