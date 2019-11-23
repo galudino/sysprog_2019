@@ -28,6 +28,8 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <math.h>
+
 #include "header.h"
 
 /**
@@ -48,4 +50,87 @@ ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width) {
     char *finish = (((char *)(end)) + (width));
 
     return ((finish - start) / width);
+}
+/**
+ *  Return mean from an array of double
+ *  
+ *  @param[in]  results pointer to double
+ *  @param[in]  count   element count of results
+ * 
+ *  @return sum of all elements in results / count
+ */
+double mean(double *results, size_t count) {
+    size_t i = 0;
+    double sum = 0.0;
+
+    if (count == 0) {
+        return -1.0;
+    }
+
+    for (i = 0; i < count; i++) {
+        sum += results[i];
+    }
+
+    return (sum / count);
+}
+
+/**
+ *  Return variance from array of double
+ * 
+ *  @param[in]  results pointer to double
+ *  @param[in]  count element count of results
+ * 
+ *  @return variance from elements in results
+ */
+double variance(double *results, size_t count) {
+    double avg = 0.0;
+    double *results_changed = NULL;
+    double sum = 0;
+
+    size_t i = 0;
+
+    if (count == 0) {
+        /* sentinel */
+        return -123456789.123456789;
+    }
+
+    avg = mean(results, count);
+
+    results_changed = calloc(count, sizeof *results_changed);
+    assert(results_changed);
+
+    memcpy(results_changed, results, sizeof *results);
+
+    for (i = 0; i < count; i++) {
+        double delta = 0.0;
+        double delta_squared = 0.0;
+
+        delta = results_changed[i] - avg;
+        delta_squared = (delta * delta);
+
+        results_changed[i] = delta_squared;
+    }
+
+    for (i = 0; i < count; i++) {
+        sum += results_changed[i];
+    }
+
+    return (sum / (count - 1));
+}
+
+/**
+ *  Return standard deviation from array of double
+ * 
+ *  @param[in]  results pointer to double
+ *  @param[in]  count element count of results
+ * 
+ *  @return standard deviation from elements in results
+ */
+double standard_deviation(double *results, size_t count) {
+    if (count == 0) {
+        /* sentinel */
+        return -123456789.123456789;
+    }
+
+    return sqrt(variance(results, count));
 }

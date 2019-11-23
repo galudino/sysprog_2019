@@ -81,4 +81,7 @@ typedef unsigned int uint32_t;
 
 ptrdiff_t ptr_distance(const void *beg, const void *end, size_t width);
 
+double mean(double *results, size_t count);
+double standard_deviation(double *results, size_t count);
+
 #endif /* HEADER_H */
