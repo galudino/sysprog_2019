@@ -63,8 +63,12 @@ void test_case(int32_t (*searchfunc)(int32_t *, size_t, int32_t, int32_t),
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
+    double array[] = { 12.4, 3.6, 5.2, 9.9, 2.0 };
+    printf("std deviation: %f\n", standard_deviation(array, sizeof(array) / sizeof *array));
+
     srand(time(NULL));
 
+    /*
     test_set(lsearch_int32, 500, 25, 99, 100);
     test_set(lsearch_int32, 500, 50, 99, 100);
     test_set(lsearch_int32, 500, 125, 99, 100);
@@ -89,6 +93,7 @@ int main(int argc, const char *argv[]) {
     test_set(lsearch_int32, 25000, 50, 99, 100);
     test_set(lsearch_int32, 25000, 125, 99, 100);
     test_set(lsearch_int32, 50000, 250, 99, 100);
+    */
 
     return EXIT_SUCCESS;
 }

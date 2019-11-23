@@ -99,7 +99,9 @@ double variance(double *results, size_t count) {
     results_changed = calloc(count, sizeof *results_changed);
     assert(results_changed);
 
-    memcpy(results_changed, results, sizeof *results);
+    for (i = 0; i < count; i++) {
+        results_changed[i] = results[i];
+    }
 
     for (i = 0; i < count; i++) {
         double delta = 0.0;
