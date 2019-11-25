@@ -28,7 +28,7 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "header.h"
+#include "client_server.h"
 
 #ifndef BUFFER_SIZE
 #define BUFFER_SIZE 256
