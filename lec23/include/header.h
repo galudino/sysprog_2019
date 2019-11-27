@@ -3,7 +3,7 @@
  *  @brief      Header file
  *
  *  @author     Gemuele Aludino
- *  @date       26 Nov 2019
+ *  @date       21 Nov 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -64,3 +64,4 @@ typedef unsigned char bool;
 #include <pthread.h>
 
 #endif /* HEADER_H */
+

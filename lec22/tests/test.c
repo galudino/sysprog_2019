@@ -3,7 +3,7 @@
  *  @brief      Test source file
  *
  *  @author     Gemuele Aludino
- *  @date       19 Nov 2019
+ *  @date       26 Nov 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -70,4 +70,3 @@ int main(int argc, const char *argv[]) {
 
     return 0;
 }
-

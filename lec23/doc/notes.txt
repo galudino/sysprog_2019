@@ -3,50 +3,12 @@
  *  @brief      Class notes
  *
  *  @author     Gemuele Aludino
- *  @date       21 Nov 2019
+ *  @date       26 Nov 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 
 ------------------------------------------------------------
 LAST CLASS:
-------------------------------------------------------------
-a file is metadata, attached to an address.
-
-tty - teletype
-
-int main(int argc, const char *argv[]) {
-  printf("hello?\n");
-  close(STDIN_FILENO);
-
-  open("/dev/tty", O_WRONLY);
-  printf("i'm back!\n");
-
-  return EXIT_SUCCESS;
-}
-
-sockets
-  file descriptors that allow you to talk
-  to machines (processes) across a network
-  (network file descriptor)
-
-client:
-  socket()
-  connect()
-
-server:
-  socket()
-
-  bind()
-
-  listen()
-
-  accept()  blocking call, until it gets a request,
-            then returns a socket connected to client side
-
-
-max portno
-4096 >= n < 65536
-------------------------------------------------------------
 ------------------------------------------------------------
 client vs. server
   server sockets can
@@ -102,3 +64,5 @@ client vs. server
 
       Domain Name Service (DNS)
       convert from hostname to IP address
+------------------------------------------------------------
+------------------------------------------------------------

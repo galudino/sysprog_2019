@@ -1,6 +1,7 @@
 /**
  *  @file       header.h
- *  @brief      Header file
+ *  @brief      Header file for Asst3:
+ *              The Decidedly Uncomplicated Message Broker
  *
  *  @author     Gemuele Aludino
  *  @date       26 Nov 2019
@@ -56,11 +57,6 @@ typedef unsigned char bool;
 #include <dirent.h>
 #include <fcntl.h>
 
-#include <errno.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
-#include <signal.h>
-#include <pthread.h>
 
 #endif /* HEADER_H */

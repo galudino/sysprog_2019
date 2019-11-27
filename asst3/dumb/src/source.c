@@ -1,6 +1,7 @@
 /**
- *  @file       header.h
- *  @brief      Header file
+ *  @file       source.c
+ *  @brief      Source file for Asst3:
+ *              The Decidedly Uncomplicated Message Broker
  *
  *  @author     Gemuele Aludino
  *  @date       26 Nov 2019
@@ -28,39 +29,4 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HEADER_H
-#define HEADER_H
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-
-#if __STD_VERSION__ >= 19990L
-#include <stdbool.h>
-#include <stdint.h>
-#else
-# define false  0
-# define true   1
-typedef unsigned char bool;
-#endif
-
-#if WIN32 || _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
-#include <assert.h>
-#include <string.h>
-#include <strings.h>
-#include <dirent.h>
-#include <fcntl.h>
-
-#include <errno.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#include <signal.h>
-#include <pthread.h>
-
-#endif /* HEADER_H */
+#include "header.h"

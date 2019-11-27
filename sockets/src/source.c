@@ -52,7 +52,7 @@
 #define ERR_DISCONN_CLIENT                                                     \
     "The server has left the network. (abrupt termination)"
 
-#define ERR_MALLOC_csockinfo_T "[client] Unable to malloc csockinfo_t."
+#define ERR_MALLOC_CSOCKINFO "[client] Unable to allocate memory for csockinfo_t."
 
 /**< server directives */
 #define ARG_COUNT_SERVER 2
@@ -76,30 +76,59 @@
 
 #define QUIT_DISCONNECT "[server] Now disconnecting..."
 
-#define ERR_MALLOC_ssockinfo_T "[server] Unable to malloc ssockinfo_t."
+#define ERR_MALLOC_SSOCKINFO "[server] Unable to allocate memory for ssockinfo_t."
 
 csockinfo_t *csockinfo_init(csockinfo_t *csock) {
-    /* TODO */
+    assert(csock);
+
+    csock->input.command = NULL;
+    csock->input.arg = NULL;
+
+    csock->msg.inbound = NULL;
+    csock->msg.outbound = NULL;
 
     return csock;
 }
 
 void *csockinfo_deinit(csockinfo_t *csock) {
-    /* TODO */
+    if (csock->input.command) {
+        free(csock->input.command);
+        csock->input.command = NULL;
+    }
 
-    return csock;
+    if (csock->input.arg) {
+        free(csock->input.arg);
+        csock->input.arg = NULL;
+    }
+
+    if (csock->msg.inbound) {
+        free(csock->msg.inbound);
+        csock->msg.inbound = NULL;
+    }
+
+    if (csock->msg.outbound) {
+        free(csock->msg.outbound);
+        csock->msg.outbound = NULL;
+    }
+
+    close(c->fd);
 }
 
 void *csockinfo_new(void) {
-    /* TODO */
+    csockinfo_t *csock = NULL;
 
-    return NULL;
+    csock = malloc(sizeof *csock);
+    assert(csock);
+
+    return csock_init(csock);
 }
 
 void csockinfo_delete(void *arg) {
-    /* TODO */
+    csockinfo_t **csock = (csockinfo_t **)(arg);
 
-
+    csockinfo_deinit((*csock));
+    free((*csock));
+    (*csock) = NULL;
 }
 
 int csockinfo_connect(csockinfo_t *csock,

@@ -1,6 +1,7 @@
 /**
- *  @file       header.h
- *  @brief      Header file
+ *  @file       test.c
+ *  @brief      Test source file (server) for Asst3:
+ *              The Decidedly Uncomplicated Message Broker
  *
  *  @author     Gemuele Aludino
  *  @date       26 Nov 2019
@@ -28,9 +29,7 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HEADER_H
-#define HEADER_H
-
+/*
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -39,8 +38,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #else
-# define false  0
-# define true   1
+# define false '\0'
+# define true '0'
 typedef unsigned char bool;
 #endif
 
@@ -55,12 +54,21 @@ typedef unsigned char bool;
 #include <strings.h>
 #include <dirent.h>
 #include <fcntl.h>
+*/
 
-#include <errno.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include "header.h"
 
-#include <signal.h>
-#include <pthread.h>
+/**
+ *  @brief  Program execution begins here
+ *
+ *  @param[in]  argc    argument count
+ *  @param[in]  argv    command line arguments
+ *
+ *  @return     exit status
+ */
+int main(int argc, const char *argv[]) {
+    /* Enter source code here... */
 
-#endif /* HEADER_H */
+
+    return EXIT_SUCCESS;
+}
