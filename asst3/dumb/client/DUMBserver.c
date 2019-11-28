@@ -29,7 +29,10 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "header.h"
+#include "network.h"
+
+void *ds_handler_server(void *arg);
+void *ds_handler_signal(void *arg);
 
 /**
  *  @brief  Program execution begins here
@@ -40,8 +43,25 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    /* Enter source code here... */
+    ssocket_t *ssock = NULL;
 
+    if (argc != 2) {
+        fprintf(stderr, "\nUSAGE: ./DUMBserver [hostname]\n\n");
+        return EXIT_FAILURE;
+    }
+    
+    ssock = ssocket_new(ds_handler_server, ds_handler_signal);
+    ssocket_connect(ssock, atoi(argv[1]));
+
+    ssocket_delete(&ssock);
 
     return EXIT_SUCCESS;
+}
+
+void *ds_handler_server(void *arg) {
+    return NULL;
+}
+
+void *ds_handler_signal(void *arg) {
+    return NULL;
 }

@@ -29,7 +29,10 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "header.h"
+#include "network.h"
+
+void *dc_handler_inbound(void *arg);
+void *dc_handler_outbound(void *arg);
 
 /**
  *  @brief  Program execution begins here
@@ -40,8 +43,28 @@
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    /* Enter source code here... */
+    csocket_t *csock = NULL;
 
+    if (argc != 3) {
+        fprintf(stderr, "\nUSAGE: ./DUMBclient [hostname] [port number]\n\n");
+        return EXIT_FAILURE;
+    }
+    
+    csock = csocket_new(dc_handler_inbound, dc_handler_outbound);
+    csocket_connect(csock, argv[1], atoi(argv[2]));
+    csocket_start(csock, NULL);
+
+    csocket_delete(&csock);
+
+    throttle(1);
 
     return EXIT_SUCCESS;
+}
+
+void *dc_handler_inbound(void *arg) {
+    return NULL;
+}
+
+void *dc_handler_outbound(void *arg) {
+    return NULL;
 }

@@ -1,6 +1,6 @@
 /**
- *  @file       source.c
- *  @brief      Source file for Asst3:
+ *  @file       utils.c
+ *  @brief      Utility source file for Asst3:
  *              The Decidedly Uncomplicated Message Broker
  *
  *  @author     Gemuele Aludino
@@ -29,4 +29,15 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "header.h"
+#include "utils.h"
+
+/**
+ *  @brief  TODO
+ * 
+ *  @param[in]      sec
+ */
+void throttle(int sec) {
+    if (sleep(sec) != 0) {
+        throttle(sec);
+    }
+}
