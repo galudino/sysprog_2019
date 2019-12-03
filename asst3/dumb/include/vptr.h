@@ -1,10 +1,10 @@
 /**
- *  @file       network.h
- *  @brief      Network header file for Asst3:
+ *  @file       vptr.c
+ *  @brief      struct vector_ptr header file for Asst3:
  *              The Decidedly Uncomplicated Message Broker
  *
  *  @author     Gemuele Aludino
- *  @date       27 Nov 2019
+ *  @date       02 Dec 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -29,25 +29,42 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef NETWORK_H
-#define NETWORK_H
+#ifndef VPTR_H
+#define VPTR_H
 
 #include "utils.h"
 
-char *get_ipaddr(int fd, char *buffer);
-uint16_t get_portno(int fd);
+#include <pthread.h>
 
-enum statcode {
-    OK_,
-    EXIST,
-    NEXST,
-    OPEND,
-    EMPTY,
-    NOOPN,
-    NOTMT,
-    WHAT_
-};
+typedef struct vector_ptr vptr_t;
 
-char *statcode_str(int statcode_num);
+vptr_t *vptr_new(size_t capacity, void (*dtor)(void *));
+void vptr_delete(void *arg);
 
-#endif /* NETWORK_H */
+vptr_t *vptr_init(vptr_t *v, size_t capacity, void (*dtor)(void *));
+vptr_t *vptr_deinit(vptr_t *v);
+
+void vptr_pushb(vptr_t *v, void *arg);
+void vptr_pushf(vptr_t *v, void *arg);
+void vptr_popb(vptr_t *v);
+void vptr_popf(vptr_t *v);
+
+void vptr_insert_at(vptr_t *v, void *arg, size_t index);
+void vptr_erase_at(vptr_t *v, size_t index);
+
+void *vptr_front(vptr_t *v);
+void *vptr_back(vptr_t *v);
+void *vptr_at(vptr_t *v, size_t index);
+
+bool vptr_empty(vptr_t *v);
+size_t vptr_size(vptr_t *v);
+size_t vptr_capacity(vptr_t *v);
+
+int vptr_search(vptr_t *v, void *arg, int (*compare)(const void *, const void *));
+
+int vptr_trylock(vptr_t *v);
+int vptr_unlock(vptr_t *v);
+
+void vptr_fprint(vptr_t *v, FILE *dest, void (*print)(const void *, FILE *));
+
+#endif /* VPTR_H */

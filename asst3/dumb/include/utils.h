@@ -1,10 +1,9 @@
 /**
  *  @file       utils.h
- *  @brief      Utility header file for Asst3:
- *              The Decidedly Uncomplicated Message Broker
+ *  @brief      Header file for utility functions, macros, etc.
  *
  *  @author     Gemuele Aludino
- *  @date       26 Nov 2019
+ *  @date       02 Dec 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -32,38 +31,77 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdarg.h>
-#include <stddef.h>
 
-#if __STD_VERSION__ >= 19990L
-#include <stdbool.h>
-#include <stdint.h>
+#if __STD_VERSION__ >= 199901L
+# include <stdbool.h>
 #else
-# define false  0
-# define true   1
 typedef unsigned char bool;
+# define false '\0'
+# define true '0'
+# define __func__ ":"
+#endif /* __STD_VERSION__ >= 199901L */
+
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+
+void str_delete(void *arg);
+int str_compare(const void *c1, const void *c2);
+void str_print(const void *arg, FILE *dest);
+
+/**< C-String functions/macros */
+char *str_trim_left(char *to_trim, const char *charset);
+char *str_trim_right(char *to_trim, const char *charset);
+char *str_trim(char *to_trim, const char *charset);
+
+#if __linux__ && !__POSIX__
+# define strdup(src) strcpy(malloc(strlen(src) + 1), src)
 #endif
 
-#if WIN32 || _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
+#define streql(s1, s2) strcmp(s1, s2) == 0
+#define strneql(s1, s2, n) strncmp(s1, s2, n) == 0
 
-#include <assert.h>
-#include <string.h>
-#include <strings.h>
-#include <dirent.h>
-#include <fcntl.h>
+/**< void ptr swappage */
+void void_ptr_swap(void **n1, void **n2);
 
-#include <pthread.h>
+#define ESC_CHARS "\t\n\v\f\r\" "
+#define NULL_TERMINATOR '\0'
+#define QUOTATION_MARK '\"'
+#define COMMA ','
+#define PERIOD '.'
+#define DASH '-'
 
-typedef unsigned short uint16_t;
-typedef short int16_t;
-typedef unsigned int uint32_t;
-typedef int int32_t;
+#define APPLE_LOGO ""
+#define APPROX_EQ_SYMBOL "≈"
+#define BETA_SYMBOL "ß"
+#define CENTS_SYMBOL "¢"
+#define COPYRIGHT "©"
+#define DELTA_SYMBOL "∆"
+#define DEGREE_SYMBOL "°"
+#define DIAMOND_SYMBOL "◊"
+#define DIVISION_SYMBOL "÷"
+#define EMPTY_SET_SYMBOL "ø"
+#define EURO_CURRENCY_SYMBOL "€"
+#define GTEQUAL_SYMBOL "≥"
+#define INFINITY_SYMBOL "∞"
+#define LTEQUAL_SYMBOL "≤"
+#define MU "µ"
+#define OMEGA_CAP "Ω"
+#define PARAGRAPH_SYMBOL "¶"
+#define PI_CAP_SYMBOL "∏"
+#define PI_SYMBOL "π"
+#define POUND_CURRENCY_SYMBOL "£"
+#define RIGHTS_RESERVED_SYMBOL "®"
+#define SIGMA_CAP "∑"
+#define THETA_LOW_SYMBOL "θ"
+#define TRADEMARK_SYMBOL "™"
+#define UPSIDEDOWN_EXCPT "¡"
+#define UPSIDEDOWN_QUEST "¿"
+
+#define BUFFER_SIZE 256
+#define BUFFER_SIZE_4K 4096
+#define MAXIMUM_STACK_BUFFER_SIZE 16384
 
 #define KNRM "\x1B[0;0m"   /**< reset to standard color/weight */
 #define KNRM_b "\x1B[0;1m" /**< standard color bold */
@@ -92,7 +130,223 @@ typedef int int32_t;
 #define KCYN_b "\x1B[1;36m" /**< cyan bold */
 #define KWHT_b "\x1B[1;37m" /**< white bold */
 
-/**< throttle: briefly halt program */
-void throttle(int sec);
+/**< utils: debugging */
+int ulog(
+    FILE *dest,
+    const char *level,     /**< meant for "BUG", "LOG", "ERROR", or "WARNING" */
+    const char *file,      /**< meant for use with the __FILE__ macro */
+    const char *func,      /**< meant for use with the __func__ macro */
+    long double line,      /**< meant for use with the __LINE__ macro */
+    const char *fmt, ...); /**< user's custom message */
+
+/**
+ *  Unless you would like to create a customized
+ *  debugging message, please use the following preprocessor directives.
+ *
+ *  BUG is suggested for documenting bugs at certain points in your program.
+ *  LOG is a general-purpose messaging tool.
+ *  ERROR is used for displaying error messages (i.e. something failed, etc)
+ *  WARNING is used to notify the client of an impending issue.
+ *
+ *  The first argument in BUG, LOG, ERROR, and WARNING is FILEMACRO,
+ *  which refers to the following macro:
+ *          __FILE__
+ *  This is just a string, so if you are building a custom ulog message,
+ *  with BUG, LOG, ERROR, or WARNING, and would like to put a different
+ *  string in place of __FILE__, you may do so.
+ */
+
+/**< Designated default streams for BUG, LOG, ERROR, and WARNING */
+#define ULOG_STREAM_BUG stderr
+#define ULOG_STREAM_LOG stdout
+#define ULOG_STREAM_ERROR stderr
+#define ULOG_STREAM_WARNING stderr
+
+/**
+ *  @def        ULOG_DISABLE_ALL
+ *  @brief      Shorthand macro to disable the following preprocessor macros:
+ *              BUG, LOG, ERROR, WARNING
+ *
+ *  Use the preprocessor directive
+ *      #define ULOG_DISABLE_ALL
+ *  before the inclusion of utils.h (or before any of the directives below)
+ *  to disable the macros BUG, LOG, ERROR, and WARNING all at once.
+ *
+ *  You may also use any combination of these macros to keep some
+ *  of the ulog macro types active.
+ *
+ *  ulog has the following format:
+ *  (level is what appears in LEVEL, usually [BUG], [LOG], [ERROR], or [WARNING]
+ *  if using the ulog macros. Using the ulog function allows you to customize
+ *  your own error message)
+ *  MMM dd yyyy HH:mm:ss LEVEL [filepath/filename:linenumber] function_name message
+ */
+#ifdef ULOG_DISABLE_ALL
+# define ULOG_DISABLE_BUG
+# define ULOG_DISABLE_LOG
+# define ULOG_DISABLE_ERROR
+# define ULOG_DISABLE_WARNING
+#endif /* ULOG_DISABLE_ALL */
+
+/** Turn off ulog attributes by invoking one or more of these in a function.
+ULOG_TOGGLE_ATTR(DATE);
+ULOG_TOGGLE_ATTR(TIME);
+ULOG_TOGGLE_ATTR(LEVEL);
+ULOG_TOGGLE_ATTR(FILENAME);
+ULOG_TOGGLE_ATTR(LINE);
+ULOG_TOGGLE_ATTR(FUNCTION);
+ULOG_TOGGLE_ATTR(MESSAGE);
+*/
+
+/**
+ *  @def        BUG
+ *  @brief      Shorthand macro for ulog to note bugs in a program
+ *
+ *  Use the preprocessor directive
+ *      #define ULOG_DISABLE_BUG
+ *  before the inclusion of utils.h (or before these directives)
+ *  to disable the BUG macro.
+ */
+#if __STDC_VERSION__ >= 199901L
+# ifndef ULOG_DISABLE_BUG
+#  define BUG(FILEMACRO, ...)                                                    \
+          ulog(ULOG_STREAM_BUG, "[BUG]", FILEMACRO, __func__, (long int)__LINE__,    \
+              __VA_ARGS__)
+# else
+#  define BUG(FILEMACRO, ...)
+# endif /* ULOG_DISABLE_BUG */
+#else
+# ifndef ULOG_DISABLE_BUG
+#  define BUG(FILEMACRO, MSG)                                                    \
+          ulog(ULOG_STREAM_BUG, "[BUG]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+# else
+#  define BUG(FILEMACRO, MSG)
+# endif /* ULOG_DISABLE_BUG */
+#endif /* __STDC_VERSION__ >= 199901L */
+
+/**
+ *  @def        LOG
+ *  @brief      Shorthand macro for ulog to create messages for a program
+ *
+ *  Use the preprocessor directive
+ *      #define ULOG_DISABLE_BUG
+ *  before the inclusion of utils.h (or before these directives)
+ *  to disable the LOG macro.
+ */
+#if __STDC_VERSION__ >= 199901L
+# ifndef ULOG_DISABLE_LOG
+#  define LOG(FILEMACRO, ...)                                                    \
+          ulog(ULOG_STREAM_LOG, "[LOG]", FILEMACRO, __func__, (long int)__LINE__,    \
+          __VA_ARGS__)
+# else
+#  define LOG(FILEMACRO, ...)
+# endif /* ULOG_DISABLE_LOG */
+#else
+# ifndef ULOG_DISABLE_LOG
+#  define LOG(FILEMACRO, MSG)                                                    \
+          ulog(ULOG_STREAM_LOG, "[LOG]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+# else
+#  define LOG(FILEMACRO, MSG)
+# endif /* ULOG_DISABLE_LOG */
+#endif /* __STDC_VERSION__ >= 199901L */
+
+/**
+ *  @def        ERROR
+ *  @brief      Shorthand macro for ulog to display errors for a program
+ *
+ *  Use the preprocessor directive
+ *      #define ULOG_DISABLE_ERROR
+ *  before the inclusion of utils.h (or before these directives)
+ *  to disable the ERROR macro.
+ */
+#if __STDC_VERSION__ >= 199901L
+# ifndef ULOG_DISABLE_ERROR
+#  define ERROR(FILEMACRO, ...)                                                  \
+          ulog(ULOG_STREAM_ERROR, "[ERROR]", FILEMACRO, __func__,                    \
+          (long int)__LINE__, __VA_ARGS__)
+# endif /* ULOG_DISABLE_ERROR */
+#else
+# ifndef ULOG_DISABLE_ERROR
+#  define ERROR(FILEMACRO, MSG)                                                  \
+          ulog(ULOG_STREAM_ERROR, "[ERROR]", FILEMACRO, __func__,                    \
+          (long int)__LINE__, MSG)
+# else
+#  define ERROR(FILEMACRO, MSG)
+# endif /* ULOG_DISABLE_ERROR */
+#endif /* __STDC_VERSION__ >= 199901L */
+
+/**
+ *  @def        WARNING
+ *  @brief      Shorthand macro for ulog to display warning for a program
+ */
+#if __STDC_VERSION__ >= 199901L
+# ifndef ULOG_DISABLE_WARNING
+#  define WARNING(FILEMACRO, ...)                                                \
+          ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__,                \
+          (long int)__LINE__, __VA_ARGS__)
+# endif /* ULOG_DISABLE_WARNING */
+#else
+# ifndef ULOG_DISABLE_WARNING
+#  define WARNING(FILEMACRO, MSG)                                                \
+          ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__,                \
+          (long int)__LINE__, MSG)
+# else
+#  define WARNING(FILEMACRO, MSG)
+# endif /* ULOG_DISABLE_WARNING */
+#endif /* __STDC_VERSION__ >= 199901L */
+
+#define UTILS_LOG_ATTRS_COUNT 7
+enum ULOG_ATTRS { DATE, TIME, LEVEL, FILENAME, LINE, FUNCTION, MESSAGE };
+extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
+
+#define ULOG_TOGGLE_ATTR(ULOG_ATTR)                                            \
+    ulog_attrs_disable[ULOG_ATTR] =                                            \
+        (ulog_attrs_disable[ULOG_ATTR]) ? (false) : (true)
+
+/**
+ *  Custom assert function with message string -
+ *  message prints to stderr, just like the assert macro in assert.h,
+ *  and the message string is printed using the ulog function --
+ *  wrapped with the ERROR macro defined in this header file.
+ *  Then, just like the assert macro, abort() is invoked
+ *  and the program ends.
+ *
+ *  Unlike the original assert macro,
+ *  NDEBUG will not disable massert - massert
+ *  will persist whether you are in debug mode, or release mode.
+ *
+ *  massert is most useful when a program is no longer fit
+ *  to continue, given a particular condition --
+ *  a description message of your choice can be provided.
+ *
+ *  If no message is preferred, you may provide an empty string.
+ */
+#define massert(CONDITION, MESSAGE)\
+if (!CONDITION) {\
+    fprintf(stderr, "Assertion failed: (%s)\n", #CONDITION);\
+    ERROR(__FILE__, (MESSAGE));\
+    abort();\
+}
+
+#define massert_ptr(PTR);\
+massert(PTR, "['"#PTR"' was found to be NULL - '"#PTR"' must be nonnull to continue.]");
+
+#define massert_ttbl(TTBL);\
+massert(TTBL, "['"#TTBL"' was found to be NULL -- '"#TTBL"' is mandatory for data type information]");
+
+#define massert_malloc(PTR);\
+massert(PTR, "[Request for heap storage allocation failed (malloc returned NULL and was assigned to '"#PTR"')]");
+
+#define massert_calloc(PTR);\
+massert(PTR, "[Request for heap storage allocation failed (calloc returned NULL and was assigned to '"#PTR"')]");
+
+#define massert_realloc(PTR);\
+massert(PTR, "[Request for heap storage reallocation failed (realloc returned NULL and was assigned to '"#PTR"')]");
+
+#define massert_pfunc(PFUNC);\
+massert(PFUNC, "['"#PFUNC"' was found to be NULL - '"#PFUNC"' must be assigned to a function with a matching prototype.]");
+
+#define massert_container(PTR);\
+massert(PTR, "['"#PTR"' was found to be NULL - '"#PTR"' must be assigned to the return value of a container initializer function prior to use.]");
 
 #endif /* UTILS_H */

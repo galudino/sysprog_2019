@@ -23,7 +23,7 @@ SRC_TST				= test.c
 
 ## EXECUTABLE NAMES ###########################################################
 EXE_CLI 			= DUMBclient
-EXE_SVR				= DUMBserver
+EXE_SVR				= DUMBserve
 EXE_TST				= test
 ###############################################################################
 
@@ -61,7 +61,7 @@ SOURCES	:= $(wildcard $(DIR_SRC)/*$(EXT_SRC))
 OBJECTS := $(patsubst $(DIR_SRC)/%$(EXT_SRC), $(DIR_OBJ)/%$(EXT_OBJ), $(SOURCES))
 
 CLIENT := client
-SERVER := server
+SERVER := serve
 TEST   := test
 
 ALL_EXE	= $(EXE_CLI) $(EXE_SVR) $(EXE_TST)
@@ -98,9 +98,9 @@ ALL_EXE	= $(EXE_CLI) $(EXE_SVR) $(EXE_TST)
 
 all: $(CLIENT) $(SERVER)
 
-client: $(EXE_CLI)
-server: $(EXE_SVR)
-test: 	$(EXE_TST)
+$(CLIENT): $(EXE_CLI)
+$(SERVER): $(EXE_SVR)
+$(TEST): 	$(EXE_TST)
 
 sources: $(OBJECTS)
 

@@ -31,143 +31,74 @@
 
 #include "network.h"
 
-/**
- *  @brief  TODO
- * 
- *  @param[out]     cs
- *  @param[in]      inbound_handler
- *  @param[in]      outbound_handler
- * 
- *  @return TODO
- */
-csocket_t *csocket_init(csocket_t *cs, 
-                        void *(*inbound_handler)(void *), 
-                        void *(*outbound_handler)(void *)) {
-    
-    return cs;
+#include <string.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+char *get_ipaddr(int fd, char *buffer) {
+    socklen_t len = 0;
+    struct sockaddr_in sa;
+    int result = 0;
+
+    len = sizeof sa;
+    result = getpeername(fd, (struct sockaddr *)(&sa), &len);
+
+    return (result == 0) ? strcpy(buffer, inet_ntoa(sa.sin_addr)) : NULL;
 }
 
-/**
- *  @brief  TODO
- * 
- *  @param[out]     cs
- * 
- *  @return TODO
- */
-csocket_t *csocket_deinit(csocket_t *cs) {
+uint16_t get_portno(int fd) {
+    socklen_t len = 0;
+    struct sockaddr_in sa;
+    int result = 0;
 
-    return cs;
+    len = sizeof sa;
+    result = getpeername(fd, (struct sockaddr *)(&sa), &len);
+
+    return (result == 0) ? ntohs(sa.sin_port) : 0;
 }
 
-/**
- *  @brief  TODO
- * 
- *  @param[in]      inbound_handler
- *  @param[in]      outbound_handler
- * 
- *  @return TODO
- */
-void *csocket_new(void *(*inbound_handler)(void *), 
-                  void *(*outbound_handler)(void *)) {
-    return NULL;
-}
+char *statcode_str(int statcode_num) {
+    char *result = NULL;
 
-/**
- *  @brief  TODO
- * 
- *  @param[in]      arg
- * 
- *  @return TODO
- */
-void csocket_delete(void *arg) {
+    switch (statcode_num) {
+        case OK_:
+        result = "OK!";
+        break;
 
-}
+        case EXIST:
+        result = "EXIST";
+        break;
 
-/**
- *  @brief  TODO
- * 
- *  @param[out]     cs
- *  @param[in]      hostname
- *  @param[in]      portno
- * 
- *  @return TODO
- */
-int csocket_connect(csocket_t *cs, 
-                    const char *hostname, 
-                    int portno) {
-    return 0;
-}
+        case NEXST:
+        result = "NEXST";
+        break;
 
-/**
- *  @brief  TODO
- *  
- *  @param[in]  cs
- *  @param[in]  function
- *  
- *  @return TODO
- */
-int csocket_start(csocket_t *cs, void *(*function)(void *)) {
-    return 0;
-}
+        case OPEND:
+        result = "OPEND";
+        break;
 
-/**
- *  @brief  TODO
- * 
- *  @param[out]     ss
- *  @param[in]      server_handler
- *  @param[in]      signal_handler
- * 
- *  @return TODO
- */
-ssocket_t *ssocket_init(ssocket_t *ss, 
-                        void *(*server_handler)(void *), 
-                        void *(*signal_handler)(void *)) {
-    return ss;
-}
+        case EMPTY:
+        result = "EMPTY";
+        break;
 
-/**
- *  @brief  TODO
- * 
- *  @param[out]     ss
- * 
- *  @return TODO
- */
-ssocket_t *ssocket_deinit(ssocket_t *ss) {
-    return ss;
-}
+        case NOOPN:
+        result = "NOOPN";
+        break;
 
-/**
- *  @brief  TODO
- * 
- *  @param[in]      server_handler
- *  @param[in]      signal_handler
- * 
- *  @return TODO
- */
-void *ssocket_new(void *(*server_handler)(void *), 
-                  void *(*signal_handler)(void *)) {
-    return NULL;
-}
+        case NOTMT:
+        result = "NOTMT";
+        break;
 
-/**
- *  @brief  TODO
- * 
- *  @param[out]     arg
- * 
- *  @return TODO
- */
-void ssocket_delete(void *arg) {
+        case WHAT_:
+        
+        default:
+        result = "WHAT?";
 
-}
+        break;
+    }
 
-/**
- *  @brief  TODO
- * 
- *  @param[out]     ss
- *  @param[in]      portno
- * 
- *  @return TODO
- */
-int ssocket_connect(ssocket_t *ss, uint16_t portno) {
-    return 0;
+    return result;
 }

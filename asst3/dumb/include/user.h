@@ -1,10 +1,10 @@
 /**
- *  @file       network.h
- *  @brief      Network header file for Asst3:
+ *  @file       user.h
+ *  @brief      User header file for Asst3:
  *              The Decidedly Uncomplicated Message Broker
  *
  *  @author     Gemuele Aludino
- *  @date       27 Nov 2019
+ *  @date       02 Dec 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
@@ -29,25 +29,27 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef NETWORK_H
-#define NETWORK_H
+#ifndef USER_H
+#define USER_H
 
 #include "utils.h"
+#include "vptr.h"
 
-char *get_ipaddr(int fd, char *buffer);
-uint16_t get_portno(int fd);
+typedef struct user user_t;
 
-enum statcode {
-    OK_,
-    EXIST,
-    NEXST,
-    OPEND,
-    EMPTY,
-    NOOPN,
-    NOTMT,
-    WHAT_
-};
+user_t *user_new(char *uname);
+void user_delete(void *arg);
+int user_compare(const void *c1, const void *c2);
+void user_print(const void *arg, FILE *dest);
 
-char *statcode_str(int statcode_num);
+user_t *user_init(user_t *u, char *uname);
+user_t *user_deinit(user_t *u);
 
-#endif /* NETWORK_H */
+bool user_active(user_t *u);
+int user_open(user_t *u);
+int user_close(user_t *u);
+int user_message_put(user_t *u, char *message);
+char **user_message_peek(user_t *u);
+int user_message_pop(user_t *u);
+
+#endif /* USER_H */

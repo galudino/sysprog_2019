@@ -29,10 +29,30 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include "vptr.h"
+#include "user.h"
 #include "network.h"
 
-void *ds_handler_server(void *arg);
-void *ds_handler_signal(void *arg);
+static int usr_usage(void);
+
+static int usr_creat(vptr_t *v, int fd);
+static int usr_opnbx(vptr_t *v, int fd);
+static int usr_delbx(vptr_t *v, int fd, int index);
+static int usr_gdbye(vptr_t *v, int fd, int index);
+
+static int usr_opnop(vptr_t *v, int fd, int index);
+static int usr_putmg(vptr_t *v, int fd, int index);
+static int usr_nxtmg(vptr_t *v, int fd, int index);
+static int usr_clsbx(vptr_t *v, int fd, int index);
+
+void temp();
 
 /**
  *  @brief  Program execution begins here
@@ -43,25 +63,79 @@ void *ds_handler_signal(void *arg);
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    ssocket_t *ssock = NULL;
+    user_t *u = user_new("charlie");
+    char buffer[256];
 
-    if (argc != 2) {
-        fprintf(stderr, "\nUSAGE: ./DUMBserver [hostname]\n\n");
-        return EXIT_FAILURE;
-    }
-    
-    ssock = ssocket_new(ds_handler_server, ds_handler_signal);
-    ssocket_connect(ssock, atoi(argv[1]));
+    printf("active: %s\n", user_active(u) ? "yes" : "no");
+    user_open(u);
 
-    ssocket_delete(&ssock);
+    strcpy(buffer, "message 1");
+    user_message_put(u, buffer);
+
+    strcpy(buffer, "message 2");
+    user_message_put(u, buffer);
+
+    strcpy(buffer, "message 3");
+    user_message_put(u, buffer);
+
+    user_print(&u, stdout);
+    printf("peek: %s\n", *user_message_peek(u));
+
+    printf("active: %s\n", user_active(u) ? "yes" : "no");
+    user_close(u);
+    printf("active: %s\n", user_active(u) ? "yes" : "no");
+
+    user_delete(&u);
 
     return EXIT_SUCCESS;
 }
 
-void *ds_handler_server(void *arg) {
-    return NULL;
+int usr_usage(void) {
+    return 0; 
 }
 
-void *ds_handler_signal(void *arg) {
-    return NULL;
+int usr_creat(vptr_t *v, int fd) {
+
+    return 0;
+}
+
+int usr_opnbx(vptr_t *v, int fd) {
+    return 0;
+}
+
+int usr_delbx(vptr_t *v, int fd, int index) {
+    return 0;
+}
+
+int usr_gdbye(vptr_t *v, int fd, int index) {
+    return 0;
+}
+
+int usr_opnop(vptr_t *v, int fd, int index) {
+    return 0;
+}
+
+int usr_putmg(vptr_t *v, int fd, int index) {
+    return 0;
+}
+
+int usr_nxtmg(vptr_t *v, int fd, int index) {
+    return 0;
+}
+
+int usr_clsbx(vptr_t *v, int fd, int index) {
+    return 0;
+}
+
+
+void temp() {
+    usr_usage();
+    usr_creat(NULL, 0);
+    usr_opnbx(NULL, 0);
+    usr_delbx(NULL, 0, 0);
+    usr_gdbye(NULL, 0, 0);
+    usr_opnop(NULL, 0, 0);
+    usr_putmg(NULL, 0, 0);
+    usr_nxtmg(NULL, 0, 0);
+    usr_clsbx(NULL, 0, 0);
 }

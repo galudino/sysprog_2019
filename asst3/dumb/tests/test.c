@@ -29,7 +29,6 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -54,9 +53,8 @@ typedef unsigned char bool;
 #include <strings.h>
 #include <dirent.h>
 #include <fcntl.h>
-*/
 
-#include "header.h"
+#include <pthread.h>
 
 /**
  *  @brief  Program execution begins here
@@ -67,8 +65,7 @@ typedef unsigned char bool;
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    /* Enter source code here... */
+    
 
-
-    return EXIT_SUCCESS;
+    return 0;
 }
