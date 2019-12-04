@@ -1,0 +1,45 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       03 Dec 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+------------------------------------------------------------
+LAST CLASS:
+------------------------------------------------------------
+Network:
+  Routing
+    building a path from one host to another
+      me?
+      directly connected to?
+        which that I am directly connected to should I relay to?
+        (store and forward)
+
+      Routing: how do the IP Addresses match?
+
+      IP address: 255.255.255.255
+      class-based 
+        A. 1 octet set 
+        B. 2 octets set 
+        C. 3 octets set 
+        D. all octets set
+
+      classless interdomain routing:
+        192.168.1.0/8
+        192.168.1.0/32
+        192.168.1.0/30
+
+(least abstracted)
+Please              physical
+Do                  data link
+Not                 network
+Throw               transfer
+Sausage             session
+Pizza               presentation
+Away                application
+(most abstracted)
+------------------------------------------------------------
+------------------------------------------------------------
