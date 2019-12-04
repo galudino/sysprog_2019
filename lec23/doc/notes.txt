@@ -92,7 +92,7 @@ Network:
 Please              physical
 Do                  data link
 Not                 network
-Throw               transfer
+Throw               transport
 Sausage             session
 Pizza               presentation
 Away                application

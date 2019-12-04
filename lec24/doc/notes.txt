@@ -43,3 +43,60 @@ Away                application
 (most abstracted)
 ------------------------------------------------------------
 ------------------------------------------------------------
+EXAM 1 (FINAL):
+  1600-1900 18 Dec CAG (College Avg Gym)
+
+Networking (sockets)
+
+Routing
+  CIDR: Classless InterDomain Routing
+  127.0.0.1/17
+
+  localhost
+
+  handling a message:
+    - is it for me? (done!) (physical)
+    - is it for someone i am directly connected to? 
+    (done-ish. fwd to that machine) (data link)
+    - is for someone i am indirectly connected to
+    (not done - forward to machine directly connected to
+    that is "closer" to the destination) (network)
+
+    CIDR - how many bits do i match across?
+    A.  1   octet  set
+    B.  2   octets set
+    C.  3   octets set
+    D.  all octets set
+
+    A: 192.168.120.1/8
+    B: 192.168.120.1/16
+    C: 192.168.120.1/24
+    D: 192.168.120.1/32
+
+    192.168.1.4/30    better match for 192.168.1.7
+    192.168.1.1/16
+
+    192.168.1.7
+
+  ISO-OSI
+  international standards organization of open systems interconnection
+
+  (most abstracted)
+  application
+    interact with user
+  presentation
+    translates/optimizes/encryptes/decrypts data
+    modify data/decode
+  session
+    synchronize over sockets/rules over messages/multiplex sockets
+    inspects messages before they are sent before using transport layer to send it 
+  transport
+    messaging, quality of service, efficiency, reliability
+    (socket)
+  network
+    route between hosts (indirect connection)
+  data link
+    point to point relay (directly connected)
+  physical
+    convert bits to radiation and vv.
+  (least abstracted)

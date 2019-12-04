@@ -3,7 +3,7 @@
  *  @brief      Source file
  *
  *  @author     Gemuele Aludino
- *  @date       03 Dec 2019
+ *  @date       03 Deca 2019
  *  @copyright  Copyright © 2019 Gemuele Aludino
  */
 /**
