@@ -91,9 +91,7 @@ user_t *user_deinit(user_t *u) {
     return u;
 }
 
-bool user_active(user_t *u) {
-    return u->active;
-}
+bool user_active(user_t *u) { return u->active; }
 
 int user_open(user_t *u) {
     int status = 0;
@@ -140,6 +138,6 @@ int user_message_pop(user_t *u) {
     } else {
         vptr_popf(u->msgbx);
     }
-    
+
     return status;
 }

@@ -58,7 +58,7 @@ void vptr_delete(void *arg) {
     (*v) = NULL;
 }
 
-vptr_t *vptr_init(vptr_t *v, size_t capacity, void (*dtor)(void *)) {    
+vptr_t *vptr_init(vptr_t *v, size_t capacity, void (*dtor)(void *)) {
     pthread_mutex_init(&v->lock, NULL);
 
     v->dtor = dtor;
@@ -138,7 +138,7 @@ void vptr_popf(vptr_t *v) {
     v->base[0] = NULL;
 
     --v->length;
-    
+
     memmove(v->base, v->base + 1, sizeof *v->base * v->length);
 }
 
@@ -177,13 +177,9 @@ void vptr_erase_at(vptr_t *v, size_t index) {
     memmove(v->base + index, v->base + (index + 1), sizeof *v->base * (v->length - index));
 }
 
-void *vptr_front(vptr_t *v) {
-    return v->base;
-}
+void *vptr_front(vptr_t *v) { return v->base; }
 
-void *vptr_back(vptr_t *v) {
-    return v->base + (v->length - 1);
-}
+void *vptr_back(vptr_t *v) { return v->base + (v->length - 1); }
 
 void *vptr_at(vptr_t *v, size_t index) {
     if (index >= v->length) {
@@ -193,17 +189,11 @@ void *vptr_at(vptr_t *v, size_t index) {
     return v->base + index;
 }
 
-bool vptr_empty(vptr_t *v) {
-    return v->length == 0;
-}
+bool vptr_empty(vptr_t *v) { return v->length == 0; }
 
-size_t vptr_size(vptr_t *v) {
-    return v->length;
-}
+size_t vptr_size(vptr_t *v) { return v->length; }
 
-size_t vptr_capacity(vptr_t *v) {
-    return v->capacity;
-}
+size_t vptr_capacity(vptr_t *v) { return v->capacity; }
 
 int vptr_search(vptr_t *v, void *arg, int (*compare)(const void *, const void *)) {
     int i = 0;
@@ -220,13 +210,9 @@ int vptr_search(vptr_t *v, void *arg, int (*compare)(const void *, const void *)
     return found ? i : -1;
 }
 
-int vptr_trylock(vptr_t *v) {
-    return pthread_mutex_trylock(&v->lock);
-}
+int vptr_trylock(vptr_t *v) { return pthread_mutex_trylock(&v->lock); }
 
-int vptr_unlock(vptr_t *v) {
-    return pthread_mutex_unlock(&v->lock);
-}
+int vptr_unlock(vptr_t *v) { return pthread_mutex_unlock(&v->lock); }
 
 void vptr_fprint(vptr_t *v, FILE *dest, void (*print)(const void *, FILE *)) {
     size_t i = 0;

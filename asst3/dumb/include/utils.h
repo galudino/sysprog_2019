@@ -34,12 +34,12 @@
 #include <stdarg.h>
 
 #if __STD_VERSION__ >= 199901L
-# include <stdbool.h>
+#include <stdbool.h>
 #else
 typedef unsigned char bool;
-# define false '\0'
-# define true '0'
-# define __func__ ":"
+#define false '\0'
+#define true '0'
+#define __func__ ":"
 #endif /* __STD_VERSION__ >= 199901L */
 
 #include <stdint.h>
@@ -56,7 +56,7 @@ char *str_trim_right(char *to_trim, const char *charset);
 char *str_trim(char *to_trim, const char *charset);
 
 #if __linux__ && !__POSIX__
-# define strdup(src) strcpy(malloc(strlen(src) + 1), src)
+#define strdup(src) strcpy(malloc(strlen(src) + 1), src)
 #endif
 
 #define streql(s1, s2) strcmp(s1, s2) == 0
@@ -131,13 +131,14 @@ void void_ptr_swap(void **n1, void **n2);
 #define KWHT_b "\x1B[1;37m" /**< white bold */
 
 /**< utils: debugging */
-int ulog(
-    FILE *dest,
-    const char *level,     /**< meant for "BUG", "LOG", "ERROR", or "WARNING" */
-    const char *file,      /**< meant for use with the __FILE__ macro */
-    const char *func,      /**< meant for use with the __func__ macro */
-    long double line,      /**< meant for use with the __LINE__ macro */
-    const char *fmt, ...); /**< user's custom message */
+int
+ulog(FILE *dest,
+     const char *level, /**< meant for "BUG", "LOG", "ERROR", or "WARNING" */
+     const char *file,  /**< meant for use with the __FILE__ macro */
+     const char *func,  /**< meant for use with the __func__ macro */
+     long double line,  /**< meant for use with the __LINE__ macro */
+     const char *fmt,
+     ...); /**< user's custom message */
 
 /**
  *  Unless you would like to create a customized
@@ -179,13 +180,14 @@ int ulog(
  *  (level is what appears in LEVEL, usually [BUG], [LOG], [ERROR], or [WARNING]
  *  if using the ulog macros. Using the ulog function allows you to customize
  *  your own error message)
- *  MMM dd yyyy HH:mm:ss LEVEL [filepath/filename:linenumber] function_name message
+ *  MMM dd yyyy HH:mm:ss LEVEL [filepath/filename:linenumber] function_name
+ *message
  */
 #ifdef ULOG_DISABLE_ALL
-# define ULOG_DISABLE_BUG
-# define ULOG_DISABLE_LOG
-# define ULOG_DISABLE_ERROR
-# define ULOG_DISABLE_WARNING
+#define ULOG_DISABLE_BUG
+#define ULOG_DISABLE_LOG
+#define ULOG_DISABLE_ERROR
+#define ULOG_DISABLE_WARNING
 #endif /* ULOG_DISABLE_ALL */
 
 /** Turn off ulog attributes by invoking one or more of these in a function.
@@ -208,20 +210,19 @@ ULOG_TOGGLE_ATTR(MESSAGE);
  *  to disable the BUG macro.
  */
 #if __STDC_VERSION__ >= 199901L
-# ifndef ULOG_DISABLE_BUG
-#  define BUG(FILEMACRO, ...)                                                    \
-          ulog(ULOG_STREAM_BUG, "[BUG]", FILEMACRO, __func__, (long int)__LINE__,    \
-              __VA_ARGS__)
-# else
-#  define BUG(FILEMACRO, ...)
-# endif /* ULOG_DISABLE_BUG */
+#ifndef ULOG_DISABLE_BUG
+#define BUG(FILEMACRO, ...)                                                    \
+    ulog(ULOG_STREAM_BUG, "[BUG]", FILEMACRO, __func__, (long int)__LINE__, __VA_ARGS__)
 #else
-# ifndef ULOG_DISABLE_BUG
-#  define BUG(FILEMACRO, MSG)                                                    \
-          ulog(ULOG_STREAM_BUG, "[BUG]", FILEMACRO, __func__, (long int)__LINE__, MSG)
-# else
-#  define BUG(FILEMACRO, MSG)
-# endif /* ULOG_DISABLE_BUG */
+#define BUG(FILEMACRO, ...)
+#endif /* ULOG_DISABLE_BUG */
+#else
+#ifndef ULOG_DISABLE_BUG
+#define BUG(FILEMACRO, MSG)                                                    \
+    ulog(ULOG_STREAM_BUG, "[BUG]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+#else
+#define BUG(FILEMACRO, MSG)
+#endif /* ULOG_DISABLE_BUG */
 #endif /* __STDC_VERSION__ >= 199901L */
 
 /**
@@ -234,20 +235,19 @@ ULOG_TOGGLE_ATTR(MESSAGE);
  *  to disable the LOG macro.
  */
 #if __STDC_VERSION__ >= 199901L
-# ifndef ULOG_DISABLE_LOG
-#  define LOG(FILEMACRO, ...)                                                    \
-          ulog(ULOG_STREAM_LOG, "[LOG]", FILEMACRO, __func__, (long int)__LINE__,    \
-          __VA_ARGS__)
-# else
-#  define LOG(FILEMACRO, ...)
-# endif /* ULOG_DISABLE_LOG */
+#ifndef ULOG_DISABLE_LOG
+#define LOG(FILEMACRO, ...)                                                    \
+    ulog(ULOG_STREAM_LOG, "[LOG]", FILEMACRO, __func__, (long int)__LINE__, __VA_ARGS__)
 #else
-# ifndef ULOG_DISABLE_LOG
-#  define LOG(FILEMACRO, MSG)                                                    \
-          ulog(ULOG_STREAM_LOG, "[LOG]", FILEMACRO, __func__, (long int)__LINE__, MSG)
-# else
-#  define LOG(FILEMACRO, MSG)
-# endif /* ULOG_DISABLE_LOG */
+#define LOG(FILEMACRO, ...)
+#endif /* ULOG_DISABLE_LOG */
+#else
+#ifndef ULOG_DISABLE_LOG
+#define LOG(FILEMACRO, MSG)                                                    \
+    ulog(ULOG_STREAM_LOG, "[LOG]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+#else
+#define LOG(FILEMACRO, MSG)
+#endif /* ULOG_DISABLE_LOG */
 #endif /* __STDC_VERSION__ >= 199901L */
 
 /**
@@ -260,19 +260,17 @@ ULOG_TOGGLE_ATTR(MESSAGE);
  *  to disable the ERROR macro.
  */
 #if __STDC_VERSION__ >= 199901L
-# ifndef ULOG_DISABLE_ERROR
-#  define ERROR(FILEMACRO, ...)                                                  \
-          ulog(ULOG_STREAM_ERROR, "[ERROR]", FILEMACRO, __func__,                    \
-          (long int)__LINE__, __VA_ARGS__)
-# endif /* ULOG_DISABLE_ERROR */
+#ifndef ULOG_DISABLE_ERROR
+#define ERROR(FILEMACRO, ...)                                                  \
+    ulog(ULOG_STREAM_ERROR, "[ERROR]", FILEMACRO, __func__, (long int)__LINE__, __VA_ARGS__)
+#endif /* ULOG_DISABLE_ERROR */
 #else
-# ifndef ULOG_DISABLE_ERROR
-#  define ERROR(FILEMACRO, MSG)                                                  \
-          ulog(ULOG_STREAM_ERROR, "[ERROR]", FILEMACRO, __func__,                    \
-          (long int)__LINE__, MSG)
-# else
-#  define ERROR(FILEMACRO, MSG)
-# endif /* ULOG_DISABLE_ERROR */
+#ifndef ULOG_DISABLE_ERROR
+#define ERROR(FILEMACRO, MSG)                                                  \
+    ulog(ULOG_STREAM_ERROR, "[ERROR]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+#else
+#define ERROR(FILEMACRO, MSG)
+#endif /* ULOG_DISABLE_ERROR */
 #endif /* __STDC_VERSION__ >= 199901L */
 
 /**
@@ -280,28 +278,33 @@ ULOG_TOGGLE_ATTR(MESSAGE);
  *  @brief      Shorthand macro for ulog to display warning for a program
  */
 #if __STDC_VERSION__ >= 199901L
-# ifndef ULOG_DISABLE_WARNING
-#  define WARNING(FILEMACRO, ...)                                                \
-          ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__,                \
-          (long int)__LINE__, __VA_ARGS__)
-# endif /* ULOG_DISABLE_WARNING */
+#ifndef ULOG_DISABLE_WARNING
+#define WARNING(FILEMACRO, ...)                                                \
+    ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__, (long int)__LINE__, __VA_ARGS__)
+#endif /* ULOG_DISABLE_WARNING */
 #else
-# ifndef ULOG_DISABLE_WARNING
-#  define WARNING(FILEMACRO, MSG)                                                \
-          ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__,                \
-          (long int)__LINE__, MSG)
-# else
-#  define WARNING(FILEMACRO, MSG)
-# endif /* ULOG_DISABLE_WARNING */
+#ifndef ULOG_DISABLE_WARNING
+#define WARNING(FILEMACRO, MSG)                                                \
+    ulog(ULOG_STREAM_WARNING, "[WARNING]", FILEMACRO, __func__, (long int)__LINE__, MSG)
+#else
+#define WARNING(FILEMACRO, MSG)
+#endif /* ULOG_DISABLE_WARNING */
 #endif /* __STDC_VERSION__ >= 199901L */
 
 #define UTILS_LOG_ATTRS_COUNT 7
-enum ULOG_ATTRS { DATE, TIME, LEVEL, FILENAME, LINE, FUNCTION, MESSAGE };
+enum ULOG_ATTRS {
+    DATE,
+    TIME,
+    LEVEL,
+    FILENAME,
+    LINE,
+    FUNCTION,
+    MESSAGE
+};
 extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
 
 #define ULOG_TOGGLE_ATTR(ULOG_ATTR)                                            \
-    ulog_attrs_disable[ULOG_ATTR] =                                            \
-        (ulog_attrs_disable[ULOG_ATTR]) ? (false) : (true)
+    ulog_attrs_disable[ULOG_ATTR] = (ulog_attrs_disable[ULOG_ATTR]) ? (false) : (true)
 
 /**
  *  Custom assert function with message string -
@@ -321,32 +324,51 @@ extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
  *
  *  If no message is preferred, you may provide an empty string.
  */
-#define massert(CONDITION, MESSAGE)\
-if (!CONDITION) {\
-    fprintf(stderr, "Assertion failed: (%s)\n", #CONDITION);\
-    ERROR(__FILE__, (MESSAGE));\
-    abort();\
-}
+#define massert(CONDITION, MESSAGE)                                            \
+    if (!CONDITION) {                                                          \
+        fprintf(stderr, "Assertion failed: (%s)\n", #CONDITION);               \
+        ERROR(__FILE__, (MESSAGE));                                            \
+        abort();                                                               \
+    }
 
-#define massert_ptr(PTR);\
-massert(PTR, "['"#PTR"' was found to be NULL - '"#PTR"' must be nonnull to continue.]");
+#define massert_ptr(PTR)                                                       \
+    ;                                                                          \
+    massert(PTR,                                                               \
+            "['" #PTR "' was found to be NULL - '" #PTR                        \
+            "' must be nonnull to continue.]");
 
-#define massert_ttbl(TTBL);\
-massert(TTBL, "['"#TTBL"' was found to be NULL -- '"#TTBL"' is mandatory for data type information]");
+#define massert_ttbl(TTBL)                                                     \
+    ;                                                                          \
+    massert(TTBL,                                                              \
+            "['" #TTBL "' was found to be NULL -- '" #TTBL                     \
+            "' is mandatory for data type information]");
 
-#define massert_malloc(PTR);\
-massert(PTR, "[Request for heap storage allocation failed (malloc returned NULL and was assigned to '"#PTR"')]");
+#define massert_malloc(PTR)                                                    \
+    ;                                                                          \
+    massert(PTR, "[Request for heap storage allocation failed (malloc "        \
+                 "returned NULL and was assigned to '" #PTR "')]");
 
-#define massert_calloc(PTR);\
-massert(PTR, "[Request for heap storage allocation failed (calloc returned NULL and was assigned to '"#PTR"')]");
+#define massert_calloc(PTR)                                                    \
+    ;                                                                          \
+    massert(PTR, "[Request for heap storage allocation failed (calloc "        \
+                 "returned NULL and was assigned to '" #PTR "')]");
 
-#define massert_realloc(PTR);\
-massert(PTR, "[Request for heap storage reallocation failed (realloc returned NULL and was assigned to '"#PTR"')]");
+#define massert_realloc(PTR)                                                   \
+    ;                                                                          \
+    massert(PTR, "[Request for heap storage reallocation failed (realloc "     \
+                 "returned NULL and was assigned to '" #PTR "')]");
 
-#define massert_pfunc(PFUNC);\
-massert(PFUNC, "['"#PFUNC"' was found to be NULL - '"#PFUNC"' must be assigned to a function with a matching prototype.]");
+#define massert_pfunc(PFUNC)                                                   \
+    ;                                                                          \
+    massert(PFUNC,                                                             \
+            "['" #PFUNC "' was found to be NULL - '" #PFUNC                    \
+            "' must be assigned to a function with a matching prototype.]");
 
-#define massert_container(PTR);\
-massert(PTR, "['"#PTR"' was found to be NULL - '"#PTR"' must be assigned to the return value of a container initializer function prior to use.]");
+#define massert_container(PTR)                                                 \
+    ;                                                                          \
+    massert(PTR,                                                               \
+            "['" #PTR "' was found to be NULL - '" #PTR                        \
+            "' must be assigned to the return value of a container "           \
+            "initializer function prior to use.]");
 
 #endif /* UTILS_H */

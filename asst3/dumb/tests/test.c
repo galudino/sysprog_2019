@@ -65,6 +65,37 @@ typedef unsigned char bool;
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
+    char buffer[256];
+    strcpy(buffer, "PUTMG!5!hello");
+
+    if (strncmp(buffer, "PUTMG", 5) == 0) {
+        char *ptr = buffer + 5;
+        char ch = ' ';
+        ch = ptr[0];
+        ptr[0] = '\0';
+        printf("cmd: %s\n", buffer);
+        ptr[0] = ch;
+
+        if (ptr[0] == '!') {
+            char *temp = NULL;
+            char ch = ' ';
+            int len = -1;
+
+            ++ptr;
+            temp = strchr(ptr, '!');
+            ch = *(temp);
+            *(temp) = '\0';
+
+            len = atoi(ptr);
+            *(temp) = ch;
+
+            ptr = temp + 1;
+            ptr[len] = '\0';
+
+            printf("len: %d\n", len);
+            printf("msg: %s\n", ptr);
+        }
+    }
     
 
     return 0;

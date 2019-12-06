@@ -41,9 +41,8 @@
 
 int ssocket_init(int *ssockfd, int domain, int type, uint16_t portno, int backlog) {
     struct sockaddr_in server;
-    int status_bind = -1;
-
-    memset(&server, '\0', sizeof server);
+    int status = -1;
+    int optval = 1;
 
     (*ssockfd) = socket(domain, type, 0);
 
@@ -52,13 +51,20 @@ int ssocket_init(int *ssockfd, int domain, int type, uint16_t portno, int backlo
         exit(EXIT_FAILURE);
     }
 
+    if (setsockopt((*ssockfd), SOL_SOCKET, SO_REUSEADDR, &optval, sizeof *ssockfd) < 0) {
+        fprintf(stderr, "Unable to set socket options\n");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&server, '\0', sizeof server);
+
     server.sin_family = domain;
     server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(portno);
 
-    status_bind = bind((*ssockfd), (struct sockaddr *)(&server), sizeof server);
+    status = bind((*ssockfd), (struct sockaddr *)(&server), sizeof server);
 
-    if (status_bind != 0) {
+    if (status != 0) {
         fprintf(stderr, "Unable to bind server socket\n");
         exit(EXIT_FAILURE);
     }
@@ -66,7 +72,14 @@ int ssocket_init(int *ssockfd, int domain, int type, uint16_t portno, int backlo
     fprintf(stdout, "Now listening on port %d\n", portno);
     fflush(stdout);
 
-    return listen((*ssockfd), backlog);
+    status = listen((*ssockfd), backlog);
+
+    if (status != 0) {
+        fprintf(stderr, "Unable to listen on port %d\n", portno);
+        exit(EXIT_FAILURE);
+    }
+
+    return (*ssockfd);
 }
 
 int csocket_init(int *csockfd, int domain, int type) {
@@ -74,14 +87,12 @@ int csocket_init(int *csockfd, int domain, int type) {
     return (*csockfd);
 }
 
-void csocket_connect(int *csockfd, int domain, const char *hostname, uint16_t portno) {
+int csocket_connect(int *csockfd, int domain, const char *hostname, uint16_t portno) {
     struct sockaddr_in addr_server;
     struct hostent *server = NULL;
 
     int status = -1;
     int count_period = 3;
-
-    memset(&addr_server, '\0', sizeof addr_server);
 
     server = gethostbyname(hostname);
 
@@ -90,17 +101,19 @@ void csocket_connect(int *csockfd, int domain, const char *hostname, uint16_t po
         exit(EXIT_FAILURE);
     }
 
+    memset(&addr_server, '\0', sizeof addr_server);
 
     addr_server.sin_family = domain;
     addr_server.sin_port = htons(portno);
+    memcpy(server->h_addr_list, &addr_server.sin_addr.s_addr, server->h_length);
 
-    fprintf(stdout, "Attempting to connect to %s via port %d\n", hostname, portno);
+    fprintf(stdout, "Attempting to connect to %s via port %d\n", server->h_name, portno);
 
     while (true) {
         status = connect((*csockfd), (struct sockaddr *)(&addr_server), sizeof addr_server);
 
         if (status != -1) {
-            fprintf(stdout, "Connected (%s via port %d)\n", hostname, portno);
+            fprintf(stdout, "Connected (%s via port %d)\n", server->h_name, portno);
             break;
         } else {
             if (count_period == 3) {
@@ -116,6 +129,8 @@ void csocket_connect(int *csockfd, int domain, const char *hostname, uint16_t po
 
         throttle(3);
     }
+
+    return (*csockfd);
 }
 
 char *get_ipaddr(int fd, char *buffer) {
@@ -144,37 +159,37 @@ char *statcode_str(int statcode_num) {
     char *result = NULL;
 
     switch (statcode_num) {
-        case OK_:
+    case OK_:
         result = "OK!";
         break;
 
-        case EXIST:
+    case EXIST:
         result = "EXIST";
         break;
 
-        case NEXST:
+    case NEXST:
         result = "NEXST";
         break;
 
-        case OPEND:
+    case OPEND:
         result = "OPEND";
         break;
 
-        case EMPTY:
+    case EMPTY:
         result = "EMPTY";
         break;
 
-        case NOOPN:
+    case NOOPN:
         result = "NOOPN";
         break;
 
-        case NOTMT:
+    case NOTMT:
         result = "NOTMT";
         break;
 
-        case WHAT_:
-        
-        default:
+    case WHAT_:
+
+    default:
         result = "WHAT?";
 
         break;
@@ -185,7 +200,7 @@ char *statcode_str(int statcode_num) {
 
 /**
  *  @brief  TODO
- * 
+ *
  *  @param[in]      sec
  */
 void throttle(int sec) {

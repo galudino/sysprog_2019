@@ -100,9 +100,11 @@ int main(int argc, const char *argv[]) {
 
 void *handler_inbound(void *arg) {
     int fd = *(int *)(arg);
+    char buffer[256];
 
+    memset(buffer, '\0', 256);
     printf("started handler_inbound with fd = %d\n", fd);
-
+    
     pthread_exit(NULL);
 }
 

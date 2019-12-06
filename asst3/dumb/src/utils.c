@@ -53,7 +53,7 @@ void str_print(const void *arg, FILE *dest) {
     fprintf(dest, "%s", (*str));
 }
 
-bool ulog_attrs_disable[] = {false, false, false, false, false, false, false};
+bool ulog_attrs_disable[] = { false, false, false, false, false, false, false };
 
 /**
  *  Utility function for debugging/error messages
@@ -67,8 +67,13 @@ bool ulog_attrs_disable[] = {false, false, false, false, false, false, false};
  *
  *  @return         character count of buffer (from fprintf)
  */
-int ulog(FILE *dest, const char *level, const char *file, const char *func,
-         long double line, const char *fmt, ...) {
+int ulog(FILE *dest,
+         const char *level,
+         const char *file,
+         const char *func,
+         long double line,
+         const char *fmt,
+         ...) {
 
     char buffer[MAXIMUM_STACK_BUFFER_SIZE];
     char temp[256];
@@ -111,7 +116,7 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
 
     sprintf(temp, "%Lf", line);
 
-    /* char digit = strchr(temp, '.'); */
+/* char digit = strchr(temp, '.'); */
 
 #if __STD_VERSION__ >= 199901L
     is_integer = line / (long long int)(line) == 1.000000 || line == 0.00000;
@@ -147,16 +152,15 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
         sprintf(filename, "[%s] ", file);
 
         j += sprintf(buffer + j, "%s", filename);
-    } else if (ulog_attrs_disable[FILENAME] &&
-               ulog_attrs_disable[LINE] == false) {
+    } else if (ulog_attrs_disable[FILENAME] && ulog_attrs_disable[LINE] == false) {
         char linenumber[1024];
 
         if (is_integer) {
-            #if __STD_VERSION__ >= 199901L
+#if __STD_VERSION__ >= 199901L
             sprintf(linenumber, "[%lli] ", (long long int)(line));
-            #else
+#else
             sprintf(linenumber, "[%li] ", (long int)(line));
-            #endif
+#endif
         } else {
             if (is_currency) {
                 sprintf(linenumber, "[%0.2Lf] ", line);
@@ -166,16 +170,15 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
         }
 
         j += sprintf(buffer + j, "%s", linenumber);
-    } else if (ulog_attrs_disable[FILENAME] == false &&
-               ulog_attrs_disable[LINE] == false) {
+    } else if (ulog_attrs_disable[FILENAME] == false && ulog_attrs_disable[LINE] == false) {
         char fileline[1024];
 
         if (is_integer) {
-            #if __STD_VERSION__ >= 199901L
+#if __STD_VERSION__ >= 199901L
             sprintf(fileline, "[%s:%lli] ", file, (long long int)(line));
-            #else
+#else
             sprintf(fileline, "[%s:%li] ", file, (long int)(line));
-            #endif
+#endif
         } else {
             if (is_currency) {
                 sprintf(fileline, "[%s%0.2Lf] ", file, line);
@@ -194,8 +197,7 @@ int ulog(FILE *dest, const char *level, const char *file, const char *func,
         j += sprintf(buffer + j, "%s", function);
     }
 
-    if (ulog_attrs_disable[FUNCTION] == false &&
-        ulog_attrs_disable[MESSAGE] == false) {
+    if (ulog_attrs_disable[FUNCTION] == false && ulog_attrs_disable[MESSAGE] == false) {
         j += sprintf(buffer + j, "%s", " ");
     }
 

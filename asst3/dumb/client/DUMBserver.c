@@ -50,17 +50,17 @@ struct entry {
 static void *handler_connection(void *arg);
 static void *handler_client(void *arg);
 
-static int usr_usage(void);
+int usr_usage(void);
 
-static int usr_creat(vptr_t *v, int fd);
-static int usr_opnbx(vptr_t *v, int fd);
-static int usr_delbx(vptr_t *v, int fd, int index);
-static int usr_gdbye(vptr_t *v, int fd, int index);
+int usr_creat(vptr_t *v, int fd);
+int usr_opnbx(vptr_t *v, int fd);
+int usr_delbx(vptr_t *v, int fd, int index);
+int usr_gdbye(vptr_t *v, int fd, int index);
 
-static int usr_opnop(vptr_t *v, int fd, int index);
-static int usr_putmg(vptr_t *v, int fd, int index);
-static int usr_nxtmg(vptr_t *v, int fd, int index);
-static int usr_clsbx(vptr_t *v, int fd, int index);
+int usr_opnop(vptr_t *v, int fd, int index);
+int usr_putmg(vptr_t *v, int fd, int index);
+int usr_nxtmg(vptr_t *v, int fd, int index);
+int usr_clsbx(vptr_t *v, int fd, int index);
 
 void temp();
 
@@ -82,21 +82,17 @@ int main(int argc, const char *argv[]) {
     pthread_t thread_connection;
     pthread_attr_t attr_connection;
 
-    status = ssocket_init(&ssockfd, AF_INET, SOCK_STREAM, 8345, 3);
-
-    if (status != 0) {
-        printf("Error: %s\n", strerror(status));
-        exit(EXIT_FAILURE);
-    }
+    ssocket_init(&ssockfd, AF_INET, SOCK_STREAM, 8345, 3);
 
     users = vptr_new(4, user_delete);
-    
+
     entry.fd = ssockfd;
     entry.users = users;
 
     pthread_attr_init(&attr_connection);
-    
-    if ((status = pthread_create(&thread_connection, &attr_connection, handler_connection, &entry)) < 0) {
+
+    if ((status = pthread_create(&thread_connection, &attr_connection, handler_connection, &entry)) <
+        0) {
         fprintf(stderr, "Error: %s\n", strerror(status));
         exit(EXIT_FAILURE);
     }
@@ -105,7 +101,7 @@ int main(int argc, const char *argv[]) {
 
     pthread_join(thread_connection, NULL);
     vptr_delete(&users);
-    
+
     return EXIT_SUCCESS;
 }
 
@@ -157,8 +153,7 @@ static void *handler_connection(void *arg) {
             pthread_t *new_base = NULL;
             size_t new_capacity = thread_vec.capacity * 2;
 
-            new_base 
-            = realloc(thread_vec.base, sizeof *new_base * new_capacity);
+            new_base = realloc(thread_vec.base, sizeof *new_base * new_capacity);
             assert(new_base);
 
             thread_vec.base = new_base;
@@ -183,8 +178,11 @@ static void *handler_connection(void *arg) {
 
         pthread_attr_init(&attr);
 
-        if ((status = pthread_create(thread_vec.base + i, &attr, handler_client, entry_vec.base + i)) < 0) {
-            fprintf(stderr, "Error: %s\n(unable to start client handler thread\n", strerror(status));
+        if ((status = pthread_create(thread_vec.base + i, &attr, handler_client, entry_vec.base + i)) <
+            0) {
+            fprintf(stderr,
+                    "Error: %s\n(unable to start client handler thread\n",
+                    strerror(status));
             exit(EXIT_FAILURE);
         }
 
@@ -217,70 +215,10 @@ static void *handler_connection(void *arg) {
 }
 
 static void *handler_client(void *arg) {
-    entry_t *entry_client = (entry_t *)(arg);
-    int status = -1;
 
-    if ((status = vptr_trylock(entry_client->users))) {
-        printf("Error: %s\n", strerror(status));
-    } else {
-        printf("%s\n", strerror(status));
-        {
-            user_t *user = user_new("jdoe_10");
-            vptr_pushb(entry_client->users, &user);
-        }
-    }
+    
 
-    vptr_unlock(entry_client->users);
-    vptr_fprint(entry_client->users, stdout, user_print);
+
 
     pthread_exit(NULL);
-}
-
-int usr_usage(void) {
-    return 0; 
-}
-
-int usr_creat(vptr_t *v, int fd) {
-
-    return 0;
-}
-
-int usr_opnbx(vptr_t *v, int fd) {
-    return 0;
-}
-
-int usr_delbx(vptr_t *v, int fd, int index) {
-    return 0;
-}
-
-int usr_gdbye(vptr_t *v, int fd, int index) {
-    return 0;
-}
-
-int usr_opnop(vptr_t *v, int fd, int index) {
-    return 0;
-}
-
-int usr_putmg(vptr_t *v, int fd, int index) {
-    return 0;
-}
-
-int usr_nxtmg(vptr_t *v, int fd, int index) {
-    return 0;
-}
-
-int usr_clsbx(vptr_t *v, int fd, int index) {
-    return 0;
-}
-
-void temp() {
-    usr_usage();
-    usr_creat(NULL, 0);
-    usr_opnbx(NULL, 0);
-    usr_delbx(NULL, 0, 0);
-    usr_gdbye(NULL, 0, 0);
-    usr_opnop(NULL, 0, 0);
-    usr_putmg(NULL, 0, 0);
-    usr_nxtmg(NULL, 0, 0);
-    usr_clsbx(NULL, 0, 0);
 }
