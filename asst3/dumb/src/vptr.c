@@ -231,6 +231,10 @@ int vptr_unlock(vptr_t *v) {
 void vptr_fprint(vptr_t *v, FILE *dest, void (*print)(const void *, FILE *)) {
     size_t i = 0;
 
+    if (vptr_empty(v)) {
+        fprintf(dest, "\n-- empty --\n");
+    }
+
     for (i = 0; i < v->length; i++) {
         print(v->base + i, dest);
         fprintf(dest, "\n");

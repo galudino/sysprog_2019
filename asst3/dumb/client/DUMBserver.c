@@ -29,6 +29,7 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,6 +40,15 @@
 #include "vptr.h"
 #include "user.h"
 #include "network.h"
+
+typedef struct entry entry_t;
+struct entry {
+    int fd;
+    vptr_t *users;
+};
+
+static void *handler_connection(void *arg);
+static void *handler_client(void *arg);
 
 static int usr_usage(void);
 
@@ -63,31 +73,167 @@ void temp();
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    user_t *u = user_new("charlie");
-    char buffer[256];
+    int status = -1;
+    int ssockfd = -1;
 
-    printf("active: %s\n", user_active(u) ? "yes" : "no");
-    user_open(u);
+    vptr_t *users = NULL;
+    entry_t entry = { -1, NULL };
 
-    strcpy(buffer, "message 1");
-    user_message_put(u, buffer);
+    pthread_t thread_connection;
+    pthread_attr_t attr_connection;
 
-    strcpy(buffer, "message 2");
-    user_message_put(u, buffer);
+    status = ssocket_init(&ssockfd, AF_INET, SOCK_STREAM, 8345, 3);
 
-    strcpy(buffer, "message 3");
-    user_message_put(u, buffer);
+    if (status != 0) {
+        printf("Error: %s\n", strerror(status));
+        exit(EXIT_FAILURE);
+    }
 
-    user_print(&u, stdout);
-    printf("peek: %s\n", *user_message_peek(u));
+    users = vptr_new(4, user_delete);
+    
+    entry.fd = ssockfd;
+    entry.users = users;
 
-    printf("active: %s\n", user_active(u) ? "yes" : "no");
-    user_close(u);
-    printf("active: %s\n", user_active(u) ? "yes" : "no");
+    pthread_attr_init(&attr_connection);
+    
+    if ((status = pthread_create(&thread_connection, &attr_connection, handler_connection, &entry)) < 0) {
+        fprintf(stderr, "Error: %s\n", strerror(status));
+        exit(EXIT_FAILURE);
+    }
 
-    user_delete(&u);
+    pthread_attr_destroy(&attr_connection);
 
+    pthread_join(thread_connection, NULL);
+    vptr_delete(&users);
+    
     return EXIT_SUCCESS;
+}
+
+static void *handler_connection(void *arg) {
+    struct sockaddr_in client;
+    socklen_t len_client = 0;
+
+    entry_t entry_server = { -1, NULL };
+    int accept_fd = 0;
+
+    char buffer_ipaddr[256];
+    char *ip_addr = NULL;
+    uint16_t portno = 0;
+
+    int i = 0;
+    int status = -1;
+
+    struct {
+        entry_t *base;
+        size_t capacity;
+        size_t length;
+    } entry_vec = { NULL, 4, 0 };
+
+    struct {
+        pthread_t *base;
+        size_t capacity;
+        size_t length;
+    } thread_vec = { NULL, 4, 0 };
+
+    len_client = sizeof client;
+    entry_server = *(entry_t *)(arg);
+
+    thread_vec.base = calloc(thread_vec.capacity, sizeof *thread_vec.base);
+    assert(thread_vec.base);
+
+    entry_vec.base = calloc(entry_vec.capacity, sizeof *entry_vec.base);
+    assert(entry_vec.base);
+
+    while ((accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client))) {
+        entry_t entry_client = { 0, NULL };
+        pthread_attr_t attr;
+
+        ip_addr = get_ipaddr(accept_fd, buffer_ipaddr);
+        portno = get_portno(accept_fd);
+
+        fprintf(stdout, "Connected %s via port %d\n", ip_addr, portno);
+
+        if (i == thread_vec.capacity) {
+            pthread_t *new_base = NULL;
+            size_t new_capacity = thread_vec.capacity * 2;
+
+            new_base 
+            = realloc(thread_vec.base, sizeof *new_base * new_capacity);
+            assert(new_base);
+
+            thread_vec.base = new_base;
+            thread_vec.capacity = new_capacity;
+        }
+
+        if (i == entry_vec.capacity) {
+            entry_t *new_base = NULL;
+            size_t new_capacity = entry_vec.capacity * 2;
+
+            new_base = realloc(entry_vec.base, sizeof *new_base * new_capacity);
+            assert(new_base);
+
+            entry_vec.base = new_base;
+            entry_vec.capacity = new_capacity;
+        }
+
+        entry_client.fd = accept_fd;
+        entry_client.users = entry_server.users;
+
+        entry_vec.base[i] = entry_client;
+
+        pthread_attr_init(&attr);
+
+        if ((status = pthread_create(thread_vec.base + i, &attr, handler_client, entry_vec.base + i)) < 0) {
+            fprintf(stderr, "Error: %s\n(unable to start client handler thread\n", strerror(status));
+            exit(EXIT_FAILURE);
+        }
+
+        ++i;
+        thread_vec.length = i;
+        entry_vec.length = i;
+
+        pthread_attr_destroy(&attr);
+    }
+
+    if (accept_fd < 0) {
+        fprintf(stderr, "Error: %s\n", strerror(accept_fd));
+    }
+
+    for (i = 0; i < thread_vec.length; i++) {
+        pthread_join(thread_vec.base[i], NULL);
+    }
+
+    entry_vec.length = 0;
+    entry_vec.capacity = 0;
+    free(thread_vec.base);
+    thread_vec.base = NULL;
+
+    thread_vec.length = 0;
+    thread_vec.capacity = 0;
+    free(entry_vec.base);
+    entry_vec.base = NULL;
+
+    pthread_exit(NULL);
+}
+
+static void *handler_client(void *arg) {
+    entry_t *entry_client = (entry_t *)(arg);
+    int status = -1;
+
+    if ((status = vptr_trylock(entry_client->users))) {
+        printf("Error: %s\n", strerror(status));
+    } else {
+        printf("%s\n", strerror(status));
+        {
+            user_t *user = user_new("jdoe_10");
+            vptr_pushb(entry_client->users, &user);
+        }
+    }
+
+    vptr_unlock(entry_client->users);
+    vptr_fprint(entry_client->users, stdout, user_print);
+
+    pthread_exit(NULL);
 }
 
 int usr_usage(void) {
@@ -126,7 +272,6 @@ int usr_nxtmg(vptr_t *v, int fd, int index) {
 int usr_clsbx(vptr_t *v, int fd, int index) {
     return 0;
 }
-
 
 void temp() {
     usr_usage();

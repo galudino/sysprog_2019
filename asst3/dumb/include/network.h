@@ -32,7 +32,21 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
+#include <netinet/in.h>
 #include "utils.h"
+
+typedef struct connection_info conninf_t;
+struct connection_info {
+    int ssockfd;
+    int cconnfd;
+
+    void *arg;
+};
+
+int ssocket_init(int *ssockfd, int domain, int type, uint16_t portno, int backlog);
+
+int csocket_init(int *csockfd, int domain, int type);
+void csocket_connect(int *csockfd, int domain, const char *hostname, uint16_t portno);
 
 char *get_ipaddr(int fd, char *buffer);
 uint16_t get_portno(int fd);
@@ -49,5 +63,8 @@ enum statcode {
 };
 
 char *statcode_str(int statcode_num);
+
+/**< throttle: briefly halt program */
+void throttle(int sec);
 
 #endif /* NETWORK_H */
