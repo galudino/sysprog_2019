@@ -36,14 +36,15 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <strings.h>
 #include <netdb.h>
 #include <unistd.h>
 
 int ssocket_init(int domain, int type, uint16_t portno, int backlog) {
     int ssockfd = -1;
 
-    int status = -1;
     int optval = 1;
+    int status = -1;
 
     struct sockaddr_in server;
 
@@ -54,12 +55,13 @@ int ssocket_init(int domain, int type, uint16_t portno, int backlog) {
         exit(EXIT_FAILURE);
     }
 
-    if (setsockopt(ssockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof ssockfd) < 0) {
+    if (setsockopt(ssockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int)) < 0) {
         fprintf(stderr, "Unable to set socket options\n");
         exit(EXIT_FAILURE);
     }
 
-    memset(&server, '\0', sizeof server);
+    /*memset(&server, '\0', sizeof server);*/
+    bzero((char *)(&server), sizeof server);
 
     server.sin_family = domain;
     server.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -109,10 +111,12 @@ int csocket_init(int domain, int type, const char *hostname, uint16_t portno) {
         exit(EXIT_FAILURE);
     }
 
-    memset(&addr_server, '\0', sizeof addr_server);
+    /*memset(&addr_server, '\0', sizeof addr_server);*/
+    bzero((char *)(&addr_server), sizeof addr_server);
 
     addr_server.sin_family = domain;
-    memcpy(server->h_addr_list, &addr_server.sin_addr.s_addr, server->h_length);
+    /*memcpy(server->h_addr_list, &addr_server.sin_addr.s_addr, server->h_length);*/
+    bcopy((char *)(server->h_addr_list[0]), (char *)(&addr_server.sin_addr.s_addr), server->h_length);
     addr_server.sin_port = htons(portno);
 
     fprintf(stdout, "Attempting to connect to %s via port %d\n", server->h_name, portno);
@@ -120,7 +124,7 @@ int csocket_init(int domain, int type, const char *hostname, uint16_t portno) {
     while (true) {
         status = connect(csockfd, (struct sockaddr *)(&addr_server), sizeof addr_server);
 
-        if (status != -1) {
+        if (status == 0) {
             fprintf(stdout, "Connected (%s via port %d)\n", server->h_name, portno);
             break;
         } else {

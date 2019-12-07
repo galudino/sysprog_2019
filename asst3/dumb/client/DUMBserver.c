@@ -118,15 +118,16 @@ int main(int argc, const char *argv[]) {
 
 static void *handler_connection(void *arg) {
     struct sockaddr_in client;
+
     socklen_t len_client = 0;
 
     entry_t entry_server = { -1, NULL };
     int accept_fd = 0;
-
+    
     char buffer_ipaddr[256];
     char *ip_addr = NULL;
     uint16_t portno = 0;
-
+    
     int i = 0;
     int status = -1;
 
@@ -142,7 +143,6 @@ static void *handler_connection(void *arg) {
         size_t length;
     } thread_vec = { NULL, 4, 0 };
 
-    len_client = sizeof client;
     entry_server = *(entry_t *)(arg);
 
     thread_vec.base = calloc(thread_vec.capacity, sizeof *thread_vec.base);
@@ -153,13 +153,6 @@ static void *handler_connection(void *arg) {
 
     while (true) {
         pthread_attr_t attr;
-
-        accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client);
-
-        ip_addr = get_ipaddr(accept_fd, buffer_ipaddr);
-        portno = get_portno(accept_fd);
-
-        fprintf(stdout, "Connected %s via port %d\n", ip_addr, portno);
 
         if (i == thread_vec.capacity) {
             pthread_t *new_base = NULL;
@@ -182,7 +175,15 @@ static void *handler_connection(void *arg) {
             entry_vec.base = new_base;
             entry_vec.capacity = new_capacity;
         }
-        
+
+        len_client = sizeof client;
+        accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client);
+
+        ip_addr = get_ipaddr(accept_fd, buffer_ipaddr);
+        portno = get_portno(accept_fd);
+
+        fprintf(stdout, "Connected %s via port %d\n", ip_addr, portno);
+     
         entry_vec.base[i].fd = accept_fd;
         entry_vec.base[i].users = entry_server.users;
 
