@@ -31,7 +31,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <assert.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <pthread.h>
 
@@ -62,6 +65,8 @@ int main(int argc, const char *argv[]) {
     pthread_attr_t attr_inbound;
     pthread_attr_t attr_outbound;
 
+    bool *status_server_disconnected = NULL;
+
     if (argc < 3) {
         fprintf(stderr, "USAGE: %s [portnumber]\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -71,7 +76,7 @@ int main(int argc, const char *argv[]) {
     portno_str = argv[2];
 
     portno = atoi(portno_str);
-    csockfd = csocket_init(AF_INET, SOCK_STREAM, hostname, portno);
+    csockfd = csocket_open(AF_INET, SOCK_STREAM, hostname, portno);
 
     printf("\n\nmain menu goes here\n\n");
 
@@ -92,26 +97,67 @@ int main(int argc, const char *argv[]) {
     pthread_attr_destroy(&attr_outbound);
     pthread_attr_destroy(&attr_inbound);
 
-    pthread_join(thread_inbound, NULL);
-    pthread_join(thread_outbound, NULL);
+    pthread_join(thread_inbound, (void **)(&status_server_disconnected));
+
+    if ((*status_server_disconnected)) {
+        pthread_cancel(thread_outbound);
+    } else {
+        pthread_join(thread_outbound, NULL);
+    }
+
+    csocket_close(csockfd);
 
     return EXIT_SUCCESS;
 }
 
 void *handler_inbound(void *arg) {
     int fd = *(int *)(arg);
-    char buffer[256];
-
-    memset(buffer, '\0', 256);
-    printf("started handler_inbound with fd = %d\n", fd);
     
-    pthread_exit(NULL);
+    char buffer_in[256];
+    int size_read = -1;
+
+    bool *status_server_disconnected = NULL;
+
+    printf("started handler_inbound with fd = %d\n", fd);
+
+    status_server_disconnected = malloc(sizeof *status_server_disconnected);
+    assert(status_server_disconnected);
+
+    (*status_server_disconnected) = false;
+
+    while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
+        printf("server says: %s\n", buffer_in);
+        bzero(buffer_in, 256);
+    }
+
+    if (size_read == 0) {
+        fprintf(stdout, "Error: Server has left the network\n");
+        (*status_server_disconnected) = true;
+    }
+    
+    pthread_exit(status_server_disconnected);
 }
 
 void *handler_outbound(void *arg) {
     int fd = *(int *)(arg);
 
-    printf("started handler_outbound with fd = %d\n", fd);
+    char buffer_out[256];
+
+    printf("started handler_outbound with fd = %d\n\n", fd);
+
+    while (true) {
+        throttle(1);
+        memset(buffer_out, '\0', 256);
+        strcpy(buffer_out, "==> ");
+        write(STDOUT_FILENO, buffer_out, 256);
+     
+        memset(buffer_out, '\0', 256);
+        read(STDIN_FILENO, buffer_out, 256);
+        printf("You wrote: %s\n", buffer_out);
+
+        write(fd, buffer_out, 256);
+        memset(buffer_out, '\0', 256);
+    }
 
     pthread_exit(NULL);
 }

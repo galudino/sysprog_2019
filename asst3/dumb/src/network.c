@@ -37,10 +37,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <strings.h>
+#include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
 
-int ssocket_init(int domain, int type, uint16_t portno, int backlog) {
+int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
     int ssockfd = -1;
 
     int optval = 1;
@@ -86,7 +87,20 @@ int ssocket_init(int domain, int type, uint16_t portno, int backlog) {
     return ssockfd;
 }
 
-int csocket_init(int domain, int type, const char *hostname, uint16_t portno) {
+int ssocket_close(int ssockfd) {
+    int status = 1;
+
+    if (close(ssockfd) == -1) {
+        fprintf(stderr, "Error: %s\n", strerror(errno));
+    } else {
+        fprintf(stdout, "Server socket successfully closed\n");
+    }
+
+    status = errno;
+    return status;
+}
+
+int csocket_open(int domain, int type, const char *hostname, uint16_t portno) {
     int csockfd = -1;
 
     struct sockaddr_in addr_server;
@@ -143,6 +157,19 @@ int csocket_init(int domain, int type, const char *hostname, uint16_t portno) {
     }
 
     return csockfd;
+}
+
+int csocket_close(int ssockfd) {
+    int status = 1;
+
+    if (close(ssockfd) == -1) {
+        fprintf(stderr, "Error: %s\n", strerror(errno));
+    } else {
+        fprintf(stdout, "Client socket successfully closed\n");
+    }
+
+    status = errno;
+    return status;
 }
 
 char *get_ipaddr(int fd, char *buffer) {

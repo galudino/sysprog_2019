@@ -96,7 +96,7 @@ int main(int argc, const char *argv[]) {
     portno_str = argv[1]; 
 
     portno = atoi(portno_str);
-    ssockfd = ssocket_init(AF_INET, SOCK_STREAM, portno, 1024);
+    ssockfd = ssocket_open(AF_INET, SOCK_STREAM, portno, 1024);
 
     users = vptr_new(4, user_delete);
 
@@ -115,6 +115,8 @@ int main(int argc, const char *argv[]) {
 
     pthread_join(thread_connection, NULL);
     vptr_delete(&users);
+
+    ssocket_close(ssockfd);
 
     return EXIT_SUCCESS;
 }
@@ -232,10 +234,30 @@ static void *handler_connection(void *arg) {
 }
 
 static void *handler_client(void *arg) {
+    entry_t *entry = (entry_t *)(arg);
+    int fd = entry->fd;
 
-    
+    char buffer_in[256];
+    char buffer_out[256];
+
+    int size_read = -1;
+
+    printf("started handler_client with fd = %d\n", fd);
+
+    while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
+        /* read incoming client message here */
+        printf("client says: %s\n", buffer_in);
 
 
+
+
+        /* write reply to client here */
+        sprintf(buffer_out, "I got your message, it said: %s\n", buffer_in);
+        write(fd, buffer_out, 256);
+
+        bzero(buffer_in, 256);
+        bzero(buffer_out, 256);
+    }
 
     pthread_exit(NULL);
 }

@@ -43,9 +43,11 @@ struct connection_info {
     void *arg;
 };
 
-int ssocket_init(int domain, int type, uint16_t portno, int backlog);
+int ssocket_open(int domain, int type, uint16_t portno, int backlog);
+int ssocket_close(int ssockfd);
 
-int csocket_init(int domain, int type, const char *hostname, uint16_t portno);
+int csocket_open(int domain, int type, const char *hostname, uint16_t portno);
+int csocket_close(int csockfd);
 
 char *get_ipaddr(int fd, char *buffer);
 uint16_t get_portno(int fd);

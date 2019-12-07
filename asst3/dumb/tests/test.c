@@ -53,8 +53,13 @@ typedef unsigned char bool;
 #include <strings.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include <pthread.h>
+
+void test_parse(void);
+
+
 
 /**
  *  @brief  Program execution begins here
@@ -65,6 +70,21 @@ typedef unsigned char bool;
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
+    char buffer[256];
+    
+    memset(buffer, '\0', 256);
+    strcpy(buffer, "==> ");
+    write(STDOUT_FILENO, buffer, 256);
+
+    memset(buffer, '\0', 256);
+    read(STDIN_FILENO, buffer, 256);
+    printf("You wrote: %s\n", buffer);
+    
+
+    return 0;
+}
+
+void test_parse() {
     char buffer[256];
     strcpy(buffer, "PUTMG!5!hello");
 
@@ -96,7 +116,4 @@ int main(int argc, const char *argv[]) {
             printf("msg: %s\n", ptr);
         }
     }
-    
-
-    return 0;
 }
