@@ -62,8 +62,13 @@ int main(int argc, const char *argv[]) {
     pthread_attr_t attr_inbound;
     pthread_attr_t attr_outbound;
 
-    hostname = "localhost";
-    portno_str = "8345";
+    if (argc < 3) {
+        fprintf(stderr, "USAGE: %s [portnumber]\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    hostname = argv[1];
+    portno_str = argv[2];
 
     portno = atoi(portno_str);
     status = csocket_init(&csockfd, AF_INET, SOCK_STREAM, hostname, portno);

@@ -76,13 +76,24 @@ int main(int argc, const char *argv[]) {
     int status = -1;
     int ssockfd = -1;
 
+    const char *portno_str = NULL;
+    uint16_t portno = 0;
+
     vptr_t *users = NULL;
     entry_t entry = { -1, NULL };
 
     pthread_t thread_connection;
     pthread_attr_t attr_connection;
 
-    ssocket_init(&ssockfd, AF_INET, SOCK_STREAM, 8345, 3);
+    if (argc < 2) {
+        fprintf(stderr, "USAGE: %s [hostname] [port number]\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    portno_str = argv[1]; 
+
+    portno = atoi(portno_str);
+    ssocket_init(&ssockfd, AF_INET, SOCK_STREAM, portno, 3);
 
     users = vptr_new(4, user_delete);
 
