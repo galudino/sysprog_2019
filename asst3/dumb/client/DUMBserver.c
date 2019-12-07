@@ -36,6 +36,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 #include "vptr.h"
 #include "user.h"
@@ -118,16 +120,15 @@ int main(int argc, const char *argv[]) {
 
 static void *handler_connection(void *arg) {
     struct sockaddr_in client;
-
     socklen_t len_client = 0;
+
+    struct hostent *hp = NULL;
+    char *haddrp = NULL;
+    uint16_t portno = 0;
 
     entry_t entry_server = { -1, NULL };
     int accept_fd = 0;
-    
-    char buffer_ipaddr[256];
-    char *ip_addr = NULL;
-    uint16_t portno = 0;
-    
+        
     int i = 0;
     int status = -1;
 
@@ -176,13 +177,17 @@ static void *handler_connection(void *arg) {
             entry_vec.capacity = new_capacity;
         }
 
+
         len_client = sizeof client;
+        bzero((char *)(&client), len_client);
+
         accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client);
 
-        ip_addr = get_ipaddr(accept_fd, buffer_ipaddr);
+        hp = gethostbyaddr((const char *)(&client.sin_addr.s_addr), sizeof(client.sin_addr.s_addr), AF_INET);
+        haddrp = inet_ntoa(client.sin_addr);
         portno = get_portno(accept_fd);
 
-        fprintf(stdout, "Connected %s via port %d\n", ip_addr, portno);
+        fprintf(stdout, "CONNECTED %s (%s) via port %d\n", hp->h_name, haddrp, portno);
      
         entry_vec.base[i].fd = accept_fd;
         entry_vec.base[i].users = entry_server.users;
