@@ -152,7 +152,6 @@ static void *handler_connection(void *arg) {
     assert(entry_vec.base);
 
     while ((accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client))) {
-        entry_t entry_client = { 0, NULL };
         pthread_attr_t attr;
 
         ip_addr = get_ipaddr(accept_fd, buffer_ipaddr);
@@ -181,11 +180,9 @@ static void *handler_connection(void *arg) {
             entry_vec.base = new_base;
             entry_vec.capacity = new_capacity;
         }
-
-        entry_client.fd = accept_fd;
-        entry_client.users = entry_server.users;
-
-        entry_vec.base[i] = entry_client;
+        
+        entry_vec.base[i].fd = accept_fd;
+        entry_vec.base[i].users = entry_server.users;
 
         pthread_attr_init(&attr);
 
