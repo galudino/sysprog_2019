@@ -151,8 +151,10 @@ static void *handler_connection(void *arg) {
     entry_vec.base = calloc(entry_vec.capacity, sizeof *entry_vec.base);
     assert(entry_vec.base);
 
-    while ((accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client))) {
+    while (true) {
         pthread_attr_t attr;
+
+        accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client);
 
         ip_addr = get_ipaddr(accept_fd, buffer_ipaddr);
         portno = get_portno(accept_fd);
