@@ -107,9 +107,8 @@ int csocket_init(int *csockfd, int domain, int type, const char *hostname, uint1
     memset(&addr_server, '\0', sizeof addr_server);
 
     addr_server.sin_family = domain;
-    addr_server.sin_port = htons(portno);
-
     memcpy(server->h_addr_list, &addr_server.sin_addr.s_addr, server->h_length);
+    addr_server.sin_port = htons(portno);
 
     fprintf(stdout, "Attempting to connect to %s via port %d\n", server->h_name, portno);
 
