@@ -82,22 +82,25 @@ int ssocket_init(int *ssockfd, int domain, int type, uint16_t portno, int backlo
     return (*ssockfd);
 }
 
-int csocket_init(int *csockfd, int domain, int type) {
-    (*csockfd) = socket(domain, type, 0);
-    return (*csockfd);
-}
-
-int csocket_connect(int *csockfd, int domain, const char *hostname, uint16_t portno) {
+int csocket_init(int *csockfd, int domain, int type, const char *hostname, uint16_t portno) {
     struct sockaddr_in addr_server;
     struct hostent *server = NULL;
 
     int status = -1;
     int count_period = 3;
 
+    status = ((*csockfd) = socket(domain, type, 0));
+
+    if (status < 0) {
+        fprintf(stderr, "Error: Socket failed\n");
+        exit(EXIT_FAILURE);
+    }
+
     server = gethostbyname(hostname);
 
     if (server == NULL) {
         fprintf(stderr, "Error: No hostname by identifier %s\n", hostname);
+        /* use h_errno */
         exit(EXIT_FAILURE);
     }
 
@@ -105,6 +108,7 @@ int csocket_connect(int *csockfd, int domain, const char *hostname, uint16_t por
 
     addr_server.sin_family = domain;
     addr_server.sin_port = htons(portno);
+
     memcpy(server->h_addr_list, &addr_server.sin_addr.s_addr, server->h_length);
 
     fprintf(stdout, "Attempting to connect to %s via port %d\n", server->h_name, portno);
@@ -127,7 +131,7 @@ int csocket_connect(int *csockfd, int domain, const char *hostname, uint16_t por
             fflush(stdout);
         }
 
-        throttle(3);
+        throttle(1);
     }
 
     return (*csockfd);

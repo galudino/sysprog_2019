@@ -53,6 +53,7 @@ int main(int argc, const char *argv[]) {
     int csockfd = -1;
 
     const char *hostname = NULL;
+    const char *portno_str = NULL;
     uint16_t portno = 0;
 
     pthread_t thread_inbound;
@@ -61,17 +62,11 @@ int main(int argc, const char *argv[]) {
     pthread_attr_t attr_inbound;
     pthread_attr_t attr_outbound;
 
-    status = csocket_init(&csockfd, AF_INET, SOCK_STREAM);
-
-    if (status == -1) {
-        printf("Error: %s\n", strerror(status));
-        exit(EXIT_FAILURE);
-    }
-
     hostname = "localhost";
-    portno = 8345;
+    portno_str = "8345";
 
-    csocket_connect(&csockfd, AF_INET, hostname, portno);
+    portno = atoi(portno_str);
+    status = csocket_init(&csockfd, AF_INET, SOCK_STREAM, hostname, portno);
 
     printf("\n\nmain menu goes here\n\n");
 
