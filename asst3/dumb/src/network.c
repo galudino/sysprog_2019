@@ -60,7 +60,6 @@ int ssocket_init(int domain, int type, uint16_t portno, int backlog) {
         exit(EXIT_FAILURE);
     }
 
-    /*memset(&server, '\0', sizeof server);*/
     bzero((char *)(&server), sizeof server);
 
     server.sin_family = domain;
@@ -96,32 +95,33 @@ int csocket_init(int domain, int type, const char *hostname, uint16_t portno) {
     int status = -1;
     int count_period = 3;
 
-    status = (csockfd = socket(domain, type, 0));
-
-    if (status < 0) {
-        fprintf(stderr, "Error: Socket failed\n");
-        exit(EXIT_FAILURE);
-    }
-
-    server = gethostbyname(hostname);
-
-    if (server == NULL) {
-        fprintf(stderr, "Error: No hostname by identifier %s\n", hostname);
-        /* use h_errno */
-        exit(EXIT_FAILURE);
-    }
-
-    /*memset(&addr_server, '\0', sizeof addr_server);*/
-    bzero((char *)(&addr_server), sizeof addr_server);
-
-    addr_server.sin_family = domain;
-    /*memcpy(server->h_addr_list, &addr_server.sin_addr.s_addr, server->h_length);*/
-    bcopy((char *)(server->h_addr_list[0]), (char *)(&addr_server.sin_addr.s_addr), server->h_length);
-    addr_server.sin_port = htons(portno);
-
-    fprintf(stdout, "Attempting to connect to %s via port %d\n", server->h_name, portno);
+    fprintf(stdout, "Attempting to connect to %s via port %d\n", hostname, portno);
 
     while (true) {
+        status = (csockfd = socket(domain, type, 0));
+
+        if (status < 0) {
+            fprintf(stderr, "Error: Socket failed\n");
+            exit(EXIT_FAILURE);
+        }
+
+        server = gethostbyname(hostname);
+
+        if (server == NULL) {
+            fprintf(stderr, "Error: No hostname by identifier %s\n", hostname);
+            /* use h_errno */
+            exit(EXIT_FAILURE);
+        }
+
+        bzero((char *)(&addr_server), sizeof addr_server);
+
+        addr_server.sin_family = domain;
+
+        bcopy((char *)(server->h_addr_list[0]),
+              (char *)(&addr_server.sin_addr.s_addr),
+              server->h_length);
+        addr_server.sin_port = htons(portno);
+
         status = connect(csockfd, (struct sockaddr *)(&addr_server), sizeof addr_server);
 
         if (status == 0) {
