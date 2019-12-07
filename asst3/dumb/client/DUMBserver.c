@@ -93,7 +93,7 @@ int main(int argc, const char *argv[]) {
     portno_str = argv[1]; 
 
     portno = atoi(portno_str);
-    ssocket_init(&ssockfd, AF_INET, SOCK_STREAM, portno, 1024);
+    ssockfd = ssocket_init(AF_INET, SOCK_STREAM, portno, 1024);
 
     users = vptr_new(4, user_delete);
 

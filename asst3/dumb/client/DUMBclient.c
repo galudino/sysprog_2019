@@ -71,7 +71,7 @@ int main(int argc, const char *argv[]) {
     portno_str = argv[2];
 
     portno = atoi(portno_str);
-    csocket_init(&csockfd, AF_INET, SOCK_STREAM, hostname, portno);
+    csockfd = csocket_init(AF_INET, SOCK_STREAM, hostname, portno);
 
     printf("\n\nmain menu goes here\n\n");
 
