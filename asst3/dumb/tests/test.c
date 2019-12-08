@@ -36,10 +36,6 @@
 #if __STD_VERSION__ >= 19990L
 #include <stdbool.h>
 #include <stdint.h>
-#else
-# define false '\0'
-# define true '0'
-typedef unsigned char bool;
 #endif
 
 #if WIN32 || _WIN32
@@ -58,6 +54,9 @@ typedef unsigned char bool;
 #include <pthread.h>
 
 void test_parse(void);
+void test_readwrite(void);
+
+#include "network.h"
 
 
 
@@ -70,17 +69,27 @@ void test_parse(void);
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    char buffer[256];
-    
-    memset(buffer, '\0', 256);
-    strcpy(buffer, "==> ");
-    write(STDOUT_FILENO, buffer, 256);
+    char cmd[256];
+    char arg[256];
+    char out[256];
 
-    memset(buffer, '\0', 256);
-    read(STDIN_FILENO, buffer, 256);
-    printf("You wrote: %s\n", buffer);
-    
+    int j = 0;
 
+    bzero(cmd, 256);
+    bzero(arg, 256);
+    bzero(out, 256);
+
+    strcpy(cmd, "open");
+    strcpy(arg, "blurp");
+
+    if (strcmp(cmd, "open") == 0) {
+        j += sprintf(out + j, "%s ", "OPNBX");
+        j += sprintf(out + j, "%s", arg);
+    }
+    
+    printf("len = %d, to send: %s", j, out);
+    printf("\n");
+    
     return 0;
 }
 
@@ -116,4 +125,16 @@ void test_parse() {
             printf("msg: %s\n", ptr);
         }
     }
+}
+
+void test_readwrite(void) {
+    char buffer[256];
+    
+    memset(buffer, '\0', 256);
+    strcpy(buffer, "==> ");
+    write(STDOUT_FILENO, buffer, 256);
+
+    memset(buffer, '\0', 256);
+    read(STDIN_FILENO, buffer, 256);
+    printf("You wrote: %s\n", buffer);
 }

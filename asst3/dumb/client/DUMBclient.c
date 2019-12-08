@@ -118,7 +118,9 @@ void *handler_inbound(void *arg) {
 
     bool *status_server_disconnected = NULL;
 
+    /*
     printf("started handler_inbound with fd = %d\n", fd);
+    */
 
     status_server_disconnected = malloc(sizeof *status_server_disconnected);
     assert(status_server_disconnected);
@@ -142,21 +144,28 @@ void *handler_outbound(void *arg) {
     int fd = *(int *)(arg);
 
     char buffer_out[256];
-
+    /*
     printf("started handler_outbound with fd = %d\n\n", fd);
+    */
 
     while (true) {
-        throttle(1);
-        memset(buffer_out, '\0', 256);
-        strcpy(buffer_out, "==> ");
+        bzero(buffer_out, 256);
+        strcpy(buffer_out, "[ready]\n==> ");
         write(STDOUT_FILENO, buffer_out, 256);
-     
-        memset(buffer_out, '\0', 256);
+        bzero(buffer_out, 256);
+
         read(STDIN_FILENO, buffer_out, 256);
-        printf("You wrote: %s\n", buffer_out);
+        printf("\nYou wrote: %s\n", buffer_out);
+
+
+
+        printf("[PLEASE WAIT]\n(server is busy...wait for [ready] indicator.)\n\n");
+        throttle(1);
 
         write(fd, buffer_out, 256);
-        memset(buffer_out, '\0', 256);
+        bzero(buffer_out, 256);
+
+        throttle(1);
     }
 
     pthread_exit(NULL);

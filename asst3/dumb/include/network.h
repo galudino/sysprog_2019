@@ -63,7 +63,28 @@ enum statcode {
     WHAT_
 };
 
+enum cmdcode {
+    HELLO,
+    GDBYE,
+    CREAT,
+    OPNBX,
+    NXTMG,
+    PUTMG,
+    DELBX,
+    CLSBX,
+    USAGE,
+    ERROR
+};
+
 char *statcode_str(int statcode_num);
+
+char *cmdarg_parse(char *bufdst, char *bufsrc);
+
+/**< cmdarg_toserv: takes human input and converts it to a DUMB message */
+char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg);
+
+/**< cmdarg_interpret: determines cmd, arg, and arglen from cmdarg_toserv */
+int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr);
 
 /**< throttle: briefly halt program */
 void throttle(int sec);

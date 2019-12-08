@@ -238,6 +238,99 @@ char *statcode_str(int statcode_num) {
 }
 
 /**
+ *  @brief  Takes the contents of bufcmd and bufarg, resulting from
+ *          client input, and converts/combines them into a single
+ *          string, in DUMB protocol format, stored in bufdst
+ *
+ *  @param[out] bufdst  buffer to store DUMB protocol message to server
+ *  @param[in]  bufcmd  string that consists of a client-typed command
+
+ *  @param[in]  bufarg  string that consists of an argument associated
+ *                      with bufcmd, if applicable
+ *
+ *  @return bufdst, a DUMB protocol formatted message
+ *          ex.
+ *              bufcmd is "open"
+ *              bufarg is "blurp"
+ *              bufdst will be "OPNBX blurp"
+ *          
+ *          A malformed message will still result in a readable string.
+ */
+char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
+
+    return bufdst;
+}
+
+/**
+ *  @brief  Takes the contents of bufsrc (the return value of cmdarg_toserv;
+ *          sent from the client and received by the server), and determines
+ *          if the first 5 characters of the string are a valid DUMB protocol
+ *          command -- and if so, stores the address of the first character
+ *          representing the associated argument, as well as the string length
+ *          of the argument, if needed.
+ *
+ *  @param[in]  bufsrc  DUMB protocol message from client
+
+ *  @param[out] arg_addr    address of a pointer that will represent 
+ *                          the memory location the first character associated
+ *                          with the command at the beginning of bufsrc;
+ *                          will be NULL if found unnecessary
+
+ *  @param[out] arglen_addr address of a signed long that will represent
+ *                          the string length of (*arg_addr), if needed;
+ *                          will be NULL if found unnecessary
+ *
+ *  @return an integer, representing the enumerations of enum cmdcode
+ *          0 = HELLO
+ *          1 = GDBYE
+ *          2 = CREAT
+ *          3 = OPNBX
+ *          4 = NXTMG
+ *          5 = PUTMG
+ *          6 = DELBX
+ *          7 = CLSBX
+ *          8 = USAGE
+ *          9 = ERROR
+ *          any integer not described by the enumeration above
+ *          [INT_MIN, 0) or [9, INT_MAX + 1) is an error. 
+ */
+int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr) {
+
+    return 0;
+}
+
+char *cmdarg_parse(char *bufdst, char *bufsrc) {
+
+
+
+    if (strlen(bufsrc) >= 5) {
+        if (strncmp(bufsrc, "HELLO", 5) == 0) {
+
+        } else if (strncmp(bufsrc, "GDBYE", 5) == 0) {
+            
+        } else if (strncmp(bufsrc, "CREAT", 5) == 0) {
+
+        } else if (strncmp(bufsrc, "OPNBX", 5) == 0) {
+
+        } else if (strncmp(bufsrc, "NXTMG", 5) == 0) {
+
+        } else if (strncmp(bufsrc, "PUTMG", 5) == 0) {
+            strcpy(bufdst, bufsrc);
+        } else if (strncmp(bufsrc, "DELBX", 5) == 0) {
+
+        } else if (strncmp(bufsrc, "CLSBX", 5) == 0) {
+
+        } else if (strncmp(bufsrc, "USAGE", 5) == 0) {
+
+        } else {
+
+        }
+    }
+
+    return bufdst;
+}
+
+/**
  *  @brief  TODO
  *
  *  @param[in]      sec

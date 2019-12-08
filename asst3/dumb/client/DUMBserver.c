@@ -252,7 +252,7 @@ static void *handler_client(void *arg) {
 
 
         /* write reply to client here */
-        sprintf(buffer_out, "I got your message, it said: %s\n", buffer_in);
+        sprintf(buffer_out, "I got your message, it said: %s", buffer_in);
         write(fd, buffer_out, 256);
 
         bzero(buffer_in, 256);
