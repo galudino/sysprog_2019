@@ -113,6 +113,8 @@ int user_close(user_t *u) {
     return status;
 }
 
+size_t user_message_count(user_t *u) { return vptr_size(u->msgbx); }
+
 int user_message_put(user_t *u, char *message) {
     char *msg = strdup(message);
     vptr_pushb(u->msgbx, &msg);

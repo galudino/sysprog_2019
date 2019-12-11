@@ -53,19 +53,15 @@ struct entry {
 static void *handler_connection(void *arg);
 static void *handler_client(void *arg);
 
-int usr_usage(void);
-
-int usr_creat(vptr_t *v, int fd);
-int usr_opnbx(vptr_t *v, int fd);
-int usr_delbx(vptr_t *v, int fd, int index);
-int usr_gdbye(vptr_t *v, int fd, int index);
-
-int usr_opnop(vptr_t *v, int fd, int index);
-int usr_putmg(vptr_t *v, int fd, int index);
-int usr_nxtmg(vptr_t *v, int fd, int index);
-int usr_clsbx(vptr_t *v, int fd, int index);
-
-void temp();
+statcode_t usr_creat(vptr_t *v, const char *arg, int fd);
+statcode_t usr_opnbx(vptr_t *v, const char *arg, int fd);
+statcode_t usr_delbx(vptr_t *v, user_t *user, int fd);
+statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd);
+statcode_t usr_putmg(user_t *user, const char *arg, int fd);
+statcode_t usr_nxtmg(user_t *user, int fd);
+statcode_t usr_clsbx(user_t *user, int fd);
+statcode_t usr_usage(int fd);
+statcode_t usr_error(int fd);
 
 /**
  *  @brief  Program execution begins here
@@ -93,7 +89,7 @@ int main(int argc, const char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    portno_str = argv[1]; 
+    portno_str = argv[1];
 
     portno = atoi(portno_str);
     ssockfd = ssocket_open(AF_INET, SOCK_STREAM, portno, 1024);
@@ -125,13 +121,15 @@ static void *handler_connection(void *arg) {
     struct sockaddr_in client;
     socklen_t len_client = 0;
 
+    /*
     struct hostent *hp = NULL;
     char *haddrp = NULL;
     uint16_t portno = 0;
+    */
 
     entry_t entry_server = { -1, NULL };
     int accept_fd = 0;
-        
+
     int i = 0;
     int status = -1;
 
@@ -180,18 +178,23 @@ static void *handler_connection(void *arg) {
             entry_vec.capacity = new_capacity;
         }
 
-
         len_client = sizeof client;
         bzero((char *)(&client), len_client);
 
         accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client);
 
-        hp = gethostbyaddr((const char *)(&client.sin_addr.s_addr), sizeof(client.sin_addr.s_addr), AF_INET);
+        /*
+        hp = gethostbyaddr((const char *)(&client.sin_addr.s_addr),
+        sizeof(client.sin_addr.s_addr), AF_INET);
         haddrp = inet_ntoa(client.sin_addr);
         portno = get_portno(accept_fd);
+        */
 
-        fprintf(stdout, "CONNECTED %s (%s) via port %d\n", hp->h_name, haddrp, portno);
-     
+        /*
+        fprintf(stdout, "CONNECTED %s (%s) via port %d\n\n", hp->h_name, haddrp,
+        portno);
+        */
+
         entry_vec.base[i].fd = accept_fd;
         entry_vec.base[i].users = entry_server.users;
 
@@ -240,24 +243,212 @@ static void *handler_client(void *arg) {
     char buffer_in[256];
     char buffer_out[256];
 
+    char datetime[256];
+    char ipaddr[256];
+    const char *cmd = NULL;
+
     int size_read = -1;
 
-    printf("started handler_client with fd = %d\n", fd);
+    char *cmdarg = NULL;
+    ssize_t arglen = -1;
+    enum cmddumb cmddumb = ERROR_CODENO;
+
+    bool exit_graceful = false;
+
+    user_t *user_current = NULL;
+
+    cmd = "connected";
+    printf("%s %s %s\n", datetime_format(datetime), get_ipaddr(fd, ipaddr), cmd);
 
     while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
         /* read incoming client message here */
+        /*
         printf("client says: %s\n", buffer_in);
+        */
 
+        cmddumb = cmdarg_interpret(buffer_in, &cmdarg, &arglen);
 
+        cmd = cmd_dumb[cmddumb];
 
+        switch (cmddumb) {
+        case HELLO_CODENO:
+            write(fd, strcpy(buffer_out, statcode[_OK_STATNO]), 256);
+            break;
 
-        /* write reply to client here */
+        case GDBYE_CODENO:
+            exit_graceful = true;
+            break;
+
+        case CREAT_CODENO:
+            usr_creat(entry->users, cmdarg, fd);
+            break;
+
+        case OPNBX_CODENO:
+            usr_opnbx(entry->users, cmdarg, fd);
+            break;
+
+        case NXTMG_CODENO:
+            usr_nxtmg(user_current, fd);
+            break;
+
+        case PUTMG_CODENO:
+            usr_putmg(user_current, cmdarg, fd);
+            break;
+
+        case DELBX_CODENO:
+            usr_delbx(entry->users, user_current, fd);
+            break;
+
+        case CLSBX_CODENO:
+            usr_clsbx(user_current, fd);
+            break;
+
+        case USAGE_CODENO:
+            usr_usage(fd);
+            break;
+
+        case ERROR_CODENO:
+            usr_error(fd);
+            break;
+
+        default:
+            usr_error(fd);
+            break;
+        }
+
+        printf("%s %s %s\n", datetime_format(datetime), ipaddr, cmd);
+
+        if (exit_graceful) {
+            break;
+        }
+
+        /*
         sprintf(buffer_out, "I got your message, it said: %s", buffer_in);
         write(fd, buffer_out, 256);
+        */
 
         bzero(buffer_in, 256);
         bzero(buffer_out, 256);
+
+        printf("user_current: %p\n", (void *)(user_current));
+    }
+
+    if (exit_graceful == false) {
+        cmd = "disconnected";
+        printf("%s %s %s\n", datetime_format(datetime), ipaddr, cmd);
+    }
+
+    if (user_current) {
+        user_close(user_current);
     }
 
     pthread_exit(NULL);
+}
+
+statcode_t usr_creat(vptr_t *v, const char *arg, int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_OK_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
+}
+
+statcode_t usr_opnbx(vptr_t *v, const char *arg, int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_OK_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
+}
+
+statcode_t usr_delbx(vptr_t *v, user_t *user, int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_OK_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
+}
+
+statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_OK_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
+}
+
+statcode_t usr_putmg(user_t *user, const char *arg, int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_OK_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
+}
+
+statcode_t usr_nxtmg(user_t *user, int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_OK_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
+}
+
+statcode_t usr_clsbx(user_t *user, int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_OK_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
+}
+
+statcode_t usr_usage(int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_OK_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
+}
+
+statcode_t usr_error(int fd) {
+    statcode_t code = _WHAT_STATNO;
+    char buffer[256];
+
+    bzero(buffer, 256);
+
+    strcpy(buffer, statcode[_WHAT_STATNO]);
+    write(fd, buffer, 256);
+
+    return code;
 }

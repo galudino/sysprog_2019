@@ -45,6 +45,8 @@ void test();
 void *handler_inbound(void *arg);
 void *handler_outbound(void *arg);
 
+dumbcmd_t last_cmd = ERROR_CODENO;
+
 /**
  *  @brief  Program execution begins here
  *
@@ -80,8 +82,6 @@ int main(int argc, const char *argv[]) {
     portno = atoi(portno_str);
     csockfd = csocket_open(AF_INET, SOCK_STREAM, hostname, portno);
 
-    printf("\n\nmain menu goes here\n\n");
-
     pthread_attr_init(&attr_inbound);
 
     if ((status = pthread_create(&thread_inbound, &attr_inbound, handler_inbound, &csockfd)) < 0) {
@@ -114,7 +114,7 @@ int main(int argc, const char *argv[]) {
 
 void *handler_inbound(void *arg) {
     int fd = *(int *)(arg);
-    
+
     char buffer_in[256];
     int size_read = -1;
 
@@ -129,18 +129,22 @@ void *handler_inbound(void *arg) {
 
     (*status_server_disconnected) = false;
 
+    bzero(buffer_in, 256);
+
     while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
         printf("server says: %s\n", buffer_in);
         bzero(buffer_in, 256);
         throttle(1);
-        printf("almost ready...\n");
+        printf("almost ready...\n\n");
+
+
     }
 
     if (size_read == 0) {
         fprintf(stdout, "Error: Server has left the network\n");
         (*status_server_disconnected) = true;
     }
-    
+
     pthread_exit(status_server_disconnected);
 }
 
@@ -148,20 +152,42 @@ void *handler_outbound(void *arg) {
     int fd = *(int *)(arg);
 
     char buffer_out[256];
-    /*
+    bool started = false;
+
     printf("started handler_outbound with fd = %d\n\n", fd);
-    */
+
 
     while (true) {
         bzero(buffer_out, 256);
-        strcpy(buffer_out, "[ready]\n==> ");
+
+        if (started) {
+            strcpy(buffer_out, "[ready]\n==> ");
+        } else {
+            strcpy(buffer_out, "[type 'start' and hit RETURN to initialize the client.]\n==> ");
+        }
+        
         write(STDOUT_FILENO, buffer_out, 256);
         bzero(buffer_out, 256);
 
-        read(STDIN_FILENO, buffer_out, 256);
-        printf("\nYou wrote: %s\n", buffer_out);
+        if (started) {
+            last_cmd = cmdarg_capture(buffer_out);
+        } else {
+            read(STDIN_FILENO, buffer_out, 256);
+            str_trim(buffer_out, "\n");
 
-        printf("[PLEASE WAIT]\n(server is busy...wait for [ready] indicator.)\n\n");
+            if (strcmp(buffer_out, cmd_engl[0]) == 0) {
+                bzero(buffer_out, 256);
+                
+                strcpy(buffer_out, cmd_dumb[0]);
+                started = true;
+            }
+        }
+
+        printf("\nWill send to server: %s\n", buffer_out);
+
+        printf("[PLEASE WAIT]\n(server is busy...wait for [ready] "
+               "indicator.)\n\n");
+
         throttle(1);
 
         write(fd, buffer_out, 256);

@@ -40,12 +40,22 @@
 #include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <time.h>
 
-#define CMD_COUNT 9
+const char *cmd_engl[] = { "start", "quit",   "create", "open", "next",
+                           "put",   "delete", "close",  "help" };
 
-const char *cmd_engl[] = { "start", "quit", "create", "open", "next", "put", "delete", "close", "help" };
+const char *cmd_dumb[] = { "HELLO", "GDBYE", "CREAT", "OPNBX", "NXTMG",
+                           "PUTMG", "DELBX", "CLSBX", "USAGE" };
 
-const char *cmd_dumb[] = { "HELLO", "GDBYE", "CREAT", "OPNBX", "NXTMG", "PUTMG", "DELBX", "CLSBX", "USAGE" };
+const char *statcode[] = { "OK!",   "EXIST", "NEXST", "OPEND",
+                           "EMPTY", "NOOPN", "NOTMT", "WHAT?" };
+
+const char *arg_prompt[] = { "", "", "Okay, what would you like to name your "
+                                     "message box?",
+                             "Okay, open which message box?", "",
+                             "Okay, what would you like your message to say?",
+                             "Okay, delete which message box?", "", "", };
 
 int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
     int ssockfd = -1;
@@ -80,7 +90,7 @@ int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stdout, "Now listening on port %d\n", portno);
+    fprintf(stdout, "Now listening on port %d...\n\n", portno);
     fflush(stdout);
 
     status = listen(ssockfd, backlog);
@@ -145,7 +155,7 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t portno) {
         status = connect(csockfd, (struct sockaddr *)(&addr_server), sizeof addr_server);
 
         if (status == 0) {
-            fprintf(stdout, "Connected (%s via port %d)\n", server->h_name, portno);
+            fprintf(stdout, "\nConnected (%s via port %d)\n", server->h_name, portno);
             break;
         } else {
             if (count_period == 3) {
@@ -200,47 +210,46 @@ uint16_t get_portno(int fd) {
     return (result == 0) ? ntohs(sa.sin_port) : 0;
 }
 
-char *statcode_str(int statcode_num) {
-    char *result = NULL;
+dumbcmd_t cmdarg_capture(char *bufdst) {
+    char bufcmd[256];
 
-    switch (statcode_num) {
-    case OK_:
-        result = "OK!";
-        break;
+    int i = 0;
+    bool found = false;
+    const char *cmd = NULL;
 
-    case EXIST:
-        result = "EXIST";
-        break;
+    bzero(bufcmd, 256);
 
-    case NEXST:
-        result = "NEXST";
-        break;
+    read(STDIN_FILENO, bufcmd, 256);
+    str_trim(bufcmd, "\n");
 
-    case OPEND:
-        result = "OPEND";
-        break;
-
-    case EMPTY:
-        result = "EMPTY";
-        break;
-
-    case NOOPN:
-        result = "NOOPN";
-        break;
-
-    case NOTMT:
-        result = "NOTMT";
-        break;
-
-    case WHAT_:
-
-    default:
-        result = "WHAT?";
-
-        break;
+    for (i = 0; i < CMD_COUNT; i++) {
+        if (strcmp(bufcmd, cmd_engl[i]) == 0) {
+            found = true;
+            break;
+        }
     }
 
-    return result;
+    if (found) {
+        cmd = cmd_dumb[i];
+
+        if (strlen(arg_prompt[i]) > 0) {
+            char bufarg[256];
+
+            bzero(bufarg, 256);
+            fflush(stdout);
+            printf("%s\n%s:> ", arg_prompt[i], cmd_engl[i]);
+
+            fgets(bufarg, 256, stdin);
+
+            sprintf(bufdst, "%s %s", cmd, bufarg);
+        } else {
+            sprintf(bufdst, "%s", cmd);
+        }
+    } else {
+        sprintf(bufdst, "%s", bufcmd);
+    }
+
+    return found ? i : ERROR_CODENO;
 }
 
 /**
@@ -259,7 +268,7 @@ char *statcode_str(int statcode_num) {
  *              bufcmd is "open"
  *              bufarg is "blurp"
  *              bufdst will be "OPNBX blurp"
- *          
+ *
  *          A malformed message will still result in a readable string.
  */
 char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
@@ -279,7 +288,7 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
         cmd = cmd_dumb[i];
 
         if (bufarg[0] != '\0') {
-            if (strcmp(cmd, cmd_dumb[PUTMG]) == 0) {
+            if (strcmp(cmd, cmd_dumb[PUTMG_CODENO]) == 0) {
                 sprintf(bufdst, "%s!%lu!%s", cmd, strlen(bufarg), bufarg);
             } else {
                 sprintf(bufdst, "%s %s", cmd, bufarg);
@@ -310,11 +319,11 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
  *
  *  @param[in]  bufsrc  DUMB protocol message from client
 
- *  @param[out] arg_addr    address of a pointer that will represent 
+ *  @param[out] arg_addr    address of a pointer that will represent
  *                          the memory location the first character associated
  *                          with the command at the beginning of bufsrc;
  *                          will be NULL if found unnecessary
-
+ *
  *  @param[out] arglen_addr address of a signed long that will represent
  *                          the string length of (*arg_addr), if needed;
  *                          will be NULL if found unnecessary
@@ -331,22 +340,37 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
  *          8 = USAGE
  *          9 = ERROR
  *          any integer not described by the enumeration above
- *          [INT_MIN, 0) or [9, INT_MAX + 1) is an error. 
+ *          [INT_MIN, 0) or [9, INT_MAX + 1) is an error.
  */
 int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr) {
+    enum cmddumb code = ERROR_CODENO;
+    int i = 0;
+    bool found = false;
 
-    return 0;
+    for (i = 0; i < CMD_COUNT; i++) {
+        if (strncmp(bufsrc, cmd_dumb[i], 5) == 0) {
+            found = true;
+            code = i;
+            break;
+        }
+    }
+
+    if (found) {
+
+    } else {
+        
+    }
+
+    return code;
 }
 
 char *cmdarg_parse(char *bufdst, char *bufsrc) {
-
-
 
     if (strlen(bufsrc) >= 5) {
         if (strncmp(bufsrc, "HELLO", 5) == 0) {
 
         } else if (strncmp(bufsrc, "GDBYE", 5) == 0) {
-            
+
         } else if (strncmp(bufsrc, "CREAT", 5) == 0) {
 
         } else if (strncmp(bufsrc, "OPNBX", 5) == 0) {
@@ -362,9 +386,91 @@ char *cmdarg_parse(char *bufdst, char *bufsrc) {
         } else if (strncmp(bufsrc, "USAGE", 5) == 0) {
 
         } else {
-
         }
     }
+
+    return bufdst;
+}
+
+char *datetime_format(char *bufdst) {
+    enum month {
+        JAN,
+        FEB,
+        MAR,
+        APR,
+        MAY,
+        JUN,
+        JUL,
+        AUG,
+        SEP,
+        OCT,
+        NOV,
+        DEC
+    };
+
+    time_t now;
+    struct tm *local = NULL;
+
+    const char *month_str = NULL;
+
+    time(&now);
+    local = localtime(&now);
+
+    switch (local->tm_mon) {
+    case JAN:
+        month_str = "Jan";
+        break;
+
+    case FEB:
+        month_str = "Feb";
+        break;
+
+    case MAR:
+        month_str = "Mar";
+        break;
+
+    case APR:
+        month_str = "Apr";
+        break;
+
+    case MAY:
+        month_str = "May";
+        break;
+
+    case JUN:
+        month_str = "Jun";
+        break;
+
+    case JUL:
+        month_str = "Jul";
+        break;
+
+    case AUG:
+        month_str = "Aug";
+        break;
+
+    case SEP:
+        month_str = "Sep";
+        break;
+
+    case OCT:
+        month_str = "Oct";
+        break;
+
+    case NOV:
+        month_str = "Nov";
+        break;
+
+    case DEC:
+        month_str = "Dec";
+        break;
+
+    default:
+        month_str = "index error";
+        break;
+    }
+
+    sprintf(bufdst, "%02d%02d %02d %s", local->tm_hour, local->tm_min, local->tm_mday, month_str);
 
     return bufdst;
 }

@@ -57,7 +57,29 @@ void test_parse(void);
 void test_readwrite(void);
 void test(void);
 
+void print_usage() {
+
+}
+
 #include "network.h"
+#include "user.h"
+
+void func() {
+    char cmd[256];
+    char out[256];
+
+    int j = 0;
+
+    bzero(cmd, 256);
+    bzero(out, 256);
+
+    j += sprintf(out + j, "%s ", "==>");
+    write(STDOUT_FILENO, out, 256);
+
+    read(STDIN_FILENO, cmd, 256);
+
+    printf("%s\n", cmd);
+}
 
 /**
  *  @brief  Program execution begins here
@@ -68,6 +90,7 @@ void test(void);
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
+    /*
     char cmd[256];
     char arg[256];
     char out[256];
@@ -77,12 +100,8 @@ int main(int argc, const char *argv[]) {
     bzero(arg, 256);
     bzero(out, 256);
 
-    /* wait for user command */
     strcpy(cmd, "open");
-    /* if valid commmand, and requires and arg, get arg */
-    /* if valid command and doesnt require arg, send */
-        /* send command and arg pair, no need to check arg */
-    /* if not valid command, send */
+
     strcpy(arg, "argument_string");
 
     status = cmdarg_toserv(out, cmd, arg);
@@ -92,7 +111,15 @@ int main(int argc, const char *argv[]) {
     } else {
         printf("will send to server, but will be error: %s\n", out);
     }
-    
+    */
+    /*
+    printf("%s\n", cmd_dumb[0]);
+
+    func();*/
+
+    test_parse();
+
+
     return 0;
 }
 

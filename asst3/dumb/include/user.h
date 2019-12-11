@@ -48,6 +48,7 @@ user_t *user_deinit(user_t *u);
 bool user_active(user_t *u);
 int user_open(user_t *u);
 int user_close(user_t *u);
+size_t user_message_count(user_t *u);
 int user_message_put(user_t *u, char *message);
 char **user_message_peek(user_t *u);
 int user_message_pop(user_t *u);

@@ -53,6 +53,61 @@ void str_print(const void *arg, FILE *dest) {
     fprintf(dest, "%s", (*str));
 }
 
+char *str_trim_left(char *to_trim, const char *charset) {
+    size_t trim_length = 0;
+
+    if (strcmp(to_trim, "") == 0) {
+        return to_trim;
+    }
+
+    if (charset == NULL) {
+        charset = ESC_CHARS; /**< "\t\n\v\f\r\" */
+    }
+
+    trim_length = strspn(to_trim, charset);
+
+    if (trim_length > 0) {
+        size_t str_length = strlen(to_trim);
+
+        if (trim_length == str_length) {
+            to_trim[0] = NULL_TERMINATOR;
+        } else {
+            memmove(to_trim, to_trim + trim_length, str_length + 1 - trim_length);
+        }
+    }
+
+    return to_trim;
+}
+
+char *str_trim_right(char *to_trim, const char *charset) {
+    size_t i = 0;
+
+    if (strcmp(to_trim, "") == 0) {
+        return to_trim;
+    }
+
+    if (charset == NULL) {
+        charset = ESC_CHARS; /**< "\t\n\v\f\r\" */
+    }
+
+    i = strlen(to_trim) - 1;
+
+    while (strchr(charset, to_trim[i]) != NULL) {
+        to_trim[i] = NULL_TERMINATOR;
+        i--;
+    }
+
+    return to_trim;
+}
+
+char *str_trim(char *to_trim, const char *charset) {
+    if (strcmp(to_trim, "") == 0) {
+        return to_trim;
+    }
+
+    return str_trim_left(str_trim_right(to_trim, charset), charset);
+}
+
 bool ulog_attrs_disable[] = { false, false, false, false, false, false, false };
 
 /**

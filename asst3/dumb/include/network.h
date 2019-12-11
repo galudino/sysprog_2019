@@ -53,38 +53,63 @@ char *get_ipaddr(int fd, char *buffer);
 uint16_t get_portno(int fd);
 
 enum statcode {
-    OK_,
-    EXIST,
-    NEXST,
-    OPEND,
-    EMPTY,
-    NOOPN,
-    NOTMT,
-    WHAT_
+    _OK_STATNO,
+    EXIST_STATNO,
+    NEXST_STATNO,
+    OPEND_STATNO,
+    EMPTY_STATNO,
+    NOOPN_STATNO,
+    NOTMT_STATNO,
+    _WHAT_STATNO
 };
 
-enum cmdcode {
-    HELLO,
-    GDBYE,
-    CREAT,
-    OPNBX,
-    NXTMG,
-    PUTMG,
-    DELBX,
-    CLSBX,
-    USAGE,
-    ERROR
+enum cmddumb {
+    HELLO_CODENO,
+    GDBYE_CODENO,
+    CREAT_CODENO,
+    OPNBX_CODENO,
+    NXTMG_CODENO,
+    PUTMG_CODENO,
+    DELBX_CODENO,
+    CLSBX_CODENO,
+    USAGE_CODENO,
+    ERROR_CODENO
 };
 
-char *statcode_str(int statcode_num);
+enum cmdengl { 
+    start_ENGLNO,
+    quit_ENGLNO,
+    create_ENGLNO,
+    open_ENGLNO,
+    next_ENGLNO,
+    put_ENGLNO,
+    delete_ENGLNO,
+    close_ENGLNO,
+    help_ENGLNO,
+    error_ENGLNO
+};
+
+typedef enum statcode statcode_t;
+typedef enum cmddumb dumbcmd_t;
+typedef enum cmdengl englcmd_t;
+
+#define CMD_COUNT 9
+extern const char *cmd_engl[];
+extern const char *cmd_dumb[];
+extern const char *arg_prompt[];
+
+#define STAT_COUNT 8
+extern const char *statcode[];
 
 char *cmdarg_parse(char *bufdst, char *bufsrc);
-
-/**< cmdarg_toserv: takes human input and converts it to a DUMB message */
+dumbcmd_t cmdarg_capture(char *bufdst);
 char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg);
-
-/**< cmdarg_interpret: determines cmd, arg, and arglen from cmdarg_toserv */
 int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr);
+
+char *cmd_msg_success(char *bufdst, char *arg0, char *arg1, enum cmddumb cmd);
+char *cmd_msg_failed(char *bufdst, char *arg0, char *arg1, enum cmddumb cmd, enum statcode stat);
+
+char *datetime_format(char *bufdst);
 
 /**< throttle: briefly halt program */
 void throttle(int sec);
