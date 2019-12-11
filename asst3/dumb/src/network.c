@@ -265,6 +265,7 @@ char *statcode_str(int statcode_num) {
 char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
     int i = 0;
     const char *cmd = NULL;
+
     bool found = false;
 
     for (i = 0; i < CMD_COUNT; i++) {
@@ -277,7 +278,7 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
     if (found) {
         cmd = cmd_dumb[i];
 
-        if (bufarg[0] == '\0') {
+        if (bufarg[0] != '\0') {
             if (strcmp(cmd, cmd_dumb[PUTMG]) == 0) {
                 sprintf(bufdst, "%s!%lu!%s", cmd, strlen(bufarg), bufarg);
             } else {
@@ -289,6 +290,12 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
 
         return bufdst;
     } else {
+        if (bufarg[0] != '\0') {
+            sprintf(bufdst, "%s %s", bufcmd, bufarg);
+        } else {
+            sprintf(bufdst, "%s", bufcmd);
+        }
+
         return NULL;
     }
 }

@@ -57,6 +57,8 @@ typedef unsigned char bool;
 
 #include "header.h"
 
+void *func(void *arg);
+
 /**
  *  @brief  Program execution begins here
  *
@@ -66,8 +68,16 @@ typedef unsigned char bool;
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
-    /* Enter source code here... */
+    pthread_t thread;
+
+    pthread_create(&thread, NULL, func, NULL);
+    
+    printf("sdfgsdfagsgn\n");
 
     return 0;
 }
 
+void *func(void *arg) {
+    printf("in func\n");
+    pthread_exit(NULL);
+}

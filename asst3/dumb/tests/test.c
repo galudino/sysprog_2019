@@ -77,8 +77,13 @@ int main(int argc, const char *argv[]) {
     bzero(arg, 256);
     bzero(out, 256);
 
+    /* wait for user command */
     strcpy(cmd, "open");
-    strcpy(arg, "mybox");
+    /* if valid commmand, and requires and arg, get arg */
+    /* if valid command and doesnt require arg, send */
+        /* send command and arg pair, no need to check arg */
+    /* if not valid command, send */
+    strcpy(arg, "argument_string");
 
     status = cmdarg_toserv(out, cmd, arg);
 

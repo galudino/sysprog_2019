@@ -92,17 +92,30 @@ Edsger Dijkstra:
 		note: because of insensitivity to identity, there is no ordering in blocking/unblocking of semaphores
 ------------------------------------------------------------
 -----------------------------------------------------------
-		
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+Threads:
+pthread_t thread;
+pthread_attr_t attr;
+
+pthread_attr_init(&attr);
+
+pthread_create(&thread, &attr, function, function_arg);
+
+pthread_attr_destroy(&attr);
+
+pthread_join(thread, retval);
+
+
+signals are process-level events,
+not thread level events.
+
+mutexes are sensitive to two things:
+identity and order
+
+lock
+and same context must unlock it
+
+signals can happen anywhere and anytime, in any context
+you must use a semaphore
+
+
