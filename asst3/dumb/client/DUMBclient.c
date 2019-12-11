@@ -40,6 +40,8 @@
 
 #include "network.h"
 
+#define ENABLE_RECONNECT true
+
 void test();
 
 void *handler_inbound(void *arg);
@@ -69,7 +71,7 @@ int main(int argc, const char *argv[]) {
     pthread_attr_t attr_inbound;
     pthread_attr_t attr_outbound;
 
-    bool *status_server_disconnected = NULL;
+    bool *server_disconnected = NULL;
 
     if (argc < 3) {
         fprintf(stderr, "USAGE: %s [portnumber]\n", argv[0]);
@@ -80,34 +82,51 @@ int main(int argc, const char *argv[]) {
     portno_str = argv[2];
 
     portno = atoi(portno_str);
+
+#if ENABLE_RECONNECT
+connect:
+#endif
+
     csockfd = csocket_open(AF_INET, SOCK_STREAM, hostname, portno);
 
     pthread_attr_init(&attr_inbound);
 
     if ((status = pthread_create(&thread_inbound, &attr_inbound, handler_inbound, &csockfd)) < 0) {
-        fprintf(stderr, "Error: %s\n", strerror(status));
+        fprintf(stderr, "error: %s\n", strerror(status));
         exit(EXIT_FAILURE);
     }
 
     pthread_attr_init(&attr_outbound);
 
     if ((status = pthread_create(&thread_outbound, &attr_outbound, handler_outbound, &csockfd)) < 0) {
-        fprintf(stderr, "Error: %s\n", strerror(status));
+        fprintf(stderr, "error: %s\n", strerror(status));
         exit(EXIT_FAILURE);
     }
 
     pthread_attr_destroy(&attr_outbound);
     pthread_attr_destroy(&attr_inbound);
 
-    pthread_join(thread_inbound, (void **)(&status_server_disconnected));
+    pthread_join(thread_inbound, (void *)(&server_disconnected));
 
-    if ((*status_server_disconnected)) {
+    if ((*server_disconnected)) {
         pthread_cancel(thread_outbound);
+
+#if ENABLE_RECONNECT
+        goto connect;
+#endif
+
     } else {
         pthread_join(thread_outbound, NULL);
     }
 
+    /* allocated in handler_inbound */
+    free(server_disconnected);
+    server_disconnected = NULL;
+
     csocket_close(csockfd);
+    printf("\n");
+
+    printf("[client exited]\n\n");
 
     return EXIT_SUCCESS;
 }
@@ -118,34 +137,32 @@ void *handler_inbound(void *arg) {
     char buffer_in[256];
     int size_read = -1;
 
-    bool *status_server_disconnected = NULL;
-
-    /*
-    printf("started handler_inbound with fd = %d\n", fd);
-    */
-
-    status_server_disconnected = malloc(sizeof *status_server_disconnected);
-    assert(status_server_disconnected);
-
-    (*status_server_disconnected) = false;
+    bool *server_disconnected = NULL;
 
     bzero(buffer_in, 256);
+
+    server_disconnected = malloc(sizeof *server_disconnected);
+    assert(server_disconnected);
+
+    (*server_disconnected) = false;
 
     while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
         printf("server says: %s\n", buffer_in);
         bzero(buffer_in, 256);
         throttle(1);
         printf("almost ready...\n\n");
-
-
     }
 
     if (size_read == 0) {
-        fprintf(stdout, "Error: Server has left the network\n");
-        (*status_server_disconnected) = true;
+        if (last_cmd != GDBYE_CODENO) {
+            (*server_disconnected) = true;
+            fprintf(stdout, "[connection severed - server has left the network]\n");
+        } else {
+            fprintf(stdout, "[connection severed at user's request]\n");
+        }
     }
 
-    pthread_exit(status_server_disconnected);
+    pthread_exit(server_disconnected);
 }
 
 void *handler_outbound(void *arg) {
@@ -154,10 +171,7 @@ void *handler_outbound(void *arg) {
     char buffer_out[256];
     bool started = false;
 
-    printf("started handler_outbound with fd = %d\n\n", fd);
-
-
-    while (true) {
+    while (last_cmd != GDBYE_CODENO) {
         bzero(buffer_out, 256);
 
         if (started) {
@@ -177,16 +191,22 @@ void *handler_outbound(void *arg) {
 
             if (strcmp(buffer_out, cmd_engl[0]) == 0) {
                 bzero(buffer_out, 256);
-                
+
                 strcpy(buffer_out, cmd_dumb[0]);
                 started = true;
+                last_cmd = HELLO_CODENO;
+            } else {
+                printf("\nYou must type 'start' and hit RETURN in order to proceed.\nPlease try again.\n");
             }
         }
 
         printf("\nWill send to server: %s\n", buffer_out);
 
-        printf("[PLEASE WAIT]\n(server is busy...wait for [ready] "
-               "indicator.)\n\n");
+        if (last_cmd == GDBYE_CODENO) {
+            printf("\n[PLEASE WAIT]\n");
+        } else {
+            printf("\n[PLEASE WAIT]\nserver is busy...\nwait for [ready] ==> indicator.\n\n");
+        }
 
         throttle(1);
 
@@ -194,6 +214,10 @@ void *handler_outbound(void *arg) {
         bzero(buffer_out, 256);
 
         throttle(2);
+
+        if (last_cmd == HELLO_CODENO) {
+            printf("[client started]\n");
+        }
     }
 
     pthread_exit(NULL);

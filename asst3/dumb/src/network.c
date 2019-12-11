@@ -68,12 +68,12 @@ int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
     ssockfd = socket(domain, type, 0);
 
     if (ssockfd == -1) {
-        fprintf(stderr, "Unable to create server socket\n");
+        fprintf(stderr, "unable to create server socket\n");
         exit(EXIT_FAILURE);
     }
 
     if (setsockopt(ssockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int)) < 0) {
-        fprintf(stderr, "Unable to set socket options\n");
+        fprintf(stderr, "unable to set socket options\n");
         exit(EXIT_FAILURE);
     }
 
@@ -86,17 +86,17 @@ int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
     status = bind(ssockfd, (struct sockaddr *)(&server), sizeof server);
 
     if (status != 0) {
-        fprintf(stderr, "Unable to bind server socket\n");
+        fprintf(stderr, "unable to bind server socket\n");
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stdout, "Now listening on port %d...\n\n", portno);
+    fprintf(stdout, "now listening on port %d...\n\n", portno);
     fflush(stdout);
 
     status = listen(ssockfd, backlog);
 
     if (status != 0) {
-        fprintf(stderr, "Unable to listen on port %d\n", portno);
+        fprintf(stderr, "unable to listen on port %d\n", portno);
         exit(EXIT_FAILURE);
     }
 
@@ -107,9 +107,9 @@ int ssocket_close(int ssockfd) {
     int status = 1;
 
     if (close(ssockfd) == -1) {
-        fprintf(stderr, "Error: %s\n", strerror(errno));
+        fprintf(stderr, "error: %s\n", strerror(errno));
     } else {
-        fprintf(stdout, "Server socket successfully closed\n");
+        fprintf(stdout, "server socket successfully closed\n");
     }
 
     status = errno;
@@ -125,20 +125,20 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t portno) {
     int status = -1;
     int count_period = 3;
 
-    fprintf(stdout, "Attempting to connect to %s via port %d\n", hostname, portno);
+    fprintf(stdout, "attempting to connect to %s via port %d\n", hostname, portno);
 
     while (true) {
         status = (csockfd = socket(domain, type, 0));
 
         if (status < 0) {
-            fprintf(stderr, "Error: Socket failed\n");
+            fprintf(stderr, "error: Socket failed\n");
             exit(EXIT_FAILURE);
         }
 
         server = gethostbyname(hostname);
 
         if (server == NULL) {
-            fprintf(stderr, "Error: No hostname by identifier %s\n", hostname);
+            fprintf(stderr, "error: no hostname by identifier %s\n", hostname);
             /* use h_errno */
             exit(EXIT_FAILURE);
         }
@@ -155,7 +155,7 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t portno) {
         status = connect(csockfd, (struct sockaddr *)(&addr_server), sizeof addr_server);
 
         if (status == 0) {
-            fprintf(stdout, "\nConnected (%s via port %d)\n", server->h_name, portno);
+            fprintf(stdout, "\n[connected (%s) via port %d]\n", server->h_name, portno);
             break;
         } else {
             if (count_period == 3) {
@@ -179,9 +179,9 @@ int csocket_close(int ssockfd) {
     int status = 1;
 
     if (close(ssockfd) == -1) {
-        fprintf(stderr, "Error: %s\n", strerror(errno));
+        fprintf(stderr, "error: %s\n", strerror(errno));
     } else {
-        fprintf(stdout, "Client socket successfully closed\n");
+        fprintf(stdout, "client socket successfully closed\n");
     }
 
     status = errno;
@@ -240,7 +240,8 @@ dumbcmd_t cmdarg_capture(char *bufdst) {
             printf("%s\n%s:> ", arg_prompt[i], cmd_engl[i]);
 
             fgets(bufarg, 256, stdin);
-
+            str_trim(bufarg, "\n");
+            
             sprintf(bufdst, "%s %s", cmd, bufarg);
         } else {
             sprintf(bufdst, "%s", cmd);

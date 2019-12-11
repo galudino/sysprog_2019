@@ -39,6 +39,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #include "vptr.h"
 #include "user.h"
@@ -245,20 +246,22 @@ static void *handler_client(void *arg) {
 
     char datetime[256];
     char ipaddr[256];
-    const char *cmd = NULL;
+    const char *description = NULL;
 
     int size_read = -1;
 
     char *cmdarg = NULL;
     ssize_t arglen = -1;
     enum cmddumb cmddumb = ERROR_CODENO;
+    statcode_t stat = _WHAT_STATNO;
 
     bool exit_graceful = false;
+    bool goodbye = false;
 
     user_t *user_current = NULL;
 
-    cmd = "connected";
-    printf("%s %s %s\n", datetime_format(datetime), get_ipaddr(fd, ipaddr), cmd);
+    description = "connected";
+    printf("%s %s %s\n", datetime_format(datetime), get_ipaddr(fd, ipaddr), description);
 
     while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
         /* read incoming client message here */
@@ -268,7 +271,7 @@ static void *handler_client(void *arg) {
 
         cmddumb = cmdarg_interpret(buffer_in, &cmdarg, &arglen);
 
-        cmd = cmd_dumb[cmddumb];
+        description = cmd_dumb[cmddumb];
 
         switch (cmddumb) {
         case HELLO_CODENO:
@@ -276,49 +279,56 @@ static void *handler_client(void *arg) {
             break;
 
         case GDBYE_CODENO:
-            exit_graceful = true;
+            stat = _OK_STATNO;
+            goodbye = true;
             break;
 
         case CREAT_CODENO:
-            usr_creat(entry->users, cmdarg, fd);
+            stat = usr_creat(entry->users, cmdarg, fd);
             break;
 
         case OPNBX_CODENO:
-            usr_opnbx(entry->users, cmdarg, fd);
+            stat = usr_opnbx(entry->users, cmdarg, fd);
             break;
 
         case NXTMG_CODENO:
-            usr_nxtmg(user_current, fd);
+            stat = usr_nxtmg(user_current, fd);
             break;
 
         case PUTMG_CODENO:
-            usr_putmg(user_current, cmdarg, fd);
+            stat = usr_putmg(user_current, cmdarg, fd);
             break;
 
         case DELBX_CODENO:
-            usr_delbx(entry->users, user_current, fd);
+            stat = usr_delbx(entry->users, user_current, fd);
             break;
 
         case CLSBX_CODENO:
-            usr_clsbx(user_current, fd);
+            stat = usr_clsbx(user_current, fd);
             break;
 
         case USAGE_CODENO:
-            usr_usage(fd);
+            stat = usr_usage(fd);
             break;
 
         case ERROR_CODENO:
-            usr_error(fd);
+            stat = usr_error(fd);
             break;
 
         default:
-            usr_error(fd);
+            stat = usr_error(fd);
             break;
         }
 
-        printf("%s %s %s\n", datetime_format(datetime), ipaddr, cmd);
+        if (stat == _OK_STATNO) {
+            fprintf(stdout, "%s %s %s\n", datetime_format(datetime), ipaddr, description);
+        } else {
+            description = statcode[stat];
 
-        if (exit_graceful) {
+            fprintf(stderr, "%s %s %s\n", datetime_format(datetime), ipaddr, description);
+        }
+
+        if (goodbye) {
             break;
         }
 
@@ -334,13 +344,15 @@ static void *handler_client(void *arg) {
     }
 
     if (exit_graceful == false) {
-        cmd = "disconnected";
-        printf("%s %s %s\n", datetime_format(datetime), ipaddr, cmd);
+        description = "disconnected";
+        printf("%s %s %s\n", datetime_format(datetime), ipaddr, description);
     }
 
     if (user_current) {
         user_close(user_current);
     }
+
+    close(fd);
 
     pthread_exit(NULL);
 }
