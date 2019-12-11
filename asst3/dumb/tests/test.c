@@ -55,10 +55,9 @@
 
 void test_parse(void);
 void test_readwrite(void);
+void test(void);
 
 #include "network.h"
-
-
 
 /**
  *  @brief  Program execution begins here
@@ -69,6 +68,30 @@ void test_readwrite(void);
  *  @return     exit status
  */
 int main(int argc, const char *argv[]) {
+    char cmd[256];
+    char arg[256];
+    char out[256];
+    char *status = NULL;
+
+    bzero(cmd, 256);
+    bzero(arg, 256);
+    bzero(out, 256);
+
+    strcpy(cmd, "open");
+    strcpy(arg, "mybox");
+
+    status = cmdarg_toserv(out, cmd, arg);
+
+    if (status) {
+        printf("will send to server: %s\n", out);
+    } else {
+        printf("will send to server, but will be error: %s\n", out);
+    }
+    
+    return 0;
+}
+
+void test() {
     char cmd[256];
     char arg[256];
     char out[256];
@@ -89,8 +112,6 @@ int main(int argc, const char *argv[]) {
     
     printf("len = %d, to send: %s", j, out);
     printf("\n");
-    
-    return 0;
 }
 
 void test_parse() {

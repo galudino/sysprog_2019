@@ -40,6 +40,8 @@
 
 #include "network.h"
 
+void test();
+
 void *handler_inbound(void *arg);
 void *handler_outbound(void *arg);
 
@@ -130,6 +132,8 @@ void *handler_inbound(void *arg) {
     while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
         printf("server says: %s\n", buffer_in);
         bzero(buffer_in, 256);
+        throttle(1);
+        printf("almost ready...\n");
     }
 
     if (size_read == 0) {
@@ -157,15 +161,13 @@ void *handler_outbound(void *arg) {
         read(STDIN_FILENO, buffer_out, 256);
         printf("\nYou wrote: %s\n", buffer_out);
 
-
-
         printf("[PLEASE WAIT]\n(server is busy...wait for [ready] indicator.)\n\n");
         throttle(1);
 
         write(fd, buffer_out, 256);
         bzero(buffer_out, 256);
 
-        throttle(1);
+        throttle(2);
     }
 
     pthread_exit(NULL);

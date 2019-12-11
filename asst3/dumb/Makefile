@@ -41,7 +41,7 @@ PTHREAD				= -lpthread
 MATH 				= -lm
 PEDANTIC			= -pedantic-errors
 
-SANTIIZED 			= #-fsanitize=address
+SANTIIZED 			= -fsanitize=address
 W_ALL 				= -Wall
 W_ERR 				= -Werror
 

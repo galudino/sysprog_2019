@@ -41,6 +41,12 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#define CMD_COUNT 9
+
+const char *cmd_engl[] = { "start", "quit", "create", "open", "next", "put", "delete", "close", "help" };
+
+const char *cmd_dumb[] = { "HELLO", "GDBYE", "CREAT", "OPNBX", "NXTMG", "PUTMG", "DELBX", "CLSBX", "USAGE" };
+
 int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
     int ssockfd = -1;
 
@@ -257,8 +263,34 @@ char *statcode_str(int statcode_num) {
  *          A malformed message will still result in a readable string.
  */
 char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
+    int i = 0;
+    const char *cmd = NULL;
+    bool found = false;
 
-    return bufdst;
+    for (i = 0; i < CMD_COUNT; i++) {
+        if (strcmp(bufcmd, cmd_engl[i]) == 0) {
+            found = true;
+            break;
+        }
+    }
+
+    if (found) {
+        cmd = cmd_dumb[i];
+
+        if (bufarg[0] == '\0') {
+            if (strcmp(cmd, cmd_dumb[PUTMG]) == 0) {
+                sprintf(bufdst, "%s!%lu!%s", cmd, strlen(bufarg), bufarg);
+            } else {
+                sprintf(bufdst, "%s %s", cmd, bufarg);
+            }
+        } else {
+            sprintf(bufdst, "%s", cmd);
+        }
+
+        return bufdst;
+    } else {
+        return NULL;
+    }
 }
 
 /**
