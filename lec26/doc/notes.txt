@@ -1,0 +1,108 @@
+/**
+ *  @file       notes.txt
+ *  @brief      Class notes
+ *
+ *  @author     Gemuele Aludino
+ *  @date       10 Dec 2019
+ *  @copyright  Copyright © 2019 Gemuele Aludino
+ */
+
+------------------------------------------------------------
+LAST CLASS:
+------------------------------------------------------------
+Final: 1600-1900, 18 Dec, CAG (College Ave Gym)
+
+
+Mutexes/synchronization:
+
+MUTEX:
+	- applies to code (not variables)
+		i.e. critical section (region code where you read from/write to shared data)
+	- one per shared variable
+	- keep critical sections as short as possible
+	- don't deadlock!
+		- global ordering on mutexes
+		- rising/falling permission
+		
+	
+so... mutex is itself shared data ... 
+	get mutex value from mem
+	jump based on value
+	
+... so how can mutex safely be implemented?
+	(i.e. how do you make these instructions uninterruptable?)
+
+	.. make them one instruction(!)
+	
+	test_and_set
+
+
+	.. mutexes: often used to protect data
+		precise order and number of function (lock, then unlock)
+		sensitive to identity (locking context must be unlocking one)
+		always resolved in lock order
+
+
+
+Barrier: synch on computation
+	on wait(), increment counter and block
+		unless! you increment counter to max value, then everyone blocking is unblocked
+		
+	addl
+	cmp
+	
+	cmp_and_incr
+
+
+
+Events (condition variables): synch on indicators you can read/access
+	on wait(), block until some condition occurs
+		when it occurs, someone informs the condvar, which unblocks the waiting context
+
+	compares current value
+	swap in new one
+
+	cmp_and_swap
+
+
+	
+	
+Edsger Dijkstra:
+	semaphores:
+		
+		canonically ... but .. I don't speak Dutch .. so..
+		p()
+		v()
+		
+		produce() 		(add to queue: incr shared value by 1 if > max, else block)
+		consume() 		(remove from queue: decr shared value by 1 if > 0, else block)
+	
+		what if .. you had a semaphore whose max value was 1?
+			... could only produce() one at a time
+				first thread to produce() would incr the value to 1, so next produce() would block
+					until first thread called consume() to decrement the counter
+					
+			sounds like a mutex.. but!:
+			- INsensitive to identity: any thread can call produce() or consume() at any time
+			- INsensitive to ordering: any thread can call produce() or consume() any number of times in any sequence
+	
+		because of this, semaphores are asychronous, threadsafe synch. mechanisms
+		ONLY synch. mech. you should ever use in a signal hanlder running over threads (sad, already if you need to do that)
+		
+		note: because of insensitivity to identity, there is no ordering in blocking/unblocking of semaphores
+------------------------------------------------------------
+-----------------------------------------------------------
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
