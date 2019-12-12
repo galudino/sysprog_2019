@@ -6,5 +6,9 @@
 *.dSYM
 *.tar.gz
 build/*.o
+*.o
 $filename_default
 $1
+DUMBserve
+DUMBclient
+test

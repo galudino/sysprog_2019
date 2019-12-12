@@ -8,11 +8,11 @@
 ##
 
 ## DIRECTORIES ################################################################
-DIR_OBJ				= ./
-DIR_INC				= ./
-DIR_SRC				= ./
-DIR_TST				= ./
-DIR_CLI				= ./
+DIR_OBJ				= build
+DIR_INC				= include
+DIR_SRC				= src
+DIR_TST				= tests
+DIR_CLI				= client
 ###############################################################################
 
 ## EXECUTABLE SOURCE FILE NAMES ###############################################
@@ -96,39 +96,48 @@ ALL_EXE	= $(EXE_CLI) $(EXE_SVR) $(EXE_TST)
 ## object files -- the intermediary steps have been skipped for brevity.
 ##
 
-all: $(CLIENT) $(SERVER) $(TEST)
+all: $(CLIENT) $(SERVER)
 
+$(CLIENT): $(EXE_CLI)
+$(SERVER): $(EXE_SVR)
+$(TEST): 	$(EXE_TST)
+
+sources: $(OBJECTS)
+
+## Source code is preprocessed, compiled, and assembled - .o object files produced
 $(DIR_OBJ)/%$(EXT_OBJ): $(DIR_SRC)/%$(EXT_SRC)
 	$(CC) -c $< -o $@ $(CFLAGS) $(INC)
 
-client: utils.o network.o vptr.o user.o *$(EXT_INC) $(SRC_CLI)
+## Links .o object files - binary executable produced
+$(EXE_CLI): $(DIR_INC)/*$(EXT_INC) $(OBJECTS) $(DIR_CLI)/$(SRC_CLI)
 	@echo;
 	@echo "Linking $(EXE_CLI)..."
 	@echo;
 
-	$(CC) -o $(EXE_CLI) $(SRC_CLI) utils.o network.o vptr.o user.o $(CFLAGS) $(LIB) $(INC)
+	$(CC) -o $(EXE_CLI) $(DIR_CLI)/$(SRC_CLI) $(OBJECTS) $(CFLAGS) $(LIB) $(INC)
 
 	@echo;
 	@echo "Linking complete."
 	@echo;
 
-serve: utils.o network.o vptr.o user.o *$(EXT_INC) $(SRC_SVR)
+$(EXE_SVR): $(DIR_INC)/*$(EXT_INC) $(OBJECTS) $(DIR_CLI)/$(SRC_SVR)
 	@echo;
 	@echo "Linking $(EXE_SVR)..."
 	@echo;
 
-	$(CC) -o $(EXE_SVR) $(SRC_SVR) utils.o network.o vptr.o user.o $(CFLAGS) $(LIB) $(INC)
+	$(CC) -o $(EXE_SVR) $(DIR_CLI)/$(SRC_SVR) $(OBJECTS) $(CFLAGS) $(LIB) $(INC)
 
 	@echo;
 	@echo "Linking complete."
 	@echo;
 
-test: utils.o network.o vptr.o user.o *$(EXT_INC) $(SRC_TST)
+## Links .o object files - binary executable produced
+$(EXE_TST): $(DIR_INC)/*$(EXT_INC) $(OBJECTS) $(DIR_TST)/$(SRC_TST)
 	@echo;
 	@echo "Linking $(EXE_TST)..."
 	@echo;
 
-	$(CC) -o $(EXE_TST) $(SRC_TST) utils.o network.o vptr.o user.o $(CFLAGS) $(LIB) $(INC)
+	$(CC) -o $(EXE_TST) $(DIR_TST)/$(SRC_TST) $(OBJECTS) $(CFLAGS) $(LIB) $(INC)
 
 	@echo;
 	@echo "Linking complete."
