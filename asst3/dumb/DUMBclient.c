@@ -53,6 +53,7 @@ statcode_t last_stat = _WHAT_STATNO;
 
 char box_name[256];
 char message[256];
+
 bool started = false;
 bool close_box = false;
 
@@ -193,7 +194,6 @@ void *handler_inbound(void *arg) {
                         arglen = atoi(buffer_in + 3);
                     } else {
                         if (strncmp(buffer_in, statcode[i], 5) == 0) {
-                            printf("here\n");
                             cmdarg_interpret(buffer_in, &ptr, &arglen);
 
                             last_stat = i;
@@ -305,8 +305,7 @@ void *handler_inbound(void *arg) {
             break;
         }
         
-
-
+    
         /* check buffer_in and see if it matches with statcode[i] */
         /* assign last_stat to i */
         /* 
@@ -382,7 +381,9 @@ void *handler_outbound(void *arg) {
             }
         }
 
+        /*
         printf("\nWill send to server: %s\n", buffer_out);
+        */
 
         if (last_cmd == GDBYE_CODENO) {
             printf("\n[PLEASE WAIT]\n");

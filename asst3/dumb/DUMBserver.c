@@ -55,7 +55,7 @@ static void *handler_connection(void *arg);
 static void *handler_client(void *arg);
 
 statcode_t usr_creat(vptr_t *v, const char *arg, int fd);
-statcode_t usr_opnbx(vptr_t *v, const char *arg, int fd, bool *box_open);
+statcode_t usr_opnbx(vptr_t *v, user_t **user, const char *arg, int fd, bool *box_open);
 statcode_t usr_delbx(vptr_t *v, user_t *user, int fd);
 statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd);
 statcode_t usr_putmg(user_t *user, const char *arg, int arglen, int fd, bool *box_open);
@@ -250,7 +250,7 @@ static void *handler_client(void *arg) {
 
     int size_read = -1;
 
-    char *cmdarg = NULL;
+    char cmdarg[256];
     ssize_t arglen = 0;
 
     dumbcmd_t cmddumb = ERROR_CODENO;
@@ -274,7 +274,9 @@ static void *handler_client(void *arg) {
         printf("client says: %s\n", buffer_in);
         */
 
-        cmddumb = cmdarg_interpret(buffer_in, &cmdarg, &arglen);
+        bzero(cmdarg, 256);
+
+        cmddumb = cmdarg_interpret(buffer_in, (char **)(&cmdarg), &arglen);
 
         description = cmd_dumb[cmddumb];
 
@@ -311,6 +313,7 @@ static void *handler_client(void *arg) {
 
         case CLSBX_CODENO:
             stat = usr_clsbx(user_current, fd, &box_open, cmdarg);
+            user_current = stat == _OK_STATNO ? NULL : user_current;
             break;
 
         case USAGE_CODENO:
@@ -355,7 +358,9 @@ static void *handler_client(void *arg) {
     if (user_current) {
         user_close(user_current);
     } else {
+        /*
         printf("user_current: %p\n", (void *)(user_current));
+        */
     }
 
     close(fd);
@@ -406,47 +411,46 @@ statcode_t usr_creat(vptr_t *v, const char *arg, int fd) {
     return stat;
 }
 
-statcode_t usr_opnbx(vptr_t *v, const char *arg, int fd, bool *box_open) {
+/**
+ *  @brief      TODO
+ *  
+ *  @param[in]   v
+ *  @param[out]  user
+ *  @param[in]   arg
+ *  @param[in]   fd
+ *  @param[out]  box_open
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO          box requested successfully opened
+ *              NEXST_STATNO        box requested nonexistent
+ *              OPEND_STATNO        box requested already open by another client
+ *              _WHAT_STATNO        malformed message
+ */
+statcode_t usr_opnbx(vptr_t *v, user_t **user, const char *arg, int fd, bool *box_open) {
     statcode_t stat = _OK_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
 
-    /*
-    {
-        int found = -1;
-
-        found = vptr_search(v, &arg, user_compare);
-        printf("found: %d\n", found);
-
-        if (found != -1) {
-            user_t *user = NULL;
-
-            stat = _OK_STATNO;
-
-            user = *(user_t **)(vptr_at(v, found));
-
-            if (user_active(user)) {
-                stat = OPEND_STATNO;
-            } else {
-                user_open(user);
-
-                stat = _OK_STATNO;
-                (*box_open) = true;
-            }
-        } else {
-            stat = NEXST_STATNO;
-        }
-        
-    }
-    */
-
-    strcpy(buffer, statcode[_OK_STATNO]);
+    strcpy(buffer, statcode[stat]);
     write(fd, buffer, 256);
 
     return stat;
 }
 
+/**
+ *  @brief  TODO
+ *
+ *  @param[in]  v
+ *  @param[in]  user
+ *  @param[in]  fd
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO       box requested successfully deleted
+ *              OPEND_STATNO     box requested is currently open
+ *              NOTMT_STATNO     box requested is not empty
+ *              _WHAT_STATNO     malformed message
+ */
 statcode_t usr_delbx(vptr_t *v, user_t *user, int fd) {
     statcode_t stat = _OK_STATNO;
     char buffer[256];
@@ -459,6 +463,16 @@ statcode_t usr_delbx(vptr_t *v, user_t *user, int fd) {
     return stat;
 }
 
+/**
+ *  @brief  TODO
+ *
+ *  @param[in]  v
+ *  @param[in]  user
+ *  @param[in]  fd
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO      (no reply will actually be sent)
+ */
 statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd) {
     statcode_t stat = _OK_STATNO;
     char buffer[256];
@@ -471,6 +485,20 @@ statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd) {
     return stat;
 }
 
+/**
+ *  @brief  TODO
+ *  
+ *  @param[in]  user
+ *  @param[in]  arg
+ *  @param[in]  arglen
+ *  @param[in]  fd
+ *  @param[out] box_open
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO      message successfully added to box
+ *              NOOPN_STATNO    no box currently open clientside
+ *              _WHAT_STATNO    malformed message
+ */
 statcode_t usr_putmg(user_t *user, const char *arg, int arglen, int fd, bool *box_open) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
@@ -483,6 +511,19 @@ statcode_t usr_putmg(user_t *user, const char *arg, int arglen, int fd, bool *bo
     return stat;
 }
 
+/**
+ *  @brief  TODO
+ *  
+ *  @param[in]  user
+ *  @param[in]  fd
+ *  @param[out] box_open
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO    next message successfully retrieved
+ *              EMPTY_STATNO  currently open message box is empty
+ *              NOOPN_STATNO  no box currently open clientside
+ *              _WHAT_STATNO  malformed message
+ */
 statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
@@ -495,6 +536,19 @@ statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
     return stat;
 }
 
+/**
+ *  @brief  TODO
+ *
+ *  @param[in]  user
+ *  @param[in]  fd
+ *  @param[out] box_open
+ *  @param[in]  cmdarg
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO    open message box was successfuly closed
+ *              NOOPN_STATNO  no box currently open clientside
+ *              _WHAT_STATNO  malformed message
+ */
 statcode_t usr_clsbx(user_t *user, int fd, bool *box_open, char *cmdarg) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
@@ -507,6 +561,15 @@ statcode_t usr_clsbx(user_t *user, int fd, bool *box_open, char *cmdarg) {
     return stat;
 }
 
+/**
+ *  @brief  TODO
+ *  
+ *  @param[in]  fd
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO      permission granted to print usage menu
+ *              _WHAT_STATNO    malformed message
+ */
 statcode_t usr_usage(int fd) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
@@ -519,6 +582,14 @@ statcode_t usr_usage(int fd) {
     return stat;
 }
 
+/**
+ *  @brief  TODO
+ *
+ *  @param[in]  fd
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO    request received is confirmed to be malformed
+ */
 statcode_t usr_error(int fd) {
     statcode_t code = _WHAT_STATNO;
     char buffer[256];
