@@ -324,7 +324,7 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
  *
  *  @param[in]  bufsrc  DUMB protocol message from client
 
- *  @param[out] arg_addr    address of a pointer that will represent
+ *  @param[out] arg         pointer that will represent
  *                          the memory location the first character associated
  *                          with the command at the beginning of bufsrc;
  *                          will be NULL if found unnecessary
@@ -347,7 +347,7 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
  *          any integer not described by the enumeration above
  *          [INT_MIN, 0) or [9, INT_MAX + 1) is an error.
  */
-int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr) {
+int cmdarg_interpret(char *bufsrc, char **arg, ssize_t *arglen_addr) {
     enum cmddumb code = ERROR_CODENO;
     int i = 0;
     bool found = false;
@@ -362,27 +362,27 @@ int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr) {
 
     if (found) {
         char ch = ' ';
-        (*arg_addr) = bufsrc + 6;
-        ch = (*arg_addr)[0];
-        (*arg_addr)[0] = '\0';
-        (*arg_addr)[0] = ch;
+        (*arg) = bufsrc + 6;
+        ch = (*arg)[0];
+        (*arg)[0] = '\0';
+        (*arg)[0] = ch;
 
         if (bufsrc[5] == '!') {
             char *temp = NULL;
             char ch = ' ';
 
-            ++(*arg_addr);
-            temp = strchr((*arg_addr), '!');
+            ++(*arg);
+            temp = strchr((*arg), '!');
             ch = *(temp);
             *(temp) = '\0';
 
-            (*arglen_addr) = atoi((*arg_addr));
+            (*arglen_addr) = atoi((*arg));
             *(temp) = ch;
 
-            (*arg_addr) = temp + 1;
-            (*arg_addr)[(*arglen_addr)] = '\0';
+            (*arg) = temp + 1;
+            (*arg)[(*arglen_addr)] = '\0';
         } else if (bufsrc[5] == ' ') {
-            (*arglen_addr) = atoi((*arg_addr));
+            (*arglen_addr) = atoi((*arg));
         }
     }
 

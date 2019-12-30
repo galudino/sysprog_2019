@@ -30,6 +30,7 @@
  */
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -54,13 +55,13 @@ struct entry {
 static void *handler_connection(void *arg);
 static void *handler_client(void *arg);
 
-statcode_t usr_creat(vptr_t *v, const char *arg, int fd);
-statcode_t usr_opnbx(vptr_t *v, user_t **user, const char *arg, int fd, bool *box_open);
+statcode_t usr_creat(vptr_t *v, char *arg, int fd);
+statcode_t usr_opnbx(vptr_t *v, user_t **user, char *arg, int fd, bool *box_open);
 statcode_t usr_delbx(vptr_t *v, user_t *user, int fd);
 statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd);
-statcode_t usr_putmg(user_t *user, const char *arg, int arglen, int fd, bool *box_open);
+statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open);
 statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open);
-statcode_t usr_clsbx(user_t *user, int fd, bool *box_open, char *cmdarg);
+statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg);
 statcode_t usr_usage(int fd);
 statcode_t usr_error(int fd);
 
@@ -250,7 +251,7 @@ static void *handler_client(void *arg) {
 
     int size_read = -1;
 
-    char cmdarg[256];
+    char *cmdarg = NULL;
     ssize_t arglen = 0;
 
     dumbcmd_t cmddumb = ERROR_CODENO;
@@ -274,9 +275,8 @@ static void *handler_client(void *arg) {
         printf("client says: %s\n", buffer_in);
         */
 
-        bzero(cmdarg, 256);
-
-        cmddumb = cmdarg_interpret(buffer_in, (char **)(&cmdarg), &arglen);
+        cmdarg = buffer_in;
+        cmddumb = cmdarg_interpret(buffer_in, &cmdarg, &arglen);
 
         description = cmd_dumb[cmddumb];
 
@@ -296,7 +296,7 @@ static void *handler_client(void *arg) {
             break;
 
         case OPNBX_CODENO:
-            stat = usr_opnbx(entry->users, cmdarg, fd, &box_open);
+            stat = usr_opnbx(entry->users, &user_current, cmdarg, fd, &box_open);
             break;
 
         case NXTMG_CODENO:
@@ -312,8 +312,7 @@ static void *handler_client(void *arg) {
             break;
 
         case CLSBX_CODENO:
-            stat = usr_clsbx(user_current, fd, &box_open, cmdarg);
-            user_current = stat == _OK_STATNO ? NULL : user_current;
+            stat = usr_clsbx(&user_current, fd, &box_open, cmdarg);
             break;
 
         case USAGE_CODENO:
@@ -334,7 +333,7 @@ static void *handler_client(void *arg) {
         } else {
             description = statcode[stat];
 
-            fprintf(stderr, "%s %s %s\n", datetime_format(datetime), ipaddr, description);
+            fprintf(stderr, "%s %s ER:%s\n", datetime_format(datetime), ipaddr, description);
         }
 
         if (goodbye) {
@@ -368,41 +367,44 @@ static void *handler_client(void *arg) {
     pthread_exit(NULL);
 }
 
-statcode_t usr_creat(vptr_t *v, const char *arg, int fd) {
+/**
+ *  @brief  TODO
+ *
+ *  @param[in]  v
+ *  @param[in]  arg
+ *  @param[in]  fd
+ *
+ *  @return     statcode values:
+ *              _OK_STATNO      user was successfully created and added to v
+ *              EXIST_STATNO    box with name arg already exists in v
+ *              _WHAT_STATNO    malformed message
+ */
+statcode_t usr_creat(vptr_t *v, char *arg, int fd) {
     statcode_t stat = _OK_STATNO;
     char buffer[256];
-    bool bad = false;
+
+    const size_t arglen = strlen(arg);
+    bool in_range = arglen >= 5 && arglen <= 25;
 
     bzero(buffer, 256);
 
-    {
-        if (strlen(arg) >= 5 && strlen(arg) <= 25) {
-            switch (*arg) {
-                case 0:
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                case 6:
-                case 7:
-                case 8:
-                case 9:
-                bad = true;
-                break;
-                default:
-                break;
-            }
+    printf("%s\n", arg);
+
+    if (in_range && isalpha(arg[0]) != 0) {
+        user_t *user = NULL;
+
+        while (vptr_trylock(v) != 0) {
+
         }
 
-        if (bad) {
-            stat = _WHAT_STATNO;
-        } else {
-            user_t *user = user_new((char *)arg);
-            vptr_pushb(v, user);
-
-            stat = _OK_STATNO;
-        }
+        user = user_new(arg);
+        vptr_pushb(v, user);
+        
+        vptr_unlock(v);
+        
+        stat = _OK_STATNO;
+    } else {
+        stat = _WHAT_STATNO;
     }
 
     strcpy(buffer, statcode[stat]);
@@ -426,7 +428,7 @@ statcode_t usr_creat(vptr_t *v, const char *arg, int fd) {
  *              OPEND_STATNO        box requested already open by another client
  *              _WHAT_STATNO        malformed message
  */
-statcode_t usr_opnbx(vptr_t *v, user_t **user, const char *arg, int fd, bool *box_open) {
+statcode_t usr_opnbx(vptr_t *v, user_t **user, char *arg, int fd, bool *box_open) {
     statcode_t stat = _OK_STATNO;
     char buffer[256];
 
@@ -499,7 +501,7 @@ statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd) {
  *              NOOPN_STATNO    no box currently open clientside
  *              _WHAT_STATNO    malformed message
  */
-statcode_t usr_putmg(user_t *user, const char *arg, int arglen, int fd, bool *box_open) {
+statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
@@ -549,7 +551,7 @@ statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
  *              NOOPN_STATNO  no box currently open clientside
  *              _WHAT_STATNO  malformed message
  */
-statcode_t usr_clsbx(user_t *user, int fd, bool *box_open, char *cmdarg) {
+statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
