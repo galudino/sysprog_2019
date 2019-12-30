@@ -55,12 +55,12 @@ static void *handler_connection(void *arg);
 static void *handler_client(void *arg);
 
 statcode_t usr_creat(vptr_t *v, const char *arg, int fd);
-statcode_t usr_opnbx(vptr_t *v, const char *arg, int fd);
+statcode_t usr_opnbx(vptr_t *v, const char *arg, int fd, bool *box_open);
 statcode_t usr_delbx(vptr_t *v, user_t *user, int fd);
 statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd);
-statcode_t usr_putmg(user_t *user, const char *arg, int fd);
-statcode_t usr_nxtmg(user_t *user, int fd);
-statcode_t usr_clsbx(user_t *user, int fd);
+statcode_t usr_putmg(user_t *user, const char *arg, int arglen, int fd, bool *box_open);
+statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open);
+statcode_t usr_clsbx(user_t *user, int fd, bool *box_open, char *cmdarg);
 statcode_t usr_usage(int fd);
 statcode_t usr_error(int fd);
 
@@ -250,15 +250,20 @@ static void *handler_client(void *arg) {
 
     int size_read = -1;
 
-    char cmdarg[256];
-    ssize_t arglen = -1;
-    enum cmddumb cmddumb = ERROR_CODENO;
+    char *cmdarg = NULL;
+    ssize_t arglen = 0;
+
+    dumbcmd_t cmddumb = ERROR_CODENO;
     statcode_t stat = _WHAT_STATNO;
 
     bool exit_graceful = false;
     bool goodbye = false;
+    bool box_open = false;
 
     user_t *user_current = NULL;
+
+    bzero(buffer_in, 256);
+    bzero(buffer_out, 256);
 
     description = "connected";
     printf("%s %s %s\n", datetime_format(datetime), get_ipaddr(fd, ipaddr), description);
@@ -268,15 +273,15 @@ static void *handler_client(void *arg) {
         /*
         printf("client says: %s\n", buffer_in);
         */
-        bzero(cmdarg, 256);
 
-        cmddumb = cmdarg_interpret(buffer_in, (char **)(&cmdarg), &arglen);
+        cmddumb = cmdarg_interpret(buffer_in, &cmdarg, &arglen);
 
         description = cmd_dumb[cmddumb];
 
         switch (cmddumb) {
         case HELLO_CODENO:
             write(fd, strcpy(buffer_out, statcode[_OK_STATNO]), 256);
+            stat = _OK_STATNO;
             break;
 
         case GDBYE_CODENO:
@@ -289,15 +294,15 @@ static void *handler_client(void *arg) {
             break;
 
         case OPNBX_CODENO:
-            stat = usr_opnbx(entry->users, cmdarg, fd);
+            stat = usr_opnbx(entry->users, cmdarg, fd, &box_open);
             break;
 
         case NXTMG_CODENO:
-            stat = usr_nxtmg(user_current, fd);
+            stat = usr_nxtmg(user_current, fd, &box_open);
             break;
 
         case PUTMG_CODENO:
-            stat = usr_putmg(user_current, cmdarg, fd);
+            stat = usr_putmg(user_current, cmdarg, arglen, fd, &box_open);
             break;
 
         case DELBX_CODENO:
@@ -305,7 +310,7 @@ static void *handler_client(void *arg) {
             break;
 
         case CLSBX_CODENO:
-            stat = usr_clsbx(user_current, fd);
+            stat = usr_clsbx(user_current, fd, &box_open, cmdarg);
             break;
 
         case USAGE_CODENO:
@@ -340,8 +345,6 @@ static void *handler_client(void *arg) {
 
         bzero(buffer_in, 256);
         bzero(buffer_out, 256);
-
-        printf("user_current: %p\n", (void *)(user_current));
     }
 
     if (exit_graceful == false) {
@@ -351,6 +354,8 @@ static void *handler_client(void *arg) {
 
     if (user_current) {
         user_close(user_current);
+    } else {
+        printf("user_current: %p\n", (void *)(user_current));
     }
 
     close(fd);
@@ -359,31 +364,91 @@ static void *handler_client(void *arg) {
 }
 
 statcode_t usr_creat(vptr_t *v, const char *arg, int fd) {
-    statcode_t code = _WHAT_STATNO;
+    statcode_t stat = _OK_STATNO;
     char buffer[256];
+    bool bad = false;
 
     bzero(buffer, 256);
 
-    strcpy(buffer, statcode[_OK_STATNO]);
+    {
+        if (strlen(arg) >= 5 && strlen(arg) <= 25) {
+            switch (*arg) {
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                case 8:
+                case 9:
+                bad = true;
+                break;
+                default:
+                break;
+            }
+        }
+
+        if (bad) {
+            stat = _WHAT_STATNO;
+        } else {
+            user_t *user = user_new((char *)arg);
+            vptr_pushb(v, user);
+
+            stat = _OK_STATNO;
+        }
+    }
+
+    strcpy(buffer, statcode[stat]);
     write(fd, buffer, 256);
 
-    return code;
+    return stat;
 }
 
-statcode_t usr_opnbx(vptr_t *v, const char *arg, int fd) {
-    statcode_t code = _WHAT_STATNO;
+statcode_t usr_opnbx(vptr_t *v, const char *arg, int fd, bool *box_open) {
+    statcode_t stat = _OK_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
 
+    /*
+    {
+        int found = -1;
+
+        found = vptr_search(v, &arg, user_compare);
+        printf("found: %d\n", found);
+
+        if (found != -1) {
+            user_t *user = NULL;
+
+            stat = _OK_STATNO;
+
+            user = *(user_t **)(vptr_at(v, found));
+
+            if (user_active(user)) {
+                stat = OPEND_STATNO;
+            } else {
+                user_open(user);
+
+                stat = _OK_STATNO;
+                (*box_open) = true;
+            }
+        } else {
+            stat = NEXST_STATNO;
+        }
+        
+    }
+    */
+
     strcpy(buffer, statcode[_OK_STATNO]);
     write(fd, buffer, 256);
 
-    return code;
+    return stat;
 }
 
 statcode_t usr_delbx(vptr_t *v, user_t *user, int fd) {
-    statcode_t code = _WHAT_STATNO;
+    statcode_t stat = _OK_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
@@ -391,11 +456,11 @@ statcode_t usr_delbx(vptr_t *v, user_t *user, int fd) {
     strcpy(buffer, statcode[_OK_STATNO]);
     write(fd, buffer, 256);
 
-    return code;
+    return stat;
 }
 
 statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd) {
-    statcode_t code = _WHAT_STATNO;
+    statcode_t stat = _OK_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
@@ -403,11 +468,11 @@ statcode_t usr_gdbye(vptr_t *v, user_t *user, int fd) {
     strcpy(buffer, statcode[_OK_STATNO]);
     write(fd, buffer, 256);
 
-    return code;
+    return stat;
 }
 
-statcode_t usr_putmg(user_t *user, const char *arg, int fd) {
-    statcode_t code = _WHAT_STATNO;
+statcode_t usr_putmg(user_t *user, const char *arg, int arglen, int fd, bool *box_open) {
+    statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
@@ -415,11 +480,11 @@ statcode_t usr_putmg(user_t *user, const char *arg, int fd) {
     strcpy(buffer, statcode[_OK_STATNO]);
     write(fd, buffer, 256);
 
-    return code;
+    return stat;
 }
 
-statcode_t usr_nxtmg(user_t *user, int fd) {
-    statcode_t code = _WHAT_STATNO;
+statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
+    statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
@@ -427,11 +492,11 @@ statcode_t usr_nxtmg(user_t *user, int fd) {
     strcpy(buffer, statcode[_OK_STATNO]);
     write(fd, buffer, 256);
 
-    return code;
+    return stat;
 }
 
-statcode_t usr_clsbx(user_t *user, int fd) {
-    statcode_t code = _WHAT_STATNO;
+statcode_t usr_clsbx(user_t *user, int fd, bool *box_open, char *cmdarg) {
+    statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
@@ -439,11 +504,11 @@ statcode_t usr_clsbx(user_t *user, int fd) {
     strcpy(buffer, statcode[_OK_STATNO]);
     write(fd, buffer, 256);
 
-    return code;
+    return stat;
 }
 
 statcode_t usr_usage(int fd) {
-    statcode_t code = _WHAT_STATNO;
+    statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
@@ -451,7 +516,7 @@ statcode_t usr_usage(int fd) {
     strcpy(buffer, statcode[_OK_STATNO]);
     write(fd, buffer, 256);
 
-    return code;
+    return stat;
 }
 
 statcode_t usr_error(int fd) {
@@ -460,7 +525,7 @@ statcode_t usr_error(int fd) {
 
     bzero(buffer, 256);
 
-    strcpy(buffer, statcode[_WHAT_STATNO]);
+    strcpy(buffer, statcode[_OK_STATNO]);
     write(fd, buffer, 256);
 
     return code;

@@ -49,7 +49,7 @@ const char *cmd_dumb[] = { "HELLO", "GDBYE", "CREAT", "OPNBX", "NXTMG",
                            "PUTMG", "DELBX", "CLSBX", "USAGE" };
 
 const char *statcode[] = { "OK!",   "EXIST", "NEXST", "OPEND",
-                           "EMPTY", "NOOPN", "NOTMT", "WHAT?" };
+                           "EMPTY", "NOOPN", "NOTMT", "WHAT?", "BOPEN" };
 
 const char *arg_prompt[] = { "", "", "Okay, what would you like to name your "
                                      "message box?",
@@ -242,7 +242,11 @@ dumbcmd_t cmdarg_capture(char *bufdst) {
             fgets(bufarg, 256, stdin);
             str_trim(bufarg, "\n");
             
-            sprintf(bufdst, "%s %s", cmd, bufarg);
+            if (strcmp(cmd, cmd_dumb[PUTMG_CODENO]) == 0) {
+                sprintf(bufdst, "%s!%lu!%s", cmd, strlen(bufarg), bufarg);
+            } else {
+                sprintf(bufdst, "%s %s", cmd, bufarg);
+            }
         } else {
             sprintf(bufdst, "%s", cmd);
         }
@@ -357,9 +361,29 @@ int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr) {
     }
 
     if (found) {
+        char ch = ' ';
+        (*arg_addr) = bufsrc + 6;
+        ch = (*arg_addr)[0];
+        (*arg_addr)[0] = '\0';
+        (*arg_addr)[0] = ch;
 
-    } else {
-        
+        if (bufsrc[5] == '!') {
+            char *temp = NULL;
+            char ch = ' ';
+
+            ++(*arg_addr);
+            temp = strchr((*arg_addr), '!');
+            ch = *(temp);
+            *(temp) = '\0';
+
+            (*arglen_addr) = atoi((*arg_addr));
+            *(temp) = ch;
+
+            (*arg_addr) = temp + 1;
+            (*arg_addr)[(*arglen_addr)] = '\0';
+        } else if (bufsrc[5] == ' ') {
+            (*arglen_addr) = atoi((*arg_addr));
+        }
     }
 
     return code;

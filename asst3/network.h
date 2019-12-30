@@ -60,7 +60,8 @@ enum statcode {
     EMPTY_STATNO,
     NOOPN_STATNO,
     NOTMT_STATNO,
-    _WHAT_STATNO
+    _WHAT_STATNO,
+    BOPEN_STATNO
 };
 
 enum cmddumb {
@@ -98,7 +99,7 @@ extern const char *cmd_engl[];
 extern const char *cmd_dumb[];
 extern const char *arg_prompt[];
 
-#define STAT_COUNT 8
+#define STAT_COUNT 9
 extern const char *statcode[];
 
 char *cmdarg_parse(char *bufdst, char *bufsrc);
@@ -106,8 +107,8 @@ dumbcmd_t cmdarg_capture(char *bufdst);
 char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg);
 int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr);
 
-char *cmd_msg_success(char *bufdst, char *arg0, char *arg1, enum cmddumb cmd);
-char *cmd_msg_failed(char *bufdst, char *arg0, char *arg1, enum cmddumb cmd, enum statcode stat);
+char *cmd_msg_success(char *bufdst, char *arg0, char *arg1, dumbcmd_t cmd);
+char *cmd_msg_failed(char *bufdst, char *arg0, char *arg1, dumbcmd_t cmd, statcode_t stat);
 
 char *datetime_format(char *bufdst);
 

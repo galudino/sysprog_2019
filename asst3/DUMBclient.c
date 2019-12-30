@@ -40,7 +40,8 @@
 
 #include "network.h"
 
-#define ENABLE_RECONNECT true
+#define ENABLE_RECONNECT
+#undef ENABLE_RECONNECT
 
 void test();
 
@@ -48,6 +49,14 @@ void *handler_inbound(void *arg);
 void *handler_outbound(void *arg);
 
 dumbcmd_t last_cmd = ERROR_CODENO;
+statcode_t last_stat = _WHAT_STATNO;
+
+char box_name[256];
+char message[256];
+bool started = false;
+bool close_box = false;
+
+void help_menu(void);
 
 /**
  *  @brief  Program execution begins here
@@ -91,6 +100,8 @@ connect:
 
     pthread_attr_init(&attr_inbound);
 
+    help_menu();
+
     if ((status = pthread_create(&thread_inbound, &attr_inbound, handler_inbound, &csockfd)) < 0) {
         fprintf(stderr, "error: %s\n", strerror(status));
         exit(EXIT_FAILURE);
@@ -131,15 +142,38 @@ connect:
     return EXIT_SUCCESS;
 }
 
+void help_menu() {
+    printf("\nDUMBclient v0\n---------------------------------------------------\n");
+    printf("start\t\tstart session with DUMB server\n");
+    printf("quit\t\tstop session with DUMB server\n");
+    printf("create\t\tcreate a new user/message box on the DUMB server\n");
+    printf("open\t\topen an existing user/message box on the DUMB server\n");
+    printf("next\t\tget the next message from the currently open message box\n");
+    printf("put\t\tput a message into the currently open message box\n");
+    printf("delete\t\tdelete a user/message box name on the DUMB server\n");
+    printf("close\t\tclose the user/message box name on the DUMB server that was opened by the client.\n");
+    printf("help\t\tsee help menu of all avaiable commands (this menu)\n");
+    printf("\n\n");
+    printf("wait for the [ready] ==> indicator before entering input.\n\n");
+}
+
 void *handler_inbound(void *arg) {
     int fd = *(int *)(arg);
 
     char buffer_in[256];
+    char bufarg[256];
+    char *ptr = NULL;
+    ssize_t arglen = 0;
+
     int size_read = -1;
+    int i = 0;
+
+    statcode_t stat_reply = _WHAT_STATNO;
 
     bool *server_disconnected = NULL;
 
     bzero(buffer_in, 256);
+    bzero(bufarg, 256);
 
     server_disconnected = malloc(sizeof *server_disconnected);
     assert(server_disconnected);
@@ -147,7 +181,140 @@ void *handler_inbound(void *arg) {
     (*server_disconnected) = false;
 
     while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
-        printf("server says: %s\n", buffer_in);
+        for (i = 0; i < STAT_COUNT; i++) {
+            if (strncmp(buffer_in, statcode[i], 2) == 0) {
+                if (strlen(buffer_in) == 3 && buffer_in[2] == '!') {
+                    last_stat = i;
+                    stat_reply = _OK_STATNO;
+                    break;
+                } else if (strlen(buffer_in) > 2) {
+                    if (buffer_in[2] == '!' && buffer_in[3] != '\0') {
+                        last_stat = i;
+                        arglen = atoi(buffer_in + 3);
+                    } else {
+                        if (strncmp(buffer_in, statcode[i], 5) == 0) {
+                            printf("here\n");
+                            cmdarg_interpret(buffer_in, &ptr, &arglen);
+
+                            last_stat = i;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                dumbcmd_t cmd = ERROR_CODENO;
+                cmd = cmdarg_interpret(buffer_in, &ptr, &arglen);
+
+                if (cmd == NXTMG_CODENO) {
+                    break;
+                }
+            }
+        }
+
+        switch (stat_reply) {
+            case _OK_STATNO:
+                switch (last_cmd) {
+                    case HELLO_CODENO:
+                    if (started) {
+                        printf("client already started\n");
+                    } else {
+                        printf("client started\n");
+                        started = true;
+                    }
+                    break;
+
+                    case GDBYE_CODENO:
+
+                    break;
+
+                    case CREAT_CODENO:
+                    printf("Success! Message box '%s' was created.\n", box_name);
+                    break;
+
+                    case OPNBX_CODENO:
+                    printf("Success! Message box '%s' was opened.\n", box_name);
+                    break;
+
+                    case NXTMG_CODENO:
+                    printf("Success! The next message was retrieved, and it says: '%s'\n", ptr);
+                    break;
+
+                    case PUTMG_CODENO:
+                    printf("Success! Your message, '%s', was pushed to '%s'.\n", message, box_name);
+                    bzero(message, 256);
+                    break;
+
+                    case DELBX_CODENO:
+                    printf("Success! Message box '%s' was deleted.\n", box_name);
+                    bzero(box_name, 256);
+                    break;
+
+                    case CLSBX_CODENO:
+                    printf("Success! Message box '%s' was closed.\n", box_name);
+                    bzero(box_name, 256);
+                    break;
+
+                    case USAGE_CODENO:
+                    help_menu();
+                    break;
+
+                    case ERROR_CODENO:
+
+                    break;
+
+                    default:
+
+                    break;
+                }
+            break;
+
+            case EXIST_STATNO:
+
+            break;
+
+            case NEXST_STATNO:
+            
+            break;
+
+            case OPEND_STATNO:
+
+            break;
+
+            case EMPTY_STATNO:
+
+            break;
+
+            case NOOPN_STATNO:
+
+            break;
+
+            case NOTMT_STATNO:
+
+            break;
+
+            case _WHAT_STATNO:
+
+            break;
+
+            case BOPEN_STATNO:
+
+            break;
+
+            default:
+
+            break;
+        }
+        
+
+
+        /* check buffer_in and see if it matches with statcode[i] */
+        /* assign last_stat to i */
+        /* 
+        switch (last_cmd) {
+            switch ()
+        }
+        */
+
         bzero(buffer_in, 256);
         throttle(1);
         printf("almost ready...\n\n");
@@ -169,7 +336,6 @@ void *handler_outbound(void *arg) {
     int fd = *(int *)(arg);
 
     char buffer_out[256];
-    bool started = false;
 
     while (last_cmd != GDBYE_CODENO) {
         bzero(buffer_out, 256);
@@ -185,6 +351,23 @@ void *handler_outbound(void *arg) {
 
         if (started) {
             last_cmd = cmdarg_capture(buffer_out);
+        
+            if ((last_cmd == OPNBX_CODENO && buffer_out[5] == ' ') || (last_cmd == CREAT_CODENO && buffer_out[5] == ' ') || (last_cmd == DELBX_CODENO && buffer_out[5] == ' ')) {
+                strcpy(box_name, buffer_out + 6);
+            } else if (last_cmd == CLSBX_CODENO && buffer_out[5] == '\0' ) {
+                sprintf(buffer_out + 5, "%s", box_name);
+                close_box = true;
+                bzero(box_name, 256);
+            } else if (last_cmd == PUTMG_CODENO) {
+                char *ptr = NULL;
+                ssize_t len = 0;
+
+                cmdarg_interpret(buffer_out, &ptr, &len);
+
+                if (ptr != NULL) {
+                    strncpy(message, ptr, len);
+                }
+            } 
         } else {
             read(STDIN_FILENO, buffer_out, 256);
             str_trim(buffer_out, "\n");
@@ -193,7 +376,6 @@ void *handler_outbound(void *arg) {
                 bzero(buffer_out, 256);
 
                 strcpy(buffer_out, cmd_dumb[0]);
-                started = true;
                 last_cmd = HELLO_CODENO;
             } else {
                 printf("\nYou must type 'start' and hit RETURN in order to proceed.\nPlease try again.\n");
@@ -213,11 +395,12 @@ void *handler_outbound(void *arg) {
         write(fd, buffer_out, 256);
         bzero(buffer_out, 256);
 
-        throttle(2);
-
-        if (last_cmd == HELLO_CODENO) {
-            printf("[client started]\n");
+        if (close_box) {
+            bzero(box_name, 256);
+            close_box = false;
         }
+
+        throttle(2);
     }
 
     pthread_exit(NULL);

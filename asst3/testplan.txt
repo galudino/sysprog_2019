@@ -1,0 +1,13 @@
+/* testplan goes here */
+
+Test plan:
+
+macOS laptop as the client,
+and CentOS Linux iLabs (pwd.cs.rutgers.edu) as the server
+
+CentOS Linux iLabs (pwd.cs.rutgers.edu) as the client,
+and macOS laptop as the server.
+
+Localhost on macOS
+
+Localhost on CentOS Linux
