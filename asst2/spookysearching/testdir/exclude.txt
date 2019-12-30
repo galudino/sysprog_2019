@@ -1,0 +1,11 @@
+## files to exclude
+
+*.DS_Store
+*.git
+*.gitignore
+*.dSYM
+*.tar.gz
+build/*.o
+build/concurrent/*.o
+$filename_default
+$1

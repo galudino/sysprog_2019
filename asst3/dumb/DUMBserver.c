@@ -250,7 +250,7 @@ static void *handler_client(void *arg) {
 
     int size_read = -1;
 
-    char *cmdarg = NULL;
+    char cmdarg[256];
     ssize_t arglen = -1;
     enum cmddumb cmddumb = ERROR_CODENO;
     statcode_t stat = _WHAT_STATNO;
@@ -268,8 +268,9 @@ static void *handler_client(void *arg) {
         /*
         printf("client says: %s\n", buffer_in);
         */
+        bzero(cmdarg, 256);
 
-        cmddumb = cmdarg_interpret(buffer_in, &cmdarg, &arglen);
+        cmddumb = cmdarg_interpret(buffer_in, (char **)(&cmdarg), &arglen);
 
         description = cmd_dumb[cmddumb];
 

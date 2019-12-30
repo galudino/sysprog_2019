@@ -1,0 +1,5 @@
+04 Nov 2019 00:55:00
+Created asst2 directory and set up/named all required source files/subdirs
+Makefile is configured for conditional compilation (all shows error msg).
+Ready to begin work.
+

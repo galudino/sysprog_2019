@@ -1,0 +1,33 @@
+TODO:
+
+0.
+-------------------------------------------------------------------------------
+testplan.txt or testplan.pdf
+    specifies how you will test your code
+-------------------------------------------------------------------------------
+
+1.
+--------------------------------------------------------------------------------
+results.pdf
+    tests' data and graphs of the relations specified below:
+        - min
+        - max
+        - average
+        - standard deviation
+    of the time each tests below takes to run for,
+    as well as each batch,
+    and over all batches.
+
+    - general trend of time vs. size of list to search for processes
+      as well as time vs. size of list to search for threads
+
+    - a tradeoff point for processes vs threads
+        i.e. at what point does splitting the work over more processes/threads
+        make the task take longer than not doing so?
+            e.g. perhaps sorting a list of 250 elements, but splitting it up
+            into lists of size 10 (requiring 25 threads) is slower than
+            splitting it up into lists of size 11 (requiring 22 threads)
+
+    - average wall clock time to switch between processes
+    - average wall clock time to switch between kernel threads
+-------------------------------------------------------------------------------
