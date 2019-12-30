@@ -58,7 +58,9 @@ int user_compare(const void *c1, const void *c2) {
     char **key = (char **)(c1);
     user_t **val = (user_t **)(c2);
 
-    return strcmp((*key), (*val)->uname) == 0;
+    int result = strcmp((*key), (*val)->uname);
+
+    return result == 0 ? 0 : result;
 }
 
 void user_print(const void *arg, FILE *dest) {
@@ -68,7 +70,7 @@ void user_print(const void *arg, FILE *dest) {
 
     fprintf(dest, "username: %s\n", (*u)->uname);
     fprintf(dest, "-------------------\n");
-
+  
     vptr_fprint((*u)->msgbx, dest, str_print);
 
     fprintf(dest, "*******************\n\n");

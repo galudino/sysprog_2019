@@ -339,7 +339,7 @@ void *handler_inbound(void *arg) {
                 switch (last_cmd) {
                     case OPNBX_CODENO:
                     case DELBX_CODENO:
-                    printf("Error. Message box '%s' does not exist.\n");
+                    printf("Error. Message box '%s' does not exist.\n", box_name);
                     break;
 
                     default:
@@ -351,7 +351,7 @@ void *handler_inbound(void *arg) {
             case OPEND_STATNO:
                 switch (last_cmd) {
                     case OPNBX_CODENO:
-                    printf("Error. Message box '%s' is already open.\n");
+                    printf("Error. Message box '%s' is already open.\n", box_name);
                     break;
 
                     case DELBX_CODENO:

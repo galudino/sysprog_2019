@@ -347,6 +347,8 @@ static void *handler_client(void *arg) {
 
         bzero(buffer_in, 256);
         bzero(buffer_out, 256);
+
+        vptr_fprint(entry->users, stdout, user_print);
     }
 
     if (exit_graceful == false) {
@@ -388,20 +390,12 @@ statcode_t usr_creat(vptr_t *v, char *arg, int fd) {
 
     bzero(buffer, 256);
 
-    printf("%s\n", arg);
-
     if (in_range && isalpha(arg[0]) != 0) {
         user_t *user = NULL;
 
-        while (vptr_trylock(v) != 0) {
-
-        }
-
         user = user_new(arg);
         vptr_pushb(v, user);
-        
-        vptr_unlock(v);
-        
+
         stat = _OK_STATNO;
     } else {
         stat = _WHAT_STATNO;
@@ -432,7 +426,28 @@ statcode_t usr_opnbx(vptr_t *v, user_t **user, char *arg, int fd, bool *box_open
     statcode_t stat = _OK_STATNO;
     char buffer[256];
 
+    int found = -1;
+
     bzero(buffer, 256);
+
+    found = vptr_search(v, &arg, user_compare);
+
+    if (found == 0) {
+        (*user) = *(user_t **)(vptr_at(v, found));
+
+        if (user_active((*user))) {
+            (*user) = NULL;
+            stat = OPEND_STATNO;
+        } else {
+            if (user_open((*user)) == 0) {
+                stat = _OK_STATNO;
+            } else {
+                stat = OPEND_STATNO;
+            }
+        }
+    } else {
+        stat = NEXST_STATNO;
+    }
 
     strcpy(buffer, statcode[stat]);
     write(fd, buffer, 256);
