@@ -318,7 +318,7 @@ void *handler_inbound(void *arg) {
                     break;
 
                     default:
-
+                    printf("Internal error - stat/cmd mismatch\n");
                     break;
                 }
             break;
@@ -330,7 +330,7 @@ void *handler_inbound(void *arg) {
                     break;
 
                     default:
-
+                    printf("Internal error - stat/cmd mismatch\n");
                     break;
                 }
             break;
@@ -338,15 +338,12 @@ void *handler_inbound(void *arg) {
             case NEXST_STATNO:
                 switch (last_cmd) {
                     case OPNBX_CODENO:
-                    printf("Error. Message box '%s' does not exist.\n", box_name);
-                    break;
-
                     case DELBX_CODENO:
                     printf("Error. Message box '%s' does not exist.\n");
                     break;
 
                     default:
-
+                    printf("Internal error - stat/cmd mismatch\n");
                     break;
                 }
             break;
@@ -362,7 +359,7 @@ void *handler_inbound(void *arg) {
                     break;
 
                     default:
-
+                    printf("Internal error - stat/cmd mismatch\n");
                     break;
                 }
             break;
@@ -374,7 +371,7 @@ void *handler_inbound(void *arg) {
                     break;
 
                     default:
-
+                    printf("Internal error - stat/cmd mismatch\n");
                     break;
                 }
             break;
@@ -386,7 +383,7 @@ void *handler_inbound(void *arg) {
                     break;
 
                     default:
-
+                    printf("Internal error - stat/cmd mismatch\n");
                     break;
                 }
             break;
@@ -398,7 +395,7 @@ void *handler_inbound(void *arg) {
                     break;
 
                     default:
-
+                    printf("Internal error - stat/cmd mismatch\n");
                     break;
                 }
             break;
@@ -421,7 +418,7 @@ void *handler_inbound(void *arg) {
                     printf("Error. Message box '%s' must be closed before opening another box.\n", box_name);
                     
                     default:
-
+                    printf("Internal error - stat/cmd mismatch\n");
                     break;
                 }
             break;
@@ -430,15 +427,6 @@ void *handler_inbound(void *arg) {
 
             break;
         }
-
-    
-        /* check buffer_in and see if it matches with statcode[i] */
-        /* assign last_stat to i */
-        /* 
-        switch (last_cmd) {
-            switch ()
-        }
-        */
 
         bzero(buffer_in, 256);
         throttle(1);
