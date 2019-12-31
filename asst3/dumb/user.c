@@ -68,11 +68,10 @@ void user_print(const void *arg, FILE *dest) {
 
     fprintf(dest, "\n*******************\n");
 
-    fprintf(dest, "username: %s\n", (*u)->uname);
+    fprintf(dest, "username: %s\nactive: %s\n", (*u)->uname, (*u)->active ? "true" : "false");
     fprintf(dest, "-------------------\n");
-  
+    
     vptr_fprint((*u)->msgbx, dest, str_print);
-
     fprintf(dest, "*******************\n\n");
 }
 
@@ -108,7 +107,7 @@ int user_open(user_t *u) {
 int user_close(user_t *u) {
     int status = 0;
 
-    if ((status = vptr_unlock(u->msgbx) == 0)) {
+    if ((status = vptr_unlock(u->msgbx)) == 0) {
         u->active = false;
     }
 

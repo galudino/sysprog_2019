@@ -106,6 +106,7 @@ char *cmdarg_parse(char *bufdst, char *bufsrc);
 dumbcmd_t cmdarg_capture(char *bufdst);
 char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg);
 int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr);
+int statcode_interpret(char *bufsrc);
 
 char *cmd_msg_success(char *bufdst, char *arg0, char *arg1, dumbcmd_t cmd);
 char *cmd_msg_failed(char *bufdst, char *arg0, char *arg1, dumbcmd_t cmd, statcode_t stat);

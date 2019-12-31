@@ -236,6 +236,7 @@ void *handler_inbound(void *arg) {
                 if (strlen(buffer_in) == 3 && buffer_in[2] == '!') {
                     last_stat = i;
                     stat_reply = _OK_STATNO;
+
                     break;
                 /* server reply is at least a valid statcode string */
                 } else if (strlen(buffer_in) > 2) {
@@ -243,6 +244,7 @@ void *handler_inbound(void *arg) {
                     if (buffer_in[2] == '!' && buffer_in[3] != '\0') {
                         last_stat = i;
                         arglen = atoi(buffer_in + 3);
+                        stat_reply = _OK_STATNO;
 
                         break;
                     /* server reply is a 'NXTMG!n!str', n being a positive integer, str being a string */
@@ -250,19 +252,24 @@ void *handler_inbound(void *arg) {
                         if (strncmp(buffer_in, statcode[i], 5) == 0) {
                             cmdarg_interpret(buffer_in, &ptr, &arglen);
                             last_stat = i;
+                            stat_reply = _OK_STATNO;
 
                             break;
                         }
                     }
                 }
-            /* server reply is not a valid statcode string */
+            /* server reply is a statcode error */
             } else {
                 dumbcmd_t cmd = ERROR_CODENO;
+                stat_reply = _OK_STATNO;
                 cmd = cmdarg_interpret(buffer_in, &ptr, &arglen);
 
                 if (cmd == NXTMG_CODENO) {
                     break;
                 }
+
+                stat_reply = statcode_interpret(buffer_in);
+                break;
             }
         }
 
@@ -416,6 +423,7 @@ void *handler_inbound(void *arg) {
                 switch (last_cmd) {
                     case OPNBX_CODENO:
                     printf("Error. Message box '%s' must be closed before opening another box.\n", box_name);
+                    break;
                     
                     default:
                     printf("Internal error - stat/cmd mismatch\n");

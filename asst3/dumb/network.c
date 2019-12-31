@@ -213,7 +213,7 @@ uint16_t get_portno(int fd) {
 dumbcmd_t cmdarg_capture(char *bufdst) {
     char bufcmd[256];
 
-    int i = 0;
+    dumbcmd_t i = 0;
     bool found = false;
     const char *cmd = NULL;
 
@@ -348,7 +348,7 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
  *          [INT_MIN, 0) or [9, INT_MAX + 1) is an error.
  */
 int cmdarg_interpret(char *bufsrc, char **arg, ssize_t *arglen_addr) {
-    enum cmddumb code = ERROR_CODENO;
+    dumbcmd_t code = ERROR_CODENO;
     int i = 0;
     bool found = false;
 
@@ -387,6 +387,25 @@ int cmdarg_interpret(char *bufsrc, char **arg, ssize_t *arglen_addr) {
     }
 
     return code;
+}
+
+/**
+ *  @brief  TODO
+ *  
+ *  @param[in]  bufsrc
+ *
+ *  @return TODO
+ */
+int statcode_interpret(char *bufsrc) {
+    statcode_t i = 0;
+
+    for (i = 0; i < STAT_COUNT; i++) {
+        if (strcmp(bufsrc, statcode[i]) == 0) {
+            break;
+        }
+    }
+
+    return i == STAT_COUNT ? (STAT_COUNT - 1) : i;
 }
 
 char *cmdarg_parse(char *bufdst, char *bufsrc) {
