@@ -87,7 +87,7 @@ int main(int argc, const char *argv[]) {
     pthread_attr_t attr_connection;
 
     if (argc < 2) {
-        fprintf(stderr, "USAGE: %s [hostname] [port number]\n", argv[0]);
+        fprintf(stderr, "USAGE: %s [port number]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -408,7 +408,7 @@ statcode_t usr_creat(vptr_t *v, char *arg, int fd) {
 
 /**
  *  @brief      TODO
- *  
+ *
  *  @param[in]   v
  *  @param[out]  user
  *  @param[in]   arg
@@ -497,7 +497,7 @@ statcode_t usr_delbx(vptr_t *v, char *arg, int fd) {
     /* if the user was found... */
     if (found >= 0) {
         u = *(user_t **)(vptr_at(v, found));
-        
+
         /* if the user is in use by any thread */
         if (user_active(u)) {
             stat = OPEND_STATNO;
@@ -548,7 +548,7 @@ statcode_t usr_gdbye(vptr_t *v, user_t **user, int fd) {
 
 /**
  *  @brief  TODO
- *  
+ *
  *  @param[in]  user
  *  @param[in]  arg
  *  @param[in]  arglen
@@ -574,7 +574,7 @@ statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open
 
 /**
  *  @brief  TODO
- *  
+ *
  *  @param[in]  user
  *  @param[in]  fd
  *  @param[out] box_open
@@ -638,7 +638,7 @@ statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg) {
 
 /**
  *  @brief  TODO
- *  
+ *
  *  @param[in]  fd
  *
  *  @return     statcode values:

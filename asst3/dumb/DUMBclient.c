@@ -52,7 +52,7 @@ struct client_socket_info {
         dumbcmd_t cmd;
         statcode_t stat;
     } previous;
-    
+
     struct {
         bool started;
         bool box_open;
@@ -118,7 +118,7 @@ int main(int argc, const char *argv[]) {
     bool *server_disconnected = NULL;
 
     if (argc < 3) {
-        fprintf(stderr, "USAGE: %s [portnumber]\n", argv[0]);
+        fprintf(stderr, "USAGE: %s [hostname] [port number]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -424,7 +424,7 @@ void *handler_inbound(void *arg) {
                     case OPNBX_CODENO:
                     printf("Error. Message box '%s' must be closed before opening another box.\n", box_name);
                     break;
-                    
+
                     default:
                     printf("Internal error - stat/cmd mismatch\n");
                     break;
@@ -466,13 +466,13 @@ void *handler_outbound(void *arg) {
         } else {
             strcpy(buffer_out, "[type 'start' and hit RETURN to initialize the client.]\n==> ");
         }
-        
+
         write(STDOUT_FILENO, buffer_out, 256);
         bzero(buffer_out, 256);
 
         if (started) {
             last_cmd = cmdarg_capture(buffer_out);
-        
+
             if ((last_cmd == OPNBX_CODENO && buffer_out[5] == ' ') || (last_cmd == CREAT_CODENO && buffer_out[5] == ' ') || (last_cmd == DELBX_CODENO && buffer_out[5] == ' ')) {
                 strcpy(box_name, buffer_out + 6);
             } else if (last_cmd == CLSBX_CODENO && buffer_out[5] == '\0' ) {
@@ -487,8 +487,9 @@ void *handler_outbound(void *arg) {
 
                 if (ptr != NULL) {
                     strncpy(message, ptr, len);
+                    printf("MESSAGE: %s\n", message);
                 }
-            } 
+            }
         } else {
             read(STDIN_FILENO, buffer_out, 256);
             str_trim(buffer_out, "\n");
