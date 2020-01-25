@@ -238,6 +238,8 @@ static void *handler_connection(void *arg) {
     pthread_exit(NULL);
 }
 
+
+
 static void *handler_client(void *arg) {
     entry_t *entry = (entry_t *)(arg);
     int fd = entry->fd;
@@ -492,6 +494,7 @@ statcode_t usr_delbx(vptr_t *v, char *arg, int fd) {
 
     bzero(buffer, 256);
 
+    /* attempt to find the user, based on arg */
     found = vptr_search(v, &arg, user_compare);
 
     /* if the user was found... */
@@ -562,11 +565,28 @@ statcode_t usr_gdbye(vptr_t *v, user_t **user, int fd) {
  */
 statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open) {
     statcode_t stat = _WHAT_STATNO;
+    /*
+    dumbcmd_t cmd = ERROR_CODENO;
+
     char buffer[256];
 
-    bzero(buffer, 256);
+    char bufmsg[256];
+    char *msg = NULL;
+    ssize_t len = 0;
 
-    strcpy(buffer, statcode[_OK_STATNO]);
+    bzero(buffer, 256);
+    bzero(bufmsg, 256);
+
+    read(fd, bufmsg, 256);
+    
+    cmd = cmdarg_interpret(bufmsg, &msg, &len);
+
+    if (cmd == PUTMG_CODENO) {
+        user_message_put(user, msg);
+        sprintf(buffer, "%s%lu", statcode[_OK_STATNO], strlen(msg));
+    }
+*/
+    strcpy(buffer, statcode[stat]);
     write(fd, buffer, 256);
 
     return stat;
@@ -591,7 +611,7 @@ statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
 
     bzero(buffer, 256);
 
-    strcpy(buffer, statcode[_OK_STATNO]);
+    strcpy(buffer, statcode[stat]);
     write(fd, buffer, 256);
 
     return stat;
@@ -623,7 +643,6 @@ statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg) {
 
             stat = _OK_STATNO;
         } else {
-            printf("here\n");
             stat = _WHAT_STATNO;
         }
     } else {
