@@ -205,7 +205,7 @@ char *ipaddr(int fd, char *buffer) {
     return (result == 0) ? strcpy(buffer, inet_ntoa(sa.sin_addr)) : NULL;
 }
 
-uint16_t get_portno(int fd) {
+uint16_t portno(int fd) {
     socklen_t len = 0;
     struct sockaddr_in sa;
     int result = 0;
