@@ -32,8 +32,8 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
-#include <netinet/in.h>
 #include "utils.h"
+#include <netinet/in.h>
 
 typedef struct connection_info conninf_t;
 struct connection_info {
@@ -43,14 +43,14 @@ struct connection_info {
     void *arg;
 };
 
-int ssocket_open(int domain, int type, uint16_t portno, int backlog);
+int ssocket_open(int domain, int type, uint16_t port, int backlog);
 int ssocket_close(int ssockfd);
 
-int csocket_open(int domain, int type, const char *hostname, uint16_t portno);
+int csocket_open(int domain, int type, const char *hostname, uint16_t port);
 int csocket_close(int csockfd);
 
-char *get_ipaddr(int fd, char *buffer);
-uint16_t get_portno(int fd);
+char *ipaddr(int fd, char *buffer);
+uint16_t portno(int fd);
 
 enum statcode {
     _OK_STATNO,
@@ -77,7 +77,7 @@ enum cmddumb {
     ERROR_CODENO
 };
 
-enum cmdengl { 
+enum cmdengl {
     start_ENGLNO,
     quit_ENGLNO,
     create_ENGLNO,
@@ -102,18 +102,14 @@ extern const char *arg_prompt[];
 #define STAT_COUNT 9
 extern const char *statcode[];
 
-char *cmdarg_parse(char *bufdst, char *bufsrc);
 dumbcmd_t cmdarg_capture(char *bufdst);
-char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg);
-int cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr);
-int statcode_interpret(char *bufsrc);
+dumbcmd_t cmdarg_interpret(char *bufsrc, char **arg_addr, ssize_t *arglen_addr);
+
+statcode_t statcode_interpret(char *bufsrc);
 
 char *cmd_msg_success(char *bufdst, char *arg0, char *arg1, dumbcmd_t cmd);
 char *cmd_msg_failed(char *bufdst, char *arg0, char *arg1, dumbcmd_t cmd, statcode_t stat);
 
 char *datetime_format(char *bufdst);
-
-/**< throttle: briefly halt program */
-void throttle(int sec);
 
 #endif /* NETWORK_H */

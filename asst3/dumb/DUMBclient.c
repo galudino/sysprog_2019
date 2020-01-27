@@ -29,14 +29,14 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
+#include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <assert.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "network.h"
 
@@ -59,7 +59,7 @@ struct client_socket_info {
     } status;
 
     struct {
-        char box_name[256];
+        char current_box[256];
         char message[256];
     } requested;
 };
@@ -85,11 +85,11 @@ void *handler_outbound(void *arg);
 dumbcmd_t last_cmd = ERROR_CODENO;
 statcode_t last_stat = _WHAT_STATNO;
 
-char box_name[256];
+char current_box[256];
+char request_box[256];
 char message[256];
 
 bool started = false;
-bool close_box = false;
 
 void help_menu(void);
 
@@ -106,8 +106,8 @@ int main(int argc, const char *argv[]) {
     int csockfd = -1;
 
     const char *hostname = NULL;
-    const char *portno_str = NULL;
-    uint16_t portno = 0;
+    const char *port_str = NULL;
+    uint16_t port = 0;
 
     pthread_t thread_inbound;
     pthread_t thread_outbound;
@@ -123,15 +123,15 @@ int main(int argc, const char *argv[]) {
     }
 
     hostname = argv[1];
-    portno_str = argv[2];
+    port_str = argv[2];
 
-    portno = atoi(portno_str);
+    port = atoi(port_str);
 
 #if ENABLE_RECONNECT
 connect:
 #endif
 
-    csockfd = csocket_open(AF_INET, SOCK_STREAM, hostname, portno);
+    csockfd = csocket_open(AF_INET, SOCK_STREAM, hostname, port);
 
     pthread_attr_init(&attr_inbound);
 
@@ -148,14 +148,16 @@ connect:
     bzero(cinf.requested.message, 256);
     */
 
-    if ((status = pthread_create(&thread_inbound, &attr_inbound, handler_inbound, &csockfd)) < 0) {
+    if ((status = pthread_create(&thread_inbound, &attr_inbound,
+                                 handler_inbound, &csockfd)) < 0) {
         fprintf(stderr, "error: %s\n", strerror(status));
         exit(EXIT_FAILURE);
     }
 
     pthread_attr_init(&attr_outbound);
 
-    if ((status = pthread_create(&thread_outbound, &attr_outbound, handler_outbound, &csockfd)) < 0) {
+    if ((status = pthread_create(&thread_outbound, &attr_outbound,
+                                 handler_outbound, &csockfd)) < 0) {
         fprintf(stderr, "error: %s\n", strerror(status));
         exit(EXIT_FAILURE);
     }
@@ -189,15 +191,18 @@ connect:
 }
 
 void help_menu() {
-    printf("\nDUMBclient v0\n---------------------------------------------------\n");
+    printf("\nDUMBclient "
+           "v0\n---------------------------------------------------\n");
     printf("start\t\tstart session with DUMB server\n");
     printf("quit\t\tstop session with DUMB server\n");
     printf("create\t\tcreate a new user/message box on the DUMB server\n");
     printf("open\t\topen an existing user/message box on the DUMB server\n");
-    printf("next\t\tget the next message from the currently open message box\n");
+    printf(
+        "next\t\tget the next message from the currently open message box\n");
     printf("put\t\tput a message into the currently open message box\n");
     printf("delete\t\tdelete a user/message box name on the DUMB server\n");
-    printf("close\t\tclose the user/message box name on the DUMB server that was opened by the client.\n");
+    printf("close\t\tclose the user/message box name on the DUMB server that "
+           "was opened by the client.\n");
     printf("help\t\tsee help menu of all avaiable commands (this menu)\n");
     printf("\n\n");
     printf("wait for the [ready] ==> indicator before entering input.\n\n");
@@ -238,7 +243,7 @@ void *handler_inbound(void *arg) {
                     stat_reply = _OK_STATNO;
 
                     break;
-                /* server reply is at least a valid statcode string */
+                    /* server reply is at least a valid statcode string */
                 } else if (strlen(buffer_in) > 2) {
                     /* server reply is 'OK!n', n being a positive integer */
                     if (buffer_in[2] == '!' && buffer_in[3] != '\0') {
@@ -247,7 +252,7 @@ void *handler_inbound(void *arg) {
                         stat_reply = _OK_STATNO;
 
                         break;
-                    /* server reply is a 'NXTMG!n!str', n being a positive integer, str being a string */
+                        /* server reply is a 'NXTMG!n!str', n being a positive integer, str being a string */
                     } else {
                         if (strncmp(buffer_in, statcode[i], 5) == 0) {
                             cmdarg_interpret(buffer_in, &ptr, &arglen);
@@ -258,7 +263,7 @@ void *handler_inbound(void *arg) {
                         }
                     }
                 }
-            /* server reply is a statcode error */
+                /* server reply is a statcode error */
             } else {
                 dumbcmd_t cmd = ERROR_CODENO;
                 stat_reply = _OK_STATNO;
@@ -274,177 +279,208 @@ void *handler_inbound(void *arg) {
         }
 
         switch (stat_reply) {
-            case _OK_STATNO:
-                switch (last_cmd) {
-                    case HELLO_CODENO:
-                    if (started) {
-                        printf("client already started\n");
-                    } else {
-                        printf("client started\n");
-                        started = true;
-                    }
-                    break;
-
-                    case GDBYE_CODENO:
-
-                    break;
-
-                    case CREAT_CODENO:
-                    printf("Success! Message box '%s' was created.\n", box_name);
-                    break;
-
-                    case OPNBX_CODENO:
-                    printf("Success! Message box '%s' was opened.\n", box_name);
-                    break;
-
-                    case NXTMG_CODENO:
-                    printf("Success! The next message was retrieved, and it says: '%s'\n", ptr);
-                    break;
-
-                    case PUTMG_CODENO:
-                    printf("Success! Your message, '%s', was pushed to '%s'.\n", message, box_name);
-                    bzero(message, 256);
-                    break;
-
-                    case DELBX_CODENO:
-                    printf("Success! Message box '%s' was deleted.\n", box_name);
-                    bzero(box_name, 256);
-                    break;
-
-                    case CLSBX_CODENO:
-                    printf("Success! Message box '%s' was closed.\n", box_name);
-                    bzero(box_name, 256);
-                    break;
-
-                    case USAGE_CODENO:
-                    help_menu();
-                    break;
-
-                    case ERROR_CODENO:
-                    printf("Error. Command was unsuccessful, please try again.\n");
-                    break;
-
-                    default:
-                    printf("Internal error - stat/cmd mismatch\n");
-                    break;
+        case _OK_STATNO:
+            switch (last_cmd) {
+            case HELLO_CODENO:
+                if (started) {
+                    printf("client already started\n");
+                } else {
+                    printf("client started\n");
+                    started = true;
                 }
-            break;
 
-            case EXIST_STATNO:
-                switch (last_cmd) {
-                    case CREAT_CODENO:
-                    printf("Error. Message box '%s' already exists.\n", box_name);
-                    break;
+                break;
 
-                    default:
-                    printf("Internal error - stat/cmd mismatch\n");
-                    break;
-                }
-            break;
+            case GDBYE_CODENO:
 
-            case NEXST_STATNO:
-                switch (last_cmd) {
-                    case OPNBX_CODENO:
-                    case DELBX_CODENO:
-                    printf("Error. Message box '%s' does not exist.\n", box_name);
-                    break;
+                break;
 
-                    default:
-                    printf("Internal error - stat/cmd mismatch\n");
-                    break;
-                }
-            break;
+            case CREAT_CODENO:
+                printf("Success! Message box '%s' was created.\n", request_box);
+                bzero(request_box, 256);
+                break;
 
-            case OPEND_STATNO:
-                switch (last_cmd) {
-                    case OPNBX_CODENO:
-                    printf("Error. Message box '%s' is already open.\n", box_name);
-                    break;
+            case OPNBX_CODENO:
+                printf("Success! Message box '%s' was opened.\n", request_box);
+                strcpy(current_box, request_box);
+                bzero(request_box, 256);
+                break;
 
-                    case DELBX_CODENO:
-                    printf("Error. Message box '%s' must be closed and empty before attempting to delete it.\n", box_name);
-                    break;
+            case NXTMG_CODENO:
+                printf("Success! The next message in box '%s' was retrieved, and it says: "
+                       "'%s'\n", current_box, ptr);
+                break;
 
-                    default:
-                    printf("Internal error - stat/cmd mismatch\n");
-                    break;
-                }
-            break;
+            case PUTMG_CODENO:
+                printf("Success! Your message, '%s', was pushed to box '%s'.\n", message, current_box);
+                bzero(message, 256);
+                break;
 
-            case EMPTY_STATNO:
-                switch (last_cmd) {
-                    case NXTMG_CODENO:
-                    printf("Error. Message box '%s' is empty.\n", box_name);
-                    break;
+            case DELBX_CODENO:
+                printf("Success! Message box '%s' was deleted.\n", request_box);
+                bzero(request_box, 256);
+                break;
 
-                    default:
-                    printf("Internal error - stat/cmd mismatch\n");
-                    break;
-                }
-            break;
+            case CLSBX_CODENO:
+                printf("Success! Message box '%s' was closed.\n", current_box);
+                bzero(current_box, 256);
+                break;
 
-            case NOOPN_STATNO:
-                switch (last_cmd) {
-                    case NXTMG_CODENO:
-                    printf("Error. Message box '%s' must be open in order to retrieve its messages.\n", box_name);
-                    break;
+            case USAGE_CODENO:
+                help_menu();
+                break;
 
-                    default:
-                    printf("Internal error - stat/cmd mismatch\n");
-                    break;
-                }
-            break;
-
-            case NOTMT_STATNO:
-                switch (last_cmd) {
-                    case DELBX_CODENO:
-                    printf("Error. Message box '%s' must be closed and empty before attempting to delete it.\n", box_name);
-                    break;
-
-                    default:
-                    printf("Internal error - stat/cmd mismatch\n");
-                    break;
-                }
-            break;
-
-            case _WHAT_STATNO:
-                switch (last_cmd) {
-                    case HELLO_CODENO:
-                    printf("Try again.\n\nType 'start' (without quotation marks) and hit the RETURN key to initialize the DUMBv0 client.\n");
-                    break;
-
-                    default:
-                    printf("Error. Command was unsuccessful, please try again.\n");
-                    break;
-                }
-            break;
-
-            case BOPEN_STATNO:
-                switch (last_cmd) {
-                    case OPNBX_CODENO:
-                    printf("Error. Message box '%s' must be closed before opening another box.\n", box_name);
-                    break;
-
-                    default:
-                    printf("Internal error - stat/cmd mismatch\n");
-                    break;
-                }
-            break;
+            case ERROR_CODENO:
+                printf("Error. Command was unsuccessful, please try again.\n");
+                break;
 
             default:
+                printf("Unspecified error, please try again.\n");
+                break;
+            }
+            break;
+
+        case EXIST_STATNO:
+            switch (last_cmd) {
+            case CREAT_CODENO:
+                printf("Error. Message box '%s' already exists.\n", request_box);
+                bzero(request_box, 256);
+                break;
+
+            default:
+                printf("Unspecified error, please try again.\n");
+                break;
+            }
+            break;
+
+        case NEXST_STATNO:
+            switch (last_cmd) {
+            case OPNBX_CODENO:
+            case DELBX_CODENO:
+                printf("Error. Message box '%s' does not exist.\n", request_box);
+                bzero(request_box, 256);
+                break;
+
+            default:
+                printf("Unspecified error, please try again.\n");
+                break;
+            }
+            break;
+
+        case OPEND_STATNO:
+            switch (last_cmd) {
+            case OPNBX_CODENO:
+                printf("Error. Message box '%s' is already open.\n", request_box);
+                bzero(request_box, 256);
+                break;
+
+            case DELBX_CODENO:
+                printf("Error. Message box '%s' must be closed and empty "
+                       "before attempting to delete it.\n",
+                       current_box);
+                break;
+
+            default:
+                printf("Unspecified error, please try again.\n");
+                break;
+            }
+
+            break;
+
+        case EMPTY_STATNO:
+            switch (last_cmd) {
+            case NXTMG_CODENO:
+                printf("Error. Message box '%s' is empty.\n", current_box);
+                break;
+
+            default:
+                printf("Unspecified error, please try again.\n");
+                break;
+            }
+            break;
+
+        case NOOPN_STATNO:
+            switch (last_cmd) {
+            case NXTMG_CODENO:
+                printf("Error. A message box must be open in order to retrieve "
+                       "its messages.\n");
+                break;
+
+            case CLSBX_CODENO:
+                printf("Error. A message box must be open in order to close "
+                       "it.\n");
+                break;
+
+            case PUTMG_CODENO:
+                printf("Error. A message box must be open in order to put "
+                       "messages into it.\n");
+                break;
+
+            default:
+                printf("Unspecified error, please try again.\n");
+                break;
+            }
+            break;
+
+        case NOTMT_STATNO:
+            switch (last_cmd) {
+            case DELBX_CODENO:
+                printf("Error. Message box '%s' must be closed and empty "
+                       "before attempting to delete it.\n",
+                       request_box);
+                bzero(request_box, 256);
+                break;
+
+            default:
+                printf("Unspecified error, please try again.\n");
+                break;
+            }
+            break;
+
+        case _WHAT_STATNO:
+            switch (last_cmd) {
+            case HELLO_CODENO:
+                printf(
+                    "Try again.\n\nType 'start' (without quotation marks) and "
+                    "hit the RETURN key to initialize the DUMBv0 client.\n");
+                break;
+
+            default:
+                printf("Error. Command was unsuccessful, please try again.\n");
+                break;
+            }
+            break;
+
+        case BOPEN_STATNO:
+            switch (last_cmd) {
+            case OPNBX_CODENO:
+                printf("Error. Message box '%s' must be closed before opening "
+                       "another box.\n",
+                       current_box);
+                break;
+
+            default:
+                printf("Unspecified error, please try again.\n");
+                break;
+            }
+            break;
+
+        default:
+            printf("Unspecified error (unknown command?), please try again.\n");
 
             break;
         }
 
         bzero(buffer_in, 256);
-        throttle(1);
+        sleep(1);
         printf("almost ready...\n\n");
     }
 
     if (size_read == 0) {
         if (last_cmd != GDBYE_CODENO) {
             (*server_disconnected) = true;
-            fprintf(stdout, "[connection severed - server has left the network]\n");
+            fprintf(stdout,
+                    "[connection severed - server has left the network]\n");
         } else {
             fprintf(stdout, "[connection severed at user's request]\n");
         }
@@ -458,13 +494,17 @@ void *handler_outbound(void *arg) {
 
     char buffer_out[256];
 
+    char *ptr = NULL;
+    ssize_t len = 0;
+
     while (last_cmd != GDBYE_CODENO) {
         bzero(buffer_out, 256);
 
         if (started) {
             strcpy(buffer_out, "[ready]\n==> ");
         } else {
-            strcpy(buffer_out, "[type 'start' and hit RETURN to initialize the client.]\n==> ");
+            strcpy(buffer_out, "[type 'start' and hit RETURN to initialize the "
+                               "client.]\n==> ");
         }
 
         write(STDOUT_FILENO, buffer_out, 256);
@@ -473,26 +513,55 @@ void *handler_outbound(void *arg) {
         if (started) {
             last_cmd = cmdarg_capture(buffer_out);
 
-            if ((last_cmd == OPNBX_CODENO && buffer_out[5] == ' ') || (last_cmd == CREAT_CODENO && buffer_out[5] == ' ') || (last_cmd == DELBX_CODENO && buffer_out[5] == ' ')) {
-                strcpy(box_name, buffer_out + 6);
-            } else if (last_cmd == CLSBX_CODENO && buffer_out[5] == '\0' ) {
-                sprintf(buffer_out + 5, "%s", box_name);
-                close_box = true;
-                bzero(box_name, 256);
-            } else if (last_cmd == PUTMG_CODENO) {
-                char *ptr = NULL;
-                ssize_t len = 0;
+            if (buffer_out[5] == ' ') {
+                switch (last_cmd) {
+                case CREAT_CODENO:
+                case OPNBX_CODENO:
+                case DELBX_CODENO:
+                    cmdarg_interpret(buffer_out, &ptr, &len);
+                    /*strcpy(current_box, buffer_out + 6);*/
+                    strcpy(request_box, buffer_out + 6);
+
+                    break;
+                default:
+                    strcpy(buffer_out, cmd_dumb[last_cmd]);
+                    break;
+                }
+            } else if (buffer_out[5] == '\0') {
+                switch (last_cmd) {
+                case CLSBX_CODENO:
+                    sprintf(buffer_out + 5, " %s", current_box);
+                    break;
+
+                default:
+                    strcpy(buffer_out, cmd_dumb[last_cmd]);
+                    break;
+                }
 
                 cmdarg_interpret(buffer_out, &ptr, &len);
+            } else if (buffer_out[5] == '!') {
+                cmdarg_interpret(buffer_out, &ptr, &len);
 
-                if (ptr != NULL) {
-                    strncpy(message, ptr, len);
-                    printf("MESSAGE: %s\n", message);
+                switch (last_cmd) {
+                case PUTMG_CODENO:
+                case NXTMG_CODENO:
+                    if (ptr != NULL) {
+                        strncpy(message, ptr, len);
+                    }
+
+                    break;
+                default:
+                    strcpy(buffer_out, cmd_dumb[last_cmd]);
+                    break;
                 }
             }
         } else {
+            char *newln_addr = NULL;
+
             read(STDIN_FILENO, buffer_out, 256);
-            str_trim(buffer_out, "\n");
+            if ((newln_addr = strchr(buffer_out, '\n'))) {
+                *(newln_addr) = '\0';
+            }
 
             if (strcmp(buffer_out, cmd_engl[0]) == 0) {
                 bzero(buffer_out, 256);
@@ -500,31 +569,35 @@ void *handler_outbound(void *arg) {
                 strcpy(buffer_out, cmd_dumb[0]);
                 last_cmd = HELLO_CODENO;
             } else {
-                printf("\nYou must type 'start' and hit RETURN in order to proceed.\nPlease try again.\n");
+                printf("\nYou must type 'start' and hit RETURN in order to "
+                       "proceed.\nPlease try again.\n");
             }
         }
-
-        /*
-        printf("\nWill send to server: %s\n", buffer_out);
-        */
 
         if (last_cmd == GDBYE_CODENO) {
             printf("\n[PLEASE WAIT]\n");
         } else {
-            printf("\n[PLEASE WAIT]\nserver is busy...\nwait for [ready] ==> indicator.\n\n");
+            printf("\n[PLEASE WAIT]\nserver is busy...\nwait for [ready] ==> "
+                   "indicator.\n\n");
         }
 
-        throttle(1);
+        sleep(1);
+
+        /**
+         *  DEBUG
+         */
+        printf("\nlast_cmd == %s_CODENO\n", cmd_dumb[last_cmd]);
+        printf("ptr: %s\nlen: %lu\n", ptr, len);
+
+        printf("\nWill send to server: %s\n\n", buffer_out);
+        /**
+         *  END DEBUG
+         */
 
         write(fd, buffer_out, 256);
         bzero(buffer_out, 256);
 
-        if (close_box) {
-            bzero(box_name, 256);
-            close_box = false;
-        }
-
-        throttle(2);
+        sleep(2);
     }
 
     pthread_exit(NULL);

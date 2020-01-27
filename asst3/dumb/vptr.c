@@ -31,11 +31,11 @@
 
 #include "vptr.h"
 
+#include <assert.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include <pthread.h>
 
 struct vector_ptr {
     void **base;
@@ -218,7 +218,7 @@ void vptr_fprint(vptr_t *v, FILE *dest, void (*print)(const void *, FILE *)) {
     size_t i = 0;
 
     if (vptr_empty(v)) {
-        fprintf(dest, "\n-- empty --\n");
+        fprintf(dest, "-- empty --\n");
     }
 
     for (i = 0; i < v->length; i++) {

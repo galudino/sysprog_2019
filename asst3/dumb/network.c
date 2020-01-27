@@ -31,16 +31,16 @@
 
 #include "network.h"
 
-#include <stdlib.h>
-#include <string.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <strings.h>
 #include <errno.h>
 #include <netdb.h>
-#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
 const char *cmd_engl[] = { "start", "quit",   "create", "open", "next",
                            "put",   "delete", "close",  "help" };
@@ -48,16 +48,23 @@ const char *cmd_engl[] = { "start", "quit",   "create", "open", "next",
 const char *cmd_dumb[] = { "HELLO", "GDBYE", "CREAT", "OPNBX", "NXTMG",
                            "PUTMG", "DELBX", "CLSBX", "USAGE" };
 
-const char *statcode[] = { "OK!",   "EXIST", "NEXST", "OPEND",
-                           "EMPTY", "NOOPN", "NOTMT", "WHAT?", "BOPEN" };
+const char *statcode[] = { "OK!",   "EXIST", "NEXST", "OPEND", "EMPTY",
+                           "NOOPN", "NOTMT", "WHAT?", "BOPEN" };
 
-const char *arg_prompt[] = { "", "", "Okay, what would you like to name your "
-                                     "message box?",
-                             "Okay, open which message box?", "",
-                             "Okay, what would you like your message to say?",
-                             "Okay, delete which message box?", "", "", };
+const char *arg_prompt[] = {
+    "",
+    "",
+    "Okay, what would you like to name your "
+    "message box?",
+    "Okay, open which message box?",
+    "",
+    "Okay, what would you like your message to say?",
+    "Okay, delete which message box?",
+    "",
+    "",
+};
 
-int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
+int ssocket_open(int domain, int type, uint16_t port, int backlog) {
     int ssockfd = -1;
 
     int optval = 1;
@@ -81,7 +88,7 @@ int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
 
     server.sin_family = domain;
     server.sin_addr.s_addr = htonl(INADDR_ANY);
-    server.sin_port = htons(portno);
+    server.sin_port = htons(port);
 
     status = bind(ssockfd, (struct sockaddr *)(&server), sizeof server);
 
@@ -90,13 +97,13 @@ int ssocket_open(int domain, int type, uint16_t portno, int backlog) {
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stdout, "now listening on port %d...\n\n", portno);
+    fprintf(stdout, "now listening on port %d...\n\n", port);
     fflush(stdout);
 
     status = listen(ssockfd, backlog);
 
     if (status != 0) {
-        fprintf(stderr, "unable to listen on port %d\n", portno);
+        fprintf(stderr, "unable to listen on port %d\n", port);
         exit(EXIT_FAILURE);
     }
 
@@ -116,7 +123,7 @@ int ssocket_close(int ssockfd) {
     return status;
 }
 
-int csocket_open(int domain, int type, const char *hostname, uint16_t portno) {
+int csocket_open(int domain, int type, const char *hostname, uint16_t port) {
     int csockfd = -1;
 
     struct sockaddr_in addr_server;
@@ -125,7 +132,7 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t portno) {
     int status = -1;
     int count_period = 3;
 
-    fprintf(stdout, "attempting to connect to %s via port %d\n", hostname, portno);
+    fprintf(stdout, "attempting to connect to %s via port %d\n", hostname, port);
 
     while (true) {
         status = (csockfd = socket(domain, type, 0));
@@ -148,14 +155,13 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t portno) {
         addr_server.sin_family = domain;
 
         bcopy((char *)(server->h_addr_list[0]),
-              (char *)(&addr_server.sin_addr.s_addr),
-              server->h_length);
-        addr_server.sin_port = htons(portno);
+              (char *)(&addr_server.sin_addr.s_addr), server->h_length);
+        addr_server.sin_port = htons(port);
 
         status = connect(csockfd, (struct sockaddr *)(&addr_server), sizeof addr_server);
 
         if (status == 0) {
-            fprintf(stdout, "\n[connected (%s) via port %d]\n", server->h_name, portno);
+            fprintf(stdout, "\n[connected (%s) via port %d]\n", server->h_name, port);
             break;
         } else {
             if (count_period == 3) {
@@ -169,7 +175,7 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t portno) {
             fflush(stdout);
         }
 
-        throttle(1);
+        sleep(1);
     }
 
     return csockfd;
@@ -188,7 +194,7 @@ int csocket_close(int ssockfd) {
     return status;
 }
 
-char *get_ipaddr(int fd, char *buffer) {
+char *ipaddr(int fd, char *buffer) {
     socklen_t len = 0;
     struct sockaddr_in sa;
     int result = 0;
@@ -212,6 +218,7 @@ uint16_t get_portno(int fd) {
 
 dumbcmd_t cmdarg_capture(char *bufdst) {
     char bufcmd[256];
+    char *newln_addr = NULL;
 
     dumbcmd_t i = 0;
     bool found = false;
@@ -220,7 +227,9 @@ dumbcmd_t cmdarg_capture(char *bufdst) {
     bzero(bufcmd, 256);
 
     read(STDIN_FILENO, bufcmd, 256);
-    str_trim(bufcmd, "\n");
+    if ((newln_addr = strchr(bufcmd, '\n'))) {
+        *(newln_addr) = '\0';
+    }
 
     for (i = 0; i < CMD_COUNT; i++) {
         if (strcmp(bufcmd, cmd_engl[i]) == 0) {
@@ -240,8 +249,10 @@ dumbcmd_t cmdarg_capture(char *bufdst) {
             printf("%s\n%s:> ", arg_prompt[i], cmd_engl[i]);
 
             fgets(bufarg, 256, stdin);
-            str_trim(bufarg, "\n");
-            
+            if ((newln_addr = strchr(bufarg, '\n'))) {
+                *(newln_addr) = '\0';
+            }
+
             if (strcmp(cmd, cmd_dumb[PUTMG_CODENO]) == 0) {
                 sprintf(bufdst, "%s!%lu!%s", cmd, strlen(bufarg), bufarg);
             } else {
@@ -255,63 +266,6 @@ dumbcmd_t cmdarg_capture(char *bufdst) {
     }
 
     return found ? i : ERROR_CODENO;
-}
-
-/**
- *  @brief  Takes the contents of bufcmd and bufarg, resulting from
- *          client input, and converts/combines them into a single
- *          string, in DUMB protocol format, stored in bufdst
- *
- *  @param[out] bufdst  buffer to store DUMB protocol message to server
- *  @param[in]  bufcmd  string that consists of a client-typed command
-
- *  @param[in]  bufarg  string that consists of an argument associated
- *                      with bufcmd, if applicable
- *
- *  @return bufdst, a DUMB protocol formatted message
- *          ex.
- *              bufcmd is "open"
- *              bufarg is "blurp"
- *              bufdst will be "OPNBX blurp"
- *
- *          A malformed message will still result in a readable string.
- */
-char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
-    int i = 0;
-    const char *cmd = NULL;
-
-    bool found = false;
-
-    for (i = 0; i < CMD_COUNT; i++) {
-        if (strcmp(bufcmd, cmd_engl[i]) == 0) {
-            found = true;
-            break;
-        }
-    }
-
-    if (found) {
-        cmd = cmd_dumb[i];
-
-        if (bufarg[0] != '\0') {
-            if (strcmp(cmd, cmd_dumb[PUTMG_CODENO]) == 0) {
-                sprintf(bufdst, "%s!%lu!%s", cmd, strlen(bufarg), bufarg);
-            } else {
-                sprintf(bufdst, "%s %s", cmd, bufarg);
-            }
-        } else {
-            sprintf(bufdst, "%s", cmd);
-        }
-
-        return bufdst;
-    } else {
-        if (bufarg[0] != '\0') {
-            sprintf(bufdst, "%s %s", bufcmd, bufarg);
-        } else {
-            sprintf(bufdst, "%s", bufcmd);
-        }
-
-        return NULL;
-    }
 }
 
 /**
@@ -347,42 +301,72 @@ char *cmdarg_toserv(char *bufdst, char *bufcmd, char *bufarg) {
  *          any integer not described by the enumeration above
  *          [INT_MIN, 0) or [9, INT_MAX + 1) is an error.
  */
-int cmdarg_interpret(char *bufsrc, char **arg, ssize_t *arglen_addr) {
+dumbcmd_t cmdarg_interpret(char *bufsrc, char **arg, ssize_t *arglen_addr) {
     dumbcmd_t code = ERROR_CODENO;
-    int i = 0;
     bool found = false;
+    int i = 0;
 
     for (i = 0; i < CMD_COUNT; i++) {
         if (strncmp(bufsrc, cmd_dumb[i], 5) == 0) {
             found = true;
             code = i;
+
             break;
         }
     }
 
     if (found) {
+        char *ptr = NULL;
         char ch = ' ';
-        (*arg) = bufsrc + 6;
-        ch = (*arg)[0];
-        (*arg)[0] = '\0';
-        (*arg)[0] = ch;
 
-        if (bufsrc[5] == '!') {
-            char *temp = NULL;
-            char ch = ' ';
+        /* ptr is address of delimiter, '!' or ' ' */
+        ptr = bufsrc + 5;
 
-            ++(*arg);
-            temp = strchr((*arg), '!');
-            ch = *(temp);
-            *(temp) = '\0';
+        /* save delimiter character */
+        ch = *(ptr);
 
-            (*arglen_addr) = atoi((*arg));
-            *(temp) = ch;
+        if (ch == '!') {
+            /* if delimiter is '!' ... */
+            char *end = NULL;
 
-            (*arg) = temp + 1;
-            (*arg)[(*arglen_addr)] = '\0';
-        } else if (bufsrc[5] == ' ') {
-            (*arglen_addr) = atoi((*arg));
+            /* advance ptr one char past delimiter */
+            ptr = ptr + 1;
+
+            /* find next occurence of delimiter */
+            end = strchr(ptr, '!');
+
+            /* temporarily null-terminate delimiter */
+            *(end) = '\0';
+
+            /* save length of message, convert string to integer */
+            *(arglen_addr) = atoi(ptr);
+
+            /* restore delimiter character */
+            *(end) = '!';
+
+            /* advance end past delimiter */
+            end = end + 1;
+
+            /* save base address of message, starting at end */
+            *(arg) = end;
+        } else if (ch == ' ') {
+            /* if delimiter is ' ' ... */
+
+            /* advance ptr one char past delimiter */
+            ptr = ptr + 1;
+
+            /* save base address of message, starting at ptr */
+            *(arg) = ptr;
+
+            /* for good measure, save length of string *(arg) */
+            *(arglen_addr) = strlen(*(arg));
+        } else if (ch == '\0') {
+            /* if delimiter is ' ' ... */
+        } else {
+            /* malformed message -
+               initial characters may have matched proper commands,
+               but expected delimiters were not found */
+            code = ERROR_CODENO;
         }
     }
 
@@ -390,13 +374,13 @@ int cmdarg_interpret(char *bufsrc, char **arg, ssize_t *arglen_addr) {
 }
 
 /**
- *  @brief  TODO
- *  
+ *  @brief  Determine the status code (statcode_t) of a client request
+ *
  *  @param[in]  bufsrc
  *
  *  @return TODO
  */
-int statcode_interpret(char *bufsrc) {
+statcode_t statcode_interpret(char *bufsrc) {
     statcode_t i = 0;
 
     for (i = 0; i < STAT_COUNT; i++) {
@@ -408,49 +392,8 @@ int statcode_interpret(char *bufsrc) {
     return i == STAT_COUNT ? (STAT_COUNT - 1) : i;
 }
 
-char *cmdarg_parse(char *bufdst, char *bufsrc) {
-
-    if (strlen(bufsrc) >= 5) {
-        if (strncmp(bufsrc, "HELLO", 5) == 0) {
-
-        } else if (strncmp(bufsrc, "GDBYE", 5) == 0) {
-
-        } else if (strncmp(bufsrc, "CREAT", 5) == 0) {
-
-        } else if (strncmp(bufsrc, "OPNBX", 5) == 0) {
-
-        } else if (strncmp(bufsrc, "NXTMG", 5) == 0) {
-
-        } else if (strncmp(bufsrc, "PUTMG", 5) == 0) {
-            strcpy(bufdst, bufsrc);
-        } else if (strncmp(bufsrc, "DELBX", 5) == 0) {
-
-        } else if (strncmp(bufsrc, "CLSBX", 5) == 0) {
-
-        } else if (strncmp(bufsrc, "USAGE", 5) == 0) {
-
-        } else {
-        }
-    }
-
-    return bufdst;
-}
-
 char *datetime_format(char *bufdst) {
-    enum month {
-        JAN,
-        FEB,
-        MAR,
-        APR,
-        MAY,
-        JUN,
-        JUL,
-        AUG,
-        SEP,
-        OCT,
-        NOV,
-        DEC
-    };
+    enum month { JAN, FEB, MAR, APR, MAY, JUN, JUL, AUG, SEP, OCT, NOV, DEC };
 
     time_t now;
     struct tm *local = NULL;
@@ -514,18 +457,8 @@ char *datetime_format(char *bufdst) {
         break;
     }
 
-    sprintf(bufdst, "%02d%02d %02d %s", local->tm_hour, local->tm_min, local->tm_mday, month_str);
+    sprintf(bufdst, "%02d%02d %02d %s", local->tm_hour, local->tm_min,
+            local->tm_mday, month_str);
 
     return bufdst;
-}
-
-/**
- *  @brief  TODO
- *
- *  @param[in]      sec
- */
-void throttle(int sec) {
-    if (sleep(sec) != 0) {
-        throttle(sec);
-    }
 }

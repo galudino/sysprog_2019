@@ -70,7 +70,7 @@ void user_print(const void *arg, FILE *dest) {
 
     fprintf(dest, "username: %s\nactive: %s\n", (*u)->uname, (*u)->active ? "true" : "false");
     fprintf(dest, "-------------------\n");
-    
+
     vptr_fprint((*u)->msgbx, dest, str_print);
     fprintf(dest, "*******************\n\n");
 }

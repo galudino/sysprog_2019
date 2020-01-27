@@ -42,8 +42,8 @@ typedef unsigned char bool;
 #define __func__ ":"
 #endif /* __STD_VERSION__ >= 199901L */
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 void str_delete(void *arg);
@@ -131,14 +131,13 @@ void void_ptr_swap(void **n1, void **n2);
 #define KWHT_b "\x1B[1;37m" /**< white bold */
 
 /**< utils: debugging */
-int
-ulog(FILE *dest,
-     const char *level, /**< meant for "BUG", "LOG", "ERROR", or "WARNING" */
-     const char *file,  /**< meant for use with the __FILE__ macro */
-     const char *func,  /**< meant for use with the __func__ macro */
-     long double line,  /**< meant for use with the __LINE__ macro */
-     const char *fmt,
-     ...); /**< user's custom message */
+int ulog(FILE *dest,
+         const char *level, /**< meant for "BUG", "LOG", "ERROR", or "WARNING" */
+         const char *file,  /**< meant for use with the __FILE__ macro */
+         const char *func,  /**< meant for use with the __func__ macro */
+         long double line,  /**< meant for use with the __LINE__ macro */
+         const char *fmt,
+         ...); /**< user's custom message */
 
 /**
  *  Unless you would like to create a customized
@@ -292,15 +291,7 @@ ULOG_TOGGLE_ATTR(MESSAGE);
 #endif /* __STDC_VERSION__ >= 199901L */
 
 #define UTILS_LOG_ATTRS_COUNT 7
-enum ULOG_ATTRS {
-    DATE,
-    TIME,
-    LEVEL,
-    FILENAME,
-    LINE,
-    FUNCTION,
-    MESSAGE
-};
+enum ULOG_ATTRS { DATE, TIME, LEVEL, FILENAME, LINE, FUNCTION, MESSAGE };
 extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
 
 #define ULOG_TOGGLE_ATTR(ULOG_ATTR)                                            \
@@ -333,15 +324,13 @@ extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
 
 #define massert_ptr(PTR)                                                       \
     ;                                                                          \
-    massert(PTR,                                                               \
-            "['" #PTR "' was found to be NULL - '" #PTR                        \
-            "' must be nonnull to continue.]");
+    massert(PTR, "['" #PTR "' was found to be NULL - '" #PTR                   \
+                 "' must be nonnull to continue.]");
 
 #define massert_ttbl(TTBL)                                                     \
     ;                                                                          \
-    massert(TTBL,                                                              \
-            "['" #TTBL "' was found to be NULL -- '" #TTBL                     \
-            "' is mandatory for data type information]");
+    massert(TTBL, "['" #TTBL "' was found to be NULL -- '" #TTBL               \
+                  "' is mandatory for data type information]");
 
 #define massert_malloc(PTR)                                                    \
     ;                                                                          \
@@ -366,9 +355,8 @@ extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
 
 #define massert_container(PTR)                                                 \
     ;                                                                          \
-    massert(PTR,                                                               \
-            "['" #PTR "' was found to be NULL - '" #PTR                        \
-            "' must be assigned to the return value of a container "           \
-            "initializer function prior to use.]");
+    massert(PTR, "['" #PTR "' was found to be NULL - '" #PTR                   \
+                 "' must be assigned to the return value of a container "      \
+                 "initializer function prior to use.]");
 
 #endif /* UTILS_H */

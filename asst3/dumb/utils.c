@@ -171,7 +171,7 @@ int ulog(FILE *dest,
 
     sprintf(temp, "%Lf", line);
 
-/* char digit = strchr(temp, '.'); */
+    /* char digit = strchr(temp, '.'); */
 
 #if __STD_VERSION__ >= 199901L
     is_integer = line / (long long int)(line) == 1.000000 || line == 0.00000;

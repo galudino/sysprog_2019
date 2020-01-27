@@ -29,9 +29,9 @@
  *  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 
 #if __STD_VERSION__ >= 19990L
 #include <stdbool.h>
@@ -45,11 +45,11 @@
 #endif
 
 #include <assert.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 #include <strings.h>
-#include <dirent.h>
-#include <fcntl.h>
-#include <errno.h>
 
 #include <pthread.h>
 
@@ -57,9 +57,7 @@ void test_parse(void);
 void test_readwrite(void);
 void test(void);
 
-void print_usage() {
-
-}
+void print_usage() {}
 
 #include "network.h"
 #include "user.h"
@@ -119,8 +117,6 @@ int main(int argc, const char *argv[]) {
 
     test_parse();
 
-
-
     return 0;
 }
 
@@ -142,7 +138,7 @@ void test() {
         j += sprintf(out + j, "%s ", "OPNBX");
         j += sprintf(out + j, "%s", arg);
     }
-    
+
     printf("len = %d, to send: %s", j, out);
     printf("\n");
 }
@@ -183,7 +179,7 @@ void test_parse() {
 
 void test_readwrite(void) {
     char buffer[256];
-    
+
     memset(buffer, '\0', 256);
     strcpy(buffer, "==> ");
     write(STDOUT_FILENO, buffer, 256);
