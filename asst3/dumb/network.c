@@ -46,7 +46,7 @@ const char *cmd_engl[] = { "start", "quit",   "create", "open", "next",
                            "put",   "delete", "close",  "help" };
 
 const char *cmd_dumb[] = { "HELLO", "GDBYE", "CREAT", "OPNBX", "NXTMG",
-                           "PUTMG", "DELBX", "CLSBX", "USAGE" };
+                           "PUTMG", "DELBX", "CLSBX", "USAGE", "ERROR" };
 
 const char *statcode[] = { "OK!",   "EXIST", "NEXST", "OPEND", "EMPTY",
                            "NOOPN", "NOTMT", "WHAT?", "BOPEN" };
