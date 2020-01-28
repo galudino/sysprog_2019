@@ -43,7 +43,7 @@
 /* #define CLIENT_DEBUG_MESSAGES */
 
 #define ENABLE_RECONNECT
-#undef ENABLE_RECONNECT
+/* #undef ENABLE_RECONNECT */
 
 static void *handler_inbound(void *arg);
 static void *handler_outbound(void *arg);
@@ -94,13 +94,15 @@ int main(int argc, const char *argv[]) {
 
     port = atoi(port_str);
 
-#if ENABLE_RECONNECT
+    printf("\n");
+
+#ifdef ENABLE_RECONNECT
 connect:
 #endif
+    csockfd = csocket_open(AF_INET, SOCK_STREAM, hostname, port);
+
     printf("[CONNECTED] client session started\n\n");
     help_menu();
-
-    csockfd = csocket_open(AF_INET, SOCK_STREAM, hostname, port);
 
     pthread_attr_init(&attr_inbound);
     pthread_attr_init(&attr_outbound);
@@ -125,7 +127,7 @@ connect:
     if ((*server_disconnected)) {
         pthread_cancel(thread_outbound);
 
-#if ENABLE_RECONNECT
+#ifdef ENABLE_RECONNECT
     goto connect;
 #endif
     } else {
@@ -144,7 +146,7 @@ connect:
 }
 
 static void help_menu() {
-    printf("\nDUMBclient "
+    printf("DUMBclient "
            "v0\n---------------------------------------------------\n");
 
     printf("start\t\tstart session with DUMB server\n");
@@ -157,11 +159,9 @@ static void help_menu() {
     printf("delete\t\tdelete a user/message box name on the DUMB server\n");
     printf("close\t\tclose the user/message box name on the DUMB server that "
            "was opened by the client.\n");
-    printf("help\t\tsee help menu of all avaiable commands (this menu)\n");
+    printf("help\t\tsee help menu of all available commands (this menu)\n");
 
-    printf("\n\n");
-
-    printf("wait for the [ready] ==> indicator before entering input.\n\n");
+    printf("\nwait for the [ready] ==> indicator before entering input.\n");
 }
 
 static void *handler_inbound(void *arg) {
