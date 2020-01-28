@@ -46,6 +46,8 @@
 #include "user.h"
 #include "vptr.h"
 
+/* #define SERVER_DEBUG_MESSAGES */
+
 typedef struct entry entry_t;
 struct entry {
     int fd;
@@ -55,15 +57,15 @@ struct entry {
 static void *handler_connection(void *arg);
 static void *handler_client(void *arg);
 
-statcode_t usr_creat(vptr_t *v, char *arg, int fd);
-statcode_t usr_opnbx(vptr_t *v, user_t **user, char *arg, int fd, bool *box_open);
-statcode_t usr_delbx(vptr_t *v, char *arg, int fd);
-statcode_t usr_gdbye(vptr_t *v, user_t **user, int fd);
-statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open);
-statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open);
-statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg);
-statcode_t usr_usage(int fd);
-statcode_t usr_error(int fd);
+static statcode_t usr_creat(vptr_t *v, char *arg, int fd);
+static statcode_t usr_opnbx(vptr_t *v, user_t **user, char *arg, int fd, bool *box_open);
+static statcode_t usr_delbx(vptr_t *v, char *arg, int fd);
+static statcode_t usr_gdbye(vptr_t *v, user_t **user, int fd);
+static statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open);
+static statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open);
+static statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg);
+static statcode_t usr_usage(int fd);
+static statcode_t usr_error(int fd);
 
 /**
  *  @brief  Program execution begins here
@@ -105,7 +107,7 @@ int main(int argc, const char *argv[]) {
 
     if ((status = pthread_create(&thread_connection, &attr_connection,
                                  handler_connection, &entry)) < 0) {
-        fprintf(stderr, "Error: %s\n", strerror(status));
+        fprintf(stderr, "[ERROR] %s\n", strerror(status));
         exit(EXIT_FAILURE);
     }
 
@@ -122,12 +124,6 @@ int main(int argc, const char *argv[]) {
 static void *handler_connection(void *arg) {
     struct sockaddr_in client;
     socklen_t len_client = 0;
-
-    /*
-    struct hostent *hp = NULL;
-    char *haddrp = NULL;
-    uint16_t portno = 0;
-    */
 
     entry_t entry_server = { -1, NULL };
     int accept_fd = 0;
@@ -185,18 +181,6 @@ static void *handler_connection(void *arg) {
 
         accept_fd = accept(entry_server.fd, (struct sockaddr *)(&client), &len_client);
 
-        /*
-        hp = gethostbyaddr((const char *)(&client.sin_addr.s_addr),
-        sizeof(client.sin_addr.s_addr), AF_INET);
-        haddrp = inet_ntoa(client.sin_addr);
-        portno = get_portno(accept_fd);
-        */
-
-        /*
-        fprintf(stdout, "CONNECTED %s (%s) via port %d\n\n", hp->h_name, haddrp,
-        portno);
-        */
-
         entry_vec.base[i].fd = accept_fd;
         entry_vec.base[i].users = entry_server.users;
 
@@ -204,7 +188,7 @@ static void *handler_connection(void *arg) {
 
         if ((status = pthread_create(thread_vec.base + i, &attr, handler_client,
                                      entry_vec.base + i)) < 0) {
-            fprintf(stderr, "Error: %s\n(unable to start client handler thread\n",
+            fprintf(stderr, "[ERROR] %s\n(unable to start client handler thread\n",
                     strerror(status));
             exit(EXIT_FAILURE);
         }
@@ -217,7 +201,7 @@ static void *handler_connection(void *arg) {
     }
 
     if (accept_fd < 0) {
-        fprintf(stderr, "Error: %s\n", strerror(accept_fd));
+        fprintf(stderr, "[ERROR] %s\n", strerror(accept_fd));
     }
 
     for (i = 0; i < thread_vec.length; i++) {
@@ -272,16 +256,12 @@ static void *handler_client(void *arg) {
         cmdarg = buffer_in;
         cmddumb = cmdarg_interpret(buffer_in, &cmdarg, &arglen);
 
-        /**
-         *  DEBUG
-         */
+#ifdef SERVER_DEBUG_MESSAGES
         printf("client says: %s\n\n", buffer_in);
 
         printf("last_cmd = %s_CODENO\n", cmd_dumb[cmddumb]);
         printf("cmdarg: %s\narglen: %lu\n\n", cmdarg, arglen);
-        /**
-         *  END DEBUG
-         */
+#endif /* SERVER_DEBUG_MESSAGES */
 
         description = cmd_dumb[cmddumb];
 
@@ -345,7 +325,9 @@ static void *handler_client(void *arg) {
         bzero(buffer_in, 256);
         bzero(buffer_out, 256);
 
+#ifdef SERVER_DEBUG_MESSAGES
         vptr_fprint(entry->users, stdout, user_print);
+#endif /* SERVER_DEBUG_MESSAGES */
 
         if (goodbye) {
             break;
@@ -356,7 +338,7 @@ static void *handler_client(void *arg) {
         description = "disconnected";
         printf("%s %s %s\n", datetime_format(datetime), ip, description);
 
-        if (user_active(user_current) && box_open) {
+        if (user_current && user_active(user_current) && box_open) {
             user_close(user_current);
         }
 
@@ -380,7 +362,7 @@ static void *handler_client(void *arg) {
  *              EXIST_STATNO    box with name arg already exists in v
  *              _WHAT_STATNO    malformed message
  */
-statcode_t usr_creat(vptr_t *v, char *arg, int fd) {
+static statcode_t usr_creat(vptr_t *v, char *arg, int fd) {
     statcode_t stat = _OK_STATNO;
     char buffer[256];
 
@@ -428,7 +410,7 @@ statcode_t usr_creat(vptr_t *v, char *arg, int fd) {
  *              BOPEN_STATNO        user already has one open box
  *              _WHAT_STATNO        malformed message
  */
-statcode_t usr_opnbx(vptr_t *v, user_t **user, char *arg, int fd, bool *box_open) {
+static statcode_t usr_opnbx(vptr_t *v, user_t **user, char *arg, int fd, bool *box_open) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
@@ -489,7 +471,7 @@ statcode_t usr_opnbx(vptr_t *v, user_t **user, char *arg, int fd, bool *box_open
  *              NOTMT_STATNO     box requested is not empty
  *              _WHAT_STATNO     malformed message
  */
-statcode_t usr_delbx(vptr_t *v, char *arg, int fd) {
+static statcode_t usr_delbx(vptr_t *v, char *arg, int fd) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
@@ -546,16 +528,14 @@ statcode_t usr_delbx(vptr_t *v, char *arg, int fd) {
  *  @return     statcode values:
  *              _OK_STATNO      (no reply will actually be sent)
  */
-statcode_t usr_gdbye(vptr_t *v, user_t **user, int fd) {
-    statcode_t stat = _WHAT_STATNO;
+static statcode_t usr_gdbye(vptr_t *v, user_t **user, int fd) {
+    statcode_t stat = _OK_STATNO;
     char buffer[256];
 
     bzero(buffer, 256);
 
     if (*(user) && user_active(*(user))) {
-        if (user_close(*(user)) == 0) {
-            stat = _OK_STATNO;
-        }
+        user_close(*(user));
     }
 
     strcpy(buffer, statcode[stat]);
@@ -578,7 +558,7 @@ statcode_t usr_gdbye(vptr_t *v, user_t **user, int fd) {
  *              NOOPN_STATNO    no box currently open clientside
  *              _WHAT_STATNO    malformed message
  */
-statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open) {
+static statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open) {
     statcode_t stat = _WHAT_STATNO;
 
     char buffer[256];
@@ -614,7 +594,7 @@ statcode_t usr_putmg(user_t *user, char *arg, int arglen, int fd, bool *box_open
  *              NOOPN_STATNO  no box currently open clientside
  *              _WHAT_STATNO  malformed message
  */
-statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
+static statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
     statcode_t stat = _WHAT_STATNO;
 
     char buffer[256];
@@ -638,6 +618,8 @@ statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
             } else {
                 stat = EMPTY_STATNO;
             }
+
+            strcpy(buffer, statcode[stat]);
         }
     } else {
         stat = NOOPN_STATNO;
@@ -661,7 +643,7 @@ statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
  *              NOOPN_STATNO  no box currently open clientside
  *              _WHAT_STATNO  malformed message
  */
-statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg) {
+static statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
@@ -695,7 +677,7 @@ statcode_t usr_clsbx(user_t **user, int fd, bool *box_open, char *cmdarg) {
  *              _OK_STATNO      permission granted to print usage menu
  *              _WHAT_STATNO    malformed message
  */
-statcode_t usr_usage(int fd) {
+static statcode_t usr_usage(int fd) {
     statcode_t stat = _WHAT_STATNO;
     char buffer[256];
 
@@ -715,7 +697,7 @@ statcode_t usr_usage(int fd) {
  *  @return     statcode values:
  *              _OK_STATNO    request received is confirmed to be malformed
  */
-statcode_t usr_error(int fd) {
+static statcode_t usr_error(int fd) {
     statcode_t code = _WHAT_STATNO;
     char buffer[256];
 

@@ -35,14 +35,6 @@
 #include "utils.h"
 #include <netinet/in.h>
 
-typedef struct connection_info conninf_t;
-struct connection_info {
-    int ssockfd;
-    int cconnfd;
-
-    void *arg;
-};
-
 int ssocket_open(int domain, int type, uint16_t port, int backlog);
 int ssocket_close(int ssockfd);
 
@@ -52,6 +44,7 @@ int csocket_close(int csockfd);
 char *ipaddr(int fd, char *buffer);
 uint16_t portno(int fd);
 
+/* [0, 9) */
 enum statcode {
     _OK_STATNO,
     EXIST_STATNO,
@@ -64,6 +57,7 @@ enum statcode {
     BOPEN_STATNO
 };
 
+/* [0, 10) */
 enum cmddumb {
     HELLO_CODENO,
     GDBYE_CODENO,
@@ -77,6 +71,7 @@ enum cmddumb {
     ERROR_CODENO
 };
 
+/* [0, 10) */
 enum cmdengl {
     start_ENGLNO,
     quit_ENGLNO,

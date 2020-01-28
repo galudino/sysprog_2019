@@ -64,6 +64,16 @@ const char *arg_prompt[] = {
     "",
 };
 
+/**
+ *  @brief TODO
+ *  
+ *  @param[in]  domain
+ *  @param[in]  type
+ *  @param[in]  port
+ *  @param[in]  backlog
+ *
+ *  @return
+ */
 int ssocket_open(int domain, int type, uint16_t port, int backlog) {
     int ssockfd = -1;
 
@@ -75,12 +85,12 @@ int ssocket_open(int domain, int type, uint16_t port, int backlog) {
     ssockfd = socket(domain, type, 0);
 
     if (ssockfd == -1) {
-        fprintf(stderr, "unable to create server socket\n");
+        fprintf(stderr, "[ERROR] server socket creation failed\n");
         exit(EXIT_FAILURE);
     }
 
     if (setsockopt(ssockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int)) < 0) {
-        fprintf(stderr, "unable to set socket options\n");
+        fprintf(stderr, "[ERROR] unable to set socket options\n");
         exit(EXIT_FAILURE);
     }
 
@@ -93,36 +103,55 @@ int ssocket_open(int domain, int type, uint16_t port, int backlog) {
     status = bind(ssockfd, (struct sockaddr *)(&server), sizeof server);
 
     if (status != 0) {
-        fprintf(stderr, "unable to bind server socket\n");
+        fprintf(stderr, "[ERROR] unable to bind server socket\n");
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stdout, "now listening on port %d...\n\n", port);
+    fprintf(stdout, "[PLEASE WAIT] now listening on port %d...\n\n", port);
     fflush(stdout);
 
     status = listen(ssockfd, backlog);
 
     if (status != 0) {
-        fprintf(stderr, "unable to listen on port %d\n", port);
+        fprintf(stderr, "[ERROR] unable to listen on port %d\n", port);
         exit(EXIT_FAILURE);
     }
 
     return ssockfd;
 }
 
+
+/**
+ *  @brief TODO
+ *  
+ *  @param[in]  ssockfd
+ *
+ *  @return
+ */
 int ssocket_close(int ssockfd) {
     int status = 1;
 
     if (close(ssockfd) == -1) {
-        fprintf(stderr, "error: %s\n", strerror(errno));
+        fprintf(stderr, "[ERROR] %s\n", strerror(errno));
     } else {
-        fprintf(stdout, "server socket successfully closed\n");
+        fprintf(stdout, "[SUCCESS] server socket closed\n");
     }
 
     status = errno;
     return status;
 }
 
+
+/**
+ *  @brief TODO
+ *  
+ *  @param[in]  domain
+ *  @param[in]  type
+ *  @param[in]  hostname
+ *  @param[in]  port
+ *
+ *  @return
+ */
 int csocket_open(int domain, int type, const char *hostname, uint16_t port) {
     int csockfd = -1;
 
@@ -132,20 +161,20 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t port) {
     int status = -1;
     int count_period = 3;
 
-    fprintf(stdout, "attempting to connect to %s via port %d\n", hostname, port);
+    fprintf(stdout, "[PLEASE WAIT] attempting to connect to %s via port %d\n", hostname, port);
 
     while (true) {
         status = (csockfd = socket(domain, type, 0));
 
         if (status < 0) {
-            fprintf(stderr, "error: Socket failed\n");
+            fprintf(stderr, "[ERROR] client socket creation failed\n");
             exit(EXIT_FAILURE);
         }
 
         server = gethostbyname(hostname);
 
         if (server == NULL) {
-            fprintf(stderr, "error: no hostname by identifier %s\n", hostname);
+            fprintf(stderr, "[ERROR] no hostname by identifier %s\n", hostname);
             /* use h_errno */
             exit(EXIT_FAILURE);
         }
@@ -161,7 +190,7 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t port) {
         status = connect(csockfd, (struct sockaddr *)(&addr_server), sizeof addr_server);
 
         if (status == 0) {
-            fprintf(stdout, "\n[connected (%s) via port %d]\n", server->h_name, port);
+            fprintf(stdout, "[SUCCESS] socket connected (%s) via port %d\n", server->h_name, port);
             break;
         } else {
             if (count_period == 3) {
@@ -181,19 +210,34 @@ int csocket_open(int domain, int type, const char *hostname, uint16_t port) {
     return csockfd;
 }
 
-int csocket_close(int ssockfd) {
+/**
+ *  @brief TODO
+ *  
+ *  @param[in]  csockfd
+ *
+ *  @return
+ */
+int csocket_close(int csockfd) {
     int status = 1;
 
-    if (close(ssockfd) == -1) {
-        fprintf(stderr, "error: %s\n", strerror(errno));
+    if (close(csockfd) == -1) {
+        fprintf(stderr, "[ERROR] %s\n", strerror(errno));
     } else {
-        fprintf(stdout, "client socket successfully closed\n");
+        fprintf(stdout, "[SUCCESS] client socket closed\n");
     }
 
     status = errno;
     return status;
 }
 
+/**
+ *  @brief  Retrieve an ip address string from a socket
+ *
+ *  @param[in]  fd  socket file descriptor
+ *  @param[out] buffer  character array for destination ip address string
+ *
+ *  @return string representation of fd's ip address
+ */
 char *ipaddr(int fd, char *buffer) {
     socklen_t len = 0;
     struct sockaddr_in sa;
@@ -205,6 +249,11 @@ char *ipaddr(int fd, char *buffer) {
     return (result == 0) ? strcpy(buffer, inet_ntoa(sa.sin_addr)) : NULL;
 }
 
+/**
+ *  @brief  Retrieve a port number from a socket
+ *
+ *  @param[in] fd   socket file descriptor
+ */
 uint16_t portno(int fd) {
     socklen_t len = 0;
     struct sockaddr_in sa;
@@ -216,6 +265,14 @@ uint16_t portno(int fd) {
     return (result == 0) ? ntohs(sa.sin_port) : 0;
 }
 
+/**
+ *  @brief  Capture the desired command and argument for the DUMBclient
+ *
+ *  @param[out] bufdst  a string formatted as per the DUMB protocol,
+ *                      representing a client request
+ *
+ *  @return     the associated command requested by the client
+ */
 dumbcmd_t cmdarg_capture(char *bufdst) {
     char bufcmd[256];
     char *newln_addr = NULL;
@@ -287,7 +344,7 @@ dumbcmd_t cmdarg_capture(char *bufdst) {
  *                          the string length of (*arg_addr), if needed;
  *                          will be NULL if found unnecessary
  *
- *  @return an integer, representing the enumerations of enum cmdcode
+ *  @return an integer, representing the enumerations of enum cmddumb
  *          0 = HELLO
  *          1 = GDBYE
  *          2 = CREAT
@@ -376,9 +433,21 @@ dumbcmd_t cmdarg_interpret(char *bufsrc, char **arg, ssize_t *arglen_addr) {
 /**
  *  @brief  Determine the status code (statcode_t) of a client request
  *
- *  @param[in]  bufsrc
+ *  @param[in]  bufsrc  source buffer containing the server's reply
+ *                      to a client request
  *
- *  @return TODO
+ *  @return     an integer, representing the enumerations of enum statcode
+ *              0 = _OK_STATNO
+ *              1 = EXIST_STATNO
+ *              2 = NEXST_STATNO
+ *              3 = OPEND_STATNO
+ *              4 = EMPTY_STATNO
+ *              5 = NOOPN_STATNO
+ *              6 = NOTMT_STATNO
+ *              7 = _WHAT_STATNO
+ *              8 = BOPEN_STATNO
+ *          any integer not described by the enumeration above
+ *          [INT_MIN, 0) or [8, INT_MAX + 1) is an error.
  */
 statcode_t statcode_interpret(char *bufsrc) {
     statcode_t i = 0;
@@ -392,6 +461,16 @@ statcode_t statcode_interpret(char *bufsrc) {
     return i == STAT_COUNT ? (STAT_COUNT - 1) : i;
 }
 
+/**
+ *  @brief  Retrieves a string representation of the current date and time,
+ *          formatted as HHmm DD MMM
+ *              (e.g 1607 04 Dec)
+ *
+ *  @param[out] bufdst  destination character buffer for date string
+ *
+ *  @return string representation of current date and time, 
+ *          formatted as described
+ */
 char *datetime_format(char *bufdst) {
     enum month { JAN, FEB, MAR, APR, MAY, JUN, JUL, AUG, SEP, OCT, NOV, DEC };
 

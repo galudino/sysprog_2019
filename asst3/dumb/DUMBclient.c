@@ -40,58 +40,24 @@
 
 #include "network.h"
 
+/* #define CLIENT_DEBUG_MESSAGES */
+
 #define ENABLE_RECONNECT
 #undef ENABLE_RECONNECT
 
-/*
-typedef struct client_socket_info csockinf_t;
-struct client_socket_info {
-    int fd;
+static void *handler_inbound(void *arg);
+static void *handler_outbound(void *arg);
 
-    struct {
-        dumbcmd_t cmd;
-        statcode_t stat;
-    } previous;
+static dumbcmd_t last_cmd = ERROR_CODENO;
+static statcode_t last_stat = _WHAT_STATNO;
 
-    struct {
-        bool started;
-        bool box_open;
-    } status;
+static char current_box[256];
+static char request_box[256];
+static char message[256];
 
-    struct {
-        char current_box[256];
-        char message[256];
-    } requested;
-};
+static bool started = false;
 
-- store the following for all client threads to access:
-strings
-    - requested box name to create
-    - requested box name to open
-    - requested box to delete
-    - requested box to close (which should be the currently open box)
-    - requested message to put
-
-bool
-    - client started, or not
-    - has a box open, or not
-*/
-
-void test();
-
-void *handler_inbound(void *arg);
-void *handler_outbound(void *arg);
-
-dumbcmd_t last_cmd = ERROR_CODENO;
-statcode_t last_stat = _WHAT_STATNO;
-
-char current_box[256];
-char request_box[256];
-char message[256];
-
-bool started = false;
-
-void help_menu(void);
+static void help_menu(void);
 
 /**
  *  @brief  Program execution begins here
@@ -107,6 +73,7 @@ int main(int argc, const char *argv[]) {
 
     const char *hostname = NULL;
     const char *port_str = NULL;
+
     uint16_t port = 0;
 
     pthread_t thread_inbound;
@@ -130,31 +97,19 @@ int main(int argc, const char *argv[]) {
 #if ENABLE_RECONNECT
 connect:
 #endif
+    printf("[CONNECTED] client session started\n\n");
+    help_menu();
 
     csockfd = csocket_open(AF_INET, SOCK_STREAM, hostname, port);
 
     pthread_attr_init(&attr_inbound);
-
-    help_menu();
-
-    /*
-    csockinf_t cinf;
-    cinf.fd = csockfd;
-    cinf.previous.cmd = HELLO_CODENO;
-    cinf.previous.stat = _OK_STATNO;
-    cinf.status.started = false;
-    cinf.status.box_open = false;
-    bzero(cinf.requested.box, 256);
-    bzero(cinf.requested.message, 256);
-    */
+    pthread_attr_init(&attr_outbound);
 
     if ((status = pthread_create(&thread_inbound, &attr_inbound,
                                  handler_inbound, &csockfd)) < 0) {
         fprintf(stderr, "error: %s\n", strerror(status));
         exit(EXIT_FAILURE);
     }
-
-    pthread_attr_init(&attr_outbound);
 
     if ((status = pthread_create(&thread_outbound, &attr_outbound,
                                  handler_outbound, &csockfd)) < 0) {
@@ -171,9 +126,8 @@ connect:
         pthread_cancel(thread_outbound);
 
 #if ENABLE_RECONNECT
-        goto connect;
+    goto connect;
 #endif
-
     } else {
         pthread_join(thread_outbound, NULL);
     }
@@ -183,16 +137,16 @@ connect:
     server_disconnected = NULL;
 
     csocket_close(csockfd);
-    printf("\n");
 
-    printf("[client exited]\n\n");
+    printf("\n[DISCONNECTED] client session ended\n\n");
 
     return EXIT_SUCCESS;
 }
 
-void help_menu() {
+static void help_menu() {
     printf("\nDUMBclient "
            "v0\n---------------------------------------------------\n");
+
     printf("start\t\tstart session with DUMB server\n");
     printf("quit\t\tstop session with DUMB server\n");
     printf("create\t\tcreate a new user/message box on the DUMB server\n");
@@ -204,16 +158,19 @@ void help_menu() {
     printf("close\t\tclose the user/message box name on the DUMB server that "
            "was opened by the client.\n");
     printf("help\t\tsee help menu of all avaiable commands (this menu)\n");
+
     printf("\n\n");
+
     printf("wait for the [ready] ==> indicator before entering input.\n\n");
 }
 
-void *handler_inbound(void *arg) {
+static void *handler_inbound(void *arg) {
     int fd = *(int *)(arg);
 
     char buffer_in[256];
     char bufarg[256];
     char *ptr = NULL;
+
     ssize_t arglen = 0;
 
     int size_read = -1;
@@ -234,39 +191,44 @@ void *handler_inbound(void *arg) {
     while ((size_read = recv(fd, buffer_in, 256, 0)) > 0) {
         ptr = buffer_in;
 
+#ifdef CLIENT_DEBUG_MESSAGES
+        printf("server reply: '%s'\n", buffer_in);
+#endif /* CLIENT_DEBUG_MESSAGES */
+
         for (i = 0; i < STAT_COUNT; i++) {
-            /* server reply begins with 'OK' */
             if (strncmp(buffer_in, statcode[i], 2) == 0) {
-                /* entirety of server reply is 'OK!' */
+                /* first two chars of server reply match a member in statcode */
                 if (strlen(buffer_in) == 3 && buffer_in[2] == '!') {
-                    last_stat = i;
+                    /* entirety of server reply is 'OK!' */
+                    last_stat = _OK_STATNO;
                     stat_reply = _OK_STATNO;
 
                     break;
-                    /* server reply is at least a valid statcode string */
                 } else if (strlen(buffer_in) > 2) {
-                    /* server reply is 'OK!n', n being a positive integer */
+                    /* server reply may be a valid statcode (specialized) */
                     if (buffer_in[2] == '!' && buffer_in[3] != '\0') {
-                        last_stat = i;
+                        /* server reply is 'OK!n', n being a positive integer */
+                        last_stat = _OK_STATNO;
                         arglen = atoi(buffer_in + 3);
                         stat_reply = _OK_STATNO;
 
                         break;
-                        /* server reply is a 'NXTMG!n!str', n being a positive integer, str being a string */
-                    } else {
+                    } else if (buffer_in[5] == '!') {
                         if (strncmp(buffer_in, statcode[i], 5) == 0) {
+                            /* server reply is a 'NXTMG!n!str', n being a positive integer, str being a string */
                             cmdarg_interpret(buffer_in, &ptr, &arglen);
                             last_stat = i;
-                            stat_reply = _OK_STATNO;
+                            stat_reply = i;
 
                             break;
                         }
                     }
                 }
-                /* server reply is a statcode error */
             } else {
+                /* server reply is a statcode error */
                 dumbcmd_t cmd = ERROR_CODENO;
-                stat_reply = _OK_STATNO;
+
+                stat_reply = i;
                 cmd = cmdarg_interpret(buffer_in, &ptr, &arglen);
 
                 if (cmd == NXTMG_CODENO) {
@@ -278,14 +240,18 @@ void *handler_inbound(void *arg) {
             }
         }
 
+#ifdef CLIENT_DEBUG_MESSAGES
+        printf("stat_reply (statcode): %s\n", statcode[i]);
+#endif /* CLIENT_DEBUG_MESSAGES */
+
         switch (stat_reply) {
         case _OK_STATNO:
             switch (last_cmd) {
             case HELLO_CODENO:
                 if (started) {
-                    printf("client already started\n");
+                    printf("Error. The client was already started.\n");
                 } else {
-                    printf("client started\n");
+                    printf("Success! The client has started.\n");
                     started = true;
                 }
 
@@ -335,9 +301,10 @@ void *handler_inbound(void *arg) {
                 break;
 
             default:
-                printf("Unspecified error, please try again.\n");
+                printf("Unspecified error [stat reply: _OK_STATNO], please try again.\n");
                 break;
             }
+
             break;
 
         case EXIST_STATNO:
@@ -348,9 +315,10 @@ void *handler_inbound(void *arg) {
                 break;
 
             default:
-                printf("Unspecified error, please try again.\n");
+                printf("Unspecified error [stat reply: EXIST_STATNO], please try again.\n");
                 break;
             }
+
             break;
 
         case NEXST_STATNO:
@@ -362,9 +330,10 @@ void *handler_inbound(void *arg) {
                 break;
 
             default:
-                printf("Unspecified error, please try again.\n");
+                printf("Unspecified error [stat reply: NEXST_STATNO], please try again.\n");
                 break;
             }
+
             break;
 
         case OPEND_STATNO:
@@ -381,7 +350,7 @@ void *handler_inbound(void *arg) {
                 break;
 
             default:
-                printf("Unspecified error, please try again.\n");
+                printf("Unspecified error [stat reply: OPEND_STATNO], please try again.\n");
                 break;
             }
 
@@ -394,9 +363,10 @@ void *handler_inbound(void *arg) {
                 break;
 
             default:
-                printf("Unspecified error, please try again.\n");
+                printf("Unspecified error [stat reply: EMPTY_STATNO], please try again.\n");
                 break;
             }
+
             break;
 
         case NOOPN_STATNO:
@@ -417,9 +387,10 @@ void *handler_inbound(void *arg) {
                 break;
 
             default:
-                printf("Unspecified error, please try again.\n");
+                printf("Unspecified error [stat reply: NOOPN_STATNO], please try again.\n");
                 break;
             }
+
             break;
 
         case NOTMT_STATNO:
@@ -432,9 +403,10 @@ void *handler_inbound(void *arg) {
                 break;
 
             default:
-                printf("Unspecified error, please try again.\n");
+                printf("Unspecified error [stat reply: NOTMT_STATNO], please try again.\n");
                 break;
             }
+
             break;
 
         case _WHAT_STATNO:
@@ -449,6 +421,7 @@ void *handler_inbound(void *arg) {
                 printf("Error. Command was unsuccessful, please try again.\n");
                 break;
             }
+
             break;
 
         case BOPEN_STATNO:
@@ -460,9 +433,10 @@ void *handler_inbound(void *arg) {
                 break;
 
             default:
-                printf("Unspecified error, please try again.\n");
+                printf("Unspecified error [stat reply: BOPEN_STATNO], please try again.\n");
                 break;
             }
+
             break;
 
         default:
@@ -473,23 +447,23 @@ void *handler_inbound(void *arg) {
 
         bzero(buffer_in, 256);
         sleep(1);
-        printf("almost ready...\n\n");
+        printf("almost ready...\n");
     }
 
     if (size_read == 0) {
         if (last_cmd != GDBYE_CODENO) {
             (*server_disconnected) = true;
             fprintf(stdout,
-                    "[connection severed - server has left the network]\n");
+                    "[CONNECTION SEVERED] server has abruptly left the network\n");
         } else {
-            fprintf(stdout, "[connection severed at user's request]\n");
+            fprintf(stdout, "[DISCONNECTING] user is leaving the network\n");
         }
     }
 
     pthread_exit(server_disconnected);
 }
 
-void *handler_outbound(void *arg) {
+static void *handler_outbound(void *arg) {
     int fd = *(int *)(arg);
 
     char buffer_out[256];
@@ -501,9 +475,9 @@ void *handler_outbound(void *arg) {
         bzero(buffer_out, 256);
 
         if (started) {
-            strcpy(buffer_out, "[ready]\n==> ");
+            strcpy(buffer_out, "\n[ready]\n==> ");
         } else {
-            strcpy(buffer_out, "[type 'start' and hit RETURN to initialize the "
+            strcpy(buffer_out, "\n[type 'start' and hit RETURN to initialize the "
                                "client.]\n==> ");
         }
 
@@ -519,7 +493,6 @@ void *handler_outbound(void *arg) {
                 case OPNBX_CODENO:
                 case DELBX_CODENO:
                     cmdarg_interpret(buffer_out, &ptr, &len);
-                    /*strcpy(current_box, buffer_out + 6);*/
                     strcpy(request_box, buffer_out + 6);
 
                     break;
@@ -583,16 +556,12 @@ void *handler_outbound(void *arg) {
 
         sleep(1);
 
-        /**
-         *  DEBUG
-         */
+#ifdef CLIENT_DEBUG_MESSAGES
         printf("\nlast_cmd == %s_CODENO\n", cmd_dumb[last_cmd]);
         printf("ptr: %s\nlen: %lu\n", ptr, len);
 
         printf("\nWill send to server: %s\n\n", buffer_out);
-        /**
-         *  END DEBUG
-         */
+#endif /* CLIENT_DEBUG_MESSAGES */
 
         write(fd, buffer_out, 256);
         bzero(buffer_out, 256);
