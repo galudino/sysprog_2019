@@ -57,11 +57,6 @@ static char myblock[MYMALLOC__BLOCK_SIZE];
 #define MYMALLOC__END_BLOCK                                                    \
     (header_t *)((myblock + (MYMALLOC__BLOCK_SIZE)) - sizeof(header_t))
 
-static uint16_t merge_counter = 0;
-
-/**< header_t: pos - position/cursor pointer */
-static header_t *pos = NULL;
-
 /**< header_t: initializer */
 static void header_init_list();
 
@@ -817,4 +812,5 @@ int ulog(FILE *dest,
 
     return fprintf(dest, "%s\n", buffer);
 }
-#endif
+
+#endif /* UTILS_H */
