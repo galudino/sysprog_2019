@@ -365,6 +365,6 @@ extern bool ulog_attrs_disable[UTILS_LOG_ATTRS_COUNT];
             "['" #PTR "' was found to be NULL - '" #PTR                        \
             "' must be assigned to the return value of a container "           \
             "initializer function prior to use.]");
-#endif
+#endif /* UTILS_H */
 
 #endif /* MY_MALLOC_H */
