@@ -196,15 +196,17 @@ static void *handler_inbound(void *arg) {
 #endif /* CLIENT_DEBUG_MESSAGES */
 
         for (i = 0; i < STAT_COUNT; i++) {
+            size_t buffer_in_len = strlen(buffer_in);
+
             if (strncmp(buffer_in, statcode[i], 2) == 0) {
                 /* first two chars of server reply match a member in statcode */
-                if (strlen(buffer_in) == 3 && buffer_in[2] == '!') {
+                if (buffer_in_len == 3 && buffer_in[2] == '!') {
                     /* entirety of server reply is 'OK!' */
                     last_stat = _OK_STATNO;
                     stat_reply = _OK_STATNO;
 
                     break;
-                } else if (strlen(buffer_in) > 2) {
+                } else if (buffer_in_len > 2) {
                     /* server reply may be a valid statcode (specialized) */
                     if (buffer_in[2] == '!' && buffer_in[3] != '\0') {
                         /* server reply is 'OK!n', n being a positive integer */
@@ -213,15 +215,26 @@ static void *handler_inbound(void *arg) {
                         stat_reply = _OK_STATNO;
 
                         break;
-                    } else if (buffer_in[5] == '!') {
+                    } else if (buffer_in_len >= 8 && buffer_in[5] == '!') {
+                        /*
+                        buffer_in_len >= 8 && buffer_in[5] == '!' means:
+                           buffer_in is at least "NXTMG!0!"
+
+                        OLD CODE
+                        server reply is a 'NXTMG!n!str', n being a positive integer, str being a string
                         if (strncmp(buffer_in, statcode[i], 5) == 0) {
-                            /* server reply is a 'NXTMG!n!str', n being a positive integer, str being a string */
                             cmdarg_interpret(buffer_in, &ptr, &arglen);
                             last_stat = i;
                             stat_reply = i;
 
                             break;
                         }
+                        END OLD CODE
+                        */
+                       cmdarg_interpret(buffer_in, &ptr, &arglen);
+                       last_stat = i;
+                       stat_reply = i;
+                       break;
                     }
                 }
             } else {
@@ -384,6 +397,7 @@ static void *handler_inbound(void *arg) {
             case PUTMG_CODENO:
                 printf("Error. A message box must be open in order to put "
                        "messages into it.\n");
+                bzero(message, 256);
                 break;
 
             default:
