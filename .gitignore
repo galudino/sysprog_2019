@@ -53,3 +53,7 @@ Mkfile.old
 dkms.conf
 .DS_Store
 lec0/main
+asst3/dumb/DUMBserve
+asst3/dumb/DUMBclient
+asst1/plusplusmalloc/test
+asst1/plusplusmalloc/memgrind
