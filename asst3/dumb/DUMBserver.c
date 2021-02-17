@@ -617,9 +617,8 @@ static statcode_t usr_nxtmg(user_t *user, int fd, bool *box_open) {
                 user_message_pop(user);
             } else {
                 stat = EMPTY_STATNO;
+                strcpy(buffer, statcode[stat]);
             }
-
-            strcpy(buffer, statcode[stat]);
         }
     } else {
         stat = NOOPN_STATNO;
